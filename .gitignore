@@ -1,0 +1,14 @@
+.env
+*.db
+*.sqlite
+*.pkl
+__pycache__/
+venv/
+tokens/
+api_keys/
+logs/
+*.gguf
+overlay/
+.venv/
+.vscode/
+*.pth

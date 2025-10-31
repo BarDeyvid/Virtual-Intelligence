@@ -1,0 +1,33 @@
+ > Training Environment:
+ | > Backend: Torch
+ | > Mixed precision: False
+ | > Precision: float32
+ | > Current device: 0
+ | > Num. of GPUs: 1
+ | > Num. of CPUs: 16
+ | > Num. of Torch Threads: 1
+ | > Torch seed: 1
+ | > Torch CUDNN: True
+ | > Torch CUDNN deterministic: False
+ | > Torch CUDNN benchmark: False
+ | > Torch TF32 MatMul: False
+ > Start Tensorboard: tensorboard --logdir=c:\Users\Deyvi\Downloads\AI\virtual_intelligence_core\run\training\GPT_XTTS_v2.0_LJSpeech_FT-September-13-2025_11+59PM-0000000
+
+ > Model has 518442047 parameters
+
+[4m[1m > EPOCH: 0/1000[0m
+ --> c:\Users\Deyvi\Downloads\AI\virtual_intelligence_core\run\training\GPT_XTTS_v2.0_LJSpeech_FT-September-13-2025_11+59PM-0000000
+
+[1m > TRAINING (2025-09-13 23:59:41) [0m
+
+[1m   --> TIME: 2025-09-14 00:00:56 -- STEP: 0/7 -- GLOBAL_STEP: 0[0m
+     | > loss_text_ce: 0.03845709189772606  (0.03845709189772606)
+     | > loss_mel_ce: 3.965463876724243  (3.965463876724243)
+     | > loss: 0.04766572639346123  (0.04766572639346123)
+     | > current_lr: 5e-06 
+     | > step_time: 19.0558  (19.055829763412476)
+     | > loader_time: 55.1033  (55.103320360183716)
+
+
+[1m > EVALUATION [0m
+
