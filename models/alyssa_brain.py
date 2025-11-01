@@ -31,13 +31,28 @@ class Brain:
                 n_batch=512,
                 use_mlock=True,
                 flash_attn=True,
-                verbose=False
+                verbose=True
             )
             logging.info("Conscious model loaded successfully.")
         except Exception as e:
             logging.error(f"Failed to load conscious model: {e}")
             raise
 
+        try:
+            self.subconscious_model = Llama( 
+                model_path=self.subconscious_model_path,
+                n_gpu_layers=16, 
+                n_ctx=512,
+                n_batch=256,
+                use_mlock=False,
+                flash_attn=True,
+                verbose=True
+            )
+            logging.info("Subconscious model loaded successfully.")
+        except Exception as e:
+            logging.error(f"Failed to load subconscious model: {e}")
+            raise
+        
     def generate_conscious_response(
         self,
         user_input: str,
@@ -114,15 +129,6 @@ class Brain:
     ) -> Dict[str, str]:
         try:
             subconscious_prompt_content = self.subconscious_prompt
-            subconscious_model = Llama(
-                model_path=self.subconscious_model_path,
-                n_gpu_layers=16,
-                n_ctx=512,
-                n_batch=256,
-                use_mlock=False,
-                flash_attn=True,
-                verbose=False
-            )
 
             # Prepare the prompt
             prompt = [
@@ -130,7 +136,7 @@ class Brain:
                 {"role": "user", "content": trigger_text}
             ]
 
-            response = subconscious_model.create_chat_completion(
+            response = self.subconscious_model.create_chat_completion(
                 messages=prompt,
                 temperature=0.5, # Increase randomness for creativity
                 max_tokens=60,
@@ -177,11 +183,7 @@ class Brain:
                 "action_urge": "nenhuma"
             }
         finally:
-            try:
-                if 'subconscious_model' in locals():
-                    del subconscious_model
-            except Exception as e:
-                logging.error(f"Erro ao liberar modelo subconsciente: {str(e)}")
+            pass
 
     def internal_dialogue_with_subconscious(
         self,

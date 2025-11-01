@@ -3,14 +3,14 @@
 from config.system_prompt import *
 
 CONSCIOUS_MODEL_PATHS = {
-    "alyssa": "models/gemma-3-1b-it-Q3_K_L.gguf",
-    "fairy": "models/gemma-3-1b-it-Q3_K_L.gguf",
-    "ishtar": "models/gemma-3-1b-it-Q3_K_L.gguf",
-    "jarvis": "models/gemma-3-1b-it-Q3_K_L.gguf"
+    "alyssa": "models/gemma-3-1b-it-q4_0.gguf",
+    "fairy": "models/gemma-3-1b-it-q4_0.gguf",
+    "ishtar": "models/gemma-3-1b-it-q4_0.gguf",
+    "jarvis": "models/gemma-3-1b-it-q4_0.gguf"
 }
 SUBCONSCIOUS_MODEL_PATHS = {
     "alyssa": "models/gemma-3-270m-it-F16.gguf",
-    "fairy": "models/Qwen2-500M-Instruct-IQ4_XS.gguf",
+    "fairy": "models/gemma-3-270m-it-F16.gguf",
     "ishtar": "models/Qwen2-500M-Instruct-IQ4_XS.gguf",
     "jarvis": "models/Qwen2-500M-Instruct-IQ4_XS.gguf"
 }
@@ -27,7 +27,7 @@ CHARACTER_CONFIGS = {
         "voice_id": "T3ZeSw265kJ0jRIeLTFw",
         "voice_model_path": None, # Alyssa might not use local TTS
         "use_vision": False,
-        "context_token_limit": 8192
+        "context_token_limit": 32768
     },
     "ishtar": {
         "name": "Ishtar",

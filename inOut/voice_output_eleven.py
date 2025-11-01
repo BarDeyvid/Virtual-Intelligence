@@ -5,7 +5,6 @@ import logging
 import requests
 import io # Para lidar com dados de áudio em memória
 from pydub import AudioSegment # Para converter MP3 para PCM
-AudioSegment.converter = r"C:\\ffmpeg\\bin\\ffmpeg.exe"
 import gc # Para limpeza de memória
 import aiohttp # Importado para requisições assíncronas
 import re # Importado para expressões regulares

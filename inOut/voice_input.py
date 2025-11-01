@@ -20,7 +20,7 @@ from transformers import pipeline
 from transformers.utils import is_flash_attn_2_available
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def whisper_worker(input_queue: Queue, output_queue: Queue, model_name="openai/whisper-large-v3"):
+def whisper_worker(input_queue: Queue, output_queue: Queue, model_name="openai/whisper-large-v3-turbo"):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
@@ -32,6 +32,15 @@ def whisper_worker(input_queue: Queue, output_queue: Queue, model_name="openai/w
         device=device,
         chunk_length_s=2.5,
         stride_length_s=[0.5, 0.5],
+        generate_kwargs = {
+            "num_beams": 1,
+            "condition_on_prev_tokens": False,
+            "compression_ratio_threshold": 1.35,  # zlib compression ratio threshold (in token space)
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "logprob_threshold": -1.0,
+            "no_speech_threshold": 0.6,
+            "return_timestamps": True,
+        },
         model_kwargs={
             "attn_implementation": "sdpa"
         } if is_flash_attn_2_available() else {"attn_implementation": "sdpa"},
@@ -156,20 +165,6 @@ class VoicePipeline:
                 })
                 logging.info(f"🔗 Segmento enviado pro Whisper ({total_length_sec:.2f}s)")
 
-                # Reinicia o detector de voz pra nova captura
-                try:
-                    self.speaker_id.restart_stream()
-                    logging.info("🔁 Stream reiniciado após transcrição")
-                except AttributeError:
-                    # fallback se o SpeakerIdentifier não tiver restart_stream()
-                    try:
-                        self.speaker_id.stop_stream()
-                        time.sleep(0.1)
-                        self.speaker_id.start_stream()
-                        logging.info("🔁 Stream reiniciado (fallback)")
-                    except Exception as e:
-                        logging.error(f"⚠️ Falha ao reiniciar stream: {e}")
-
 
         except Exception as e:
             logging.error(f"❌ Erro ao pré-processar segmento: {e}")
@@ -181,6 +176,7 @@ class VoicePipeline:
             return None
 
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
     pipeline = VoicePipeline()
     pipeline.start()
     try:

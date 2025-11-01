@@ -20,8 +20,6 @@ except Exception:  # pragma: no cover – just to keep the file importable witho
 # ------------------------------------------------------------------
 # Local imports
 # ------------------------------------------------------------------
-from engine.ai_control import AIControl
-from engine.screen_capture import capture_screen
 from models.alyssa_brain import Brain      # classe que encapsula o LLM
 from memory.alyssa_memory import MemorySystem
 
@@ -40,10 +38,7 @@ class AlyssaEngine:
         """
         self.name = character_config.get("name", "Unknown Character")
         self.vision_queue = vision_queue
-        self.use_vision = bool(character_config.get("use_vision", False))
-        self.vision_source = "camera" # 'camera' ou 'screen'
         # no __init__ – antes de criar os objetos já existentes
-        self.lmstudio_url = character_config.get("lmstudio_url", "http://localhost:1234")   # <‑‑ porta padrão 1234
         self.ctx_limit = character_config.get("context_token_limit", 4000)
         conscious_model_path = character_config["conscious_model_path"]
         subconscious_model_path = character_config["subconscious_model_path"]
@@ -51,9 +46,6 @@ class AlyssaEngine:
         subconscious_prompt = character_config["subconscious_prompt"]
         db_path = character_config["db_path"]
         
-
-        self.multimodal_description: Optional[str] = None
-
         # Brain: carrega os modelos LLM
         self.brain = Brain(
             conscious_model_path,
@@ -64,18 +56,10 @@ class AlyssaEngine:
         )
 
         # Nova linha
-        self.last_vision_meta: Dict[str, Any] = {} # Guarda os ÚLTIMOS metadados da visão
         self.memory = MemorySystem(db_path=db_path)
 
         self.input_queue: asyncio.Queue[str] = asyncio.Queue()
         #asyncio.create_task(self._consume_input_queue())
-
-
-        # AIControl: visão computacional + controle de PC
-        self.ai_ctrl = AIControl(
-            brain=self.brain,
-            device="cuda" if torch.cuda.is_available() else "cpu"
-        )
 
         # Logger – apenas erros e críticos no nível padrão, mas
         # podemos mudar dinamicamente se precisarmos de mais verbosidade.
@@ -173,104 +157,28 @@ class AlyssaEngine:
 
 
     
-    async def _capture_frame(self):
-        """
-        Captura um frame da webcam OU da tela, dependendo de self.vision_source.
-        Retorna um frame ou None se `use_vision` for False.
-        """
-        if not self.use_vision:
-            return None
-
-        loop = asyncio.get_running_loop()
-
-        if self.vision_source == "screen":
-            # Roda a captura de tela (síncrona) em um executor para não bloquear
-            return await loop.run_in_executor(None, capture_screen)
-        else: # Padrão é a câmera
-            # A captura da câmera já é relativamente rápida
-            cap = cv2.VideoCapture(0)
-            success, frame = cap.read()
-            cap.release()
-            return frame if success else None
-
-    async def _call_multimodal(self, meta: Dict[str, Any]) -> str:
-        """
-        Chama Gemma 4B via LM‑Studio com o conteúdo da visão.
-        O *meta* deve conter:
-            - o texto OCR (str)
-            - lista de objetos (list)
-            - lista de gestos (list)
-        Se houver frame disponível ele será enviado em Base64 junto ao texto.
-        """
-        # 1️⃣ Preparar dados
-        ocr = meta.get("ocr_text", "")
-        objects = meta.get("objects", [])
-        gestures = meta.get("gestures", [])
-
-        # Construir mensagem “user” a partir dos três campos
-        parts = [f"OCR: {ocr}" if ocr else None,
-                f"Objetos: {', '.join(objects)}" if objects else None,
-                f"Gesta(s): {', '.join(gestures)}" if gestures else None]
-        user_content = "; ".join(filter(None, parts))
-
-        # Se houver frame (captura opcional), codifique em Base64
-        image_b64: str | None = None
-        if self.use_vision:
-            frame = await self._capture_frame()
-            if frame is not None:
-                _, buffer = cv2.imencode(".jpg", frame)
-                image_b64 = base64.b64encode(buffer).decode("utf-8")
-
-        if image_b64:
-            user_content += f"\n<image_base64>{image_b64}</image_base64>"
-
-        # 2️⃣ Montar payload para LM‑Studio
-        payload = {
-            "model": "google/gemma-3-4b",
-            "messages": [
-                {"role": "system", "content": "Descreva a cena de forma rica e detalhada."},
-                {"role": "user",   "content": user_content}
-            ],
-            "max_tokens": 512,
-            "temperature": 0.7,
-            "stream": False
-        }
-
-        # 3️⃣ Enviar via httpx (async)
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.post(
-                    f"{self.lmstudio_url}/v1/chat/completions",
-                    json=payload,
-                    timeout=30.0
-                )
-                resp.raise_for_status()
-                data = resp.json()
-
-                content = data["choices"][0]["message"]["content"].strip()
-                return f"Visão multimodal: {content}"
-            except httpx.HTTPError as exc:
-                logging.error(f"[LM‑Studio] Erro de chamada: {exc}")
-                return "Desculpe, não consegui analisar a cena."
-
-
-    # ────────────────────────────────────────
-    # Adicione esta linha no __init__, logo após self.internal_dialogue_iterations = 3
-
-    async def consume_vision_queue(self) -> None:
-        """
-        Roda em background e consome a queue de visão,
-        apenas atualizando os metadados mais recentes disponíveis.
-        """
-        while True:
-            meta = await self.vision_queue.get()
-            # Apenas atualiza o último estado conhecido da visão
-            self.last_vision_meta = meta
-            self.vision_queue.task_done()
-
+#    async def _capture_frame(self):
+#        """
+#        Captura um frame da webcam OU da tela, dependendo de self.vision_source.
+#        Retorna um frame ou None se `use_vision` for False.
+#        """
+#        if not self.use_vision:
+#            return None
+#
+#        loop = asyncio.get_running_loop()
+#
+#        if self.vision_source == "screen":
+#            # Roda a captura de tela (síncrona) em um executor para não bloquear
+#            return await loop.run_in_executor(None, capture_screen)
+#        else: # Padrão é a câmera
+#            # A captura da câmera já é relativamente rápida
+#            cap = cv2.VideoCapture(0)
+#            success, frame = cap.read()
+#            cap.release()
+#            return frame if success else None
 
     # --------------------------------------------------------------
-    # 3 – Métodos auxiliares (mantidos inalterados)
+    # 3 – Métodos auxiliares
     # --------------------------------------------------------------
     def update_dominant_emotion(self, current_emotion: Dict[str, float]):
         """Atualiza a lista de histórico e recalcula a emoção dominante ponderada."""
@@ -368,17 +276,8 @@ class AlyssaEngine:
         # ------------------------------------------------------------------
         # 1️⃣ Captura frame (se habilitado)
         # ------------------------------------------------------------------
-        frame = await self._capture_frame() if not capture_screen_now else capture_screen()
-        vision_desc = self.multimodal_description or ""
-
-        # ------------------------------------------------------------------
-        # 2️⃣ Envio ao AIControl (PC + visão) – sem usar o modelo ainda
-        # ------------------------------------------------------------------
-        ai_result = await self.ai_ctrl.handle_input(
-            user_text=user_input,
-            frame=frame,
-            allow_pc_actions=True,
-        )
+        #frame = await self._capture_frame() if not capture_screen_now else capture_screen()
+        #vision_desc = self.multimodal_description or ""
 
         # ------------------------------------------------------------------
         # 3️⃣ Inferência de emoção (opcional)
@@ -415,17 +314,6 @@ class AlyssaEngine:
             context_parts.append(
                 "Memórias passadas relevantes:\n"
                 + "\n".join(m.conteudo for m in contexto_memoria)
-            )
-
-        # ---- b) Pergunta sobre visão ------------------------------------
-        user_asks_about_vision = any(word in user_input.lower()
-                                    for word in ["vê", "tela", "olha", "isso"])
-
-        if user_asks_about_vision and self.last_vision_meta:
-            logging.info("👁️ Pergunta sobre visão detectada. Gerando descrição rica…")
-            enriched_desc = await self._call_multimodal(self.last_vision_meta)
-            context_parts.append(
-                f"Contexto visual atual da tela do usuário: {enriched_desc}"
             )
 
         # ---- c) Construção de contexto completo -------------------------
@@ -478,7 +366,7 @@ class AlyssaEngine:
         messages = [
             {
                 "role": "system",
-                "content": vision_desc or self.brain.system_prompt,
+                "content": self.brain.system_prompt,
             },
             {
                 "role": "user",
@@ -500,7 +388,7 @@ class AlyssaEngine:
                 f"⚠️ Uso de token alto ({tokens_used}/{self.ctx_limit}). "
                 "Recarregando modelo pequeno…"
             )
-            await self._reload_conscious_model_async("models/conscious_small.gguf")
+            #await self._reload_conscious_model_async("models/conscious_small.gguf")
 
             # Re‑monta mensagens (mesma string) após reload
             prompt_text = "".join(m["content"] for m in messages)
@@ -518,7 +406,7 @@ class AlyssaEngine:
                 emotion_state=emotion_state or self.dominant_emotion,
                 subconscious_suggestion=None,   # será preenchido depois
                 context_info=contexto_completo,
-                system_directives=vision_desc,
+                system_directives=" ",
             )
         except Exception as e:
             logging.error(f"❌ Falha ao chamar LLM: {e}")
@@ -538,7 +426,7 @@ class AlyssaEngine:
         # ------------------------------------------------------------------
         if elapsed > 12:   # ajuste conforme sua GPU / modelo
             logging.warning(f"Resposta demorada ({elapsed:.1f}s). Recarregando modelo pequeno…")
-            await self._reload_conscious_model_async("models/conscious_small.gguf")
+            #await self._reload_conscious_model_async("models/conscious_small.gguf")
 
         # ------------------------------------------------------------------
         # 10️⃣ Processa o resultado do LLM (JSON já parseado)
@@ -608,10 +496,6 @@ class AlyssaEngine:
             "decision": decision,
             "actions": actions,
             "motor_output": motor_output,
-
-            # Dados de visão e PC (se houver)
-            "vision": ai_result.get("vision"),
-            "pc_action": ai_result.get("pc_action"),
         }
 
         return response
@@ -635,21 +519,6 @@ class AlyssaEngine:
         self.last_input_time = time.time()
 
         # ------------------------------------------------------------------
-        # 1️⃣ Captura frame (se habilitado)
-        # ------------------------------------------------------------------
-        frame = await self._capture_frame() if not capture_screen_now else capture_screen()
-        vision_desc = self.multimodal_description or ""
-
-        # ------------------------------------------------------------------
-        # 2️⃣ Envio ao AIControl (PC + visão) – sem usar o modelo ainda
-        # ------------------------------------------------------------------
-        ai_result = await self.ai_ctrl.handle_input(
-            user_text=user_input,
-            frame=frame,
-            allow_pc_actions=True,
-        )
-
-        # ------------------------------------------------------------------
         # 3️⃣ Inferência de emoção (opcional)
         # ------------------------------------------------------------------
         if roberta_input and not emotion_state:
@@ -769,7 +638,7 @@ class AlyssaEngine:
                 f"⚠️ Uso de token alto ({tokens_used}/{self.ctx_limit}). "
                 "Recarregando modelo pequeno…"
             )
-            await self._reload_conscious_model_async("models/conscious_small.gguf")
+            #await self._reload_conscious_model_async("models/conscious_small.gguf")
 
             # Re‑monta mensagens (mesma string) após reload
             prompt_text = "".join(m["content"] for m in messages)
@@ -807,7 +676,7 @@ class AlyssaEngine:
         # ------------------------------------------------------------------
         if elapsed > 12:   # ajuste conforme sua GPU / modelo
             logging.warning(f"Resposta demorada ({elapsed:.1f}s). Recarregando modelo pequeno…")
-            await self._reload_conscious_model_async("models/conscious_small.gguf")
+            #await self._reload_conscious_model_async("models/conscious_small.gguf")
 
         # ------------------------------------------------------------------
         # 10️⃣ Processa o resultado do LLM (JSON já parseado)
@@ -877,10 +746,6 @@ class AlyssaEngine:
             "decision": decision,
             "actions": actions,
             "motor_output": motor_output,
-
-            # Dados de visão e PC (se houver)
-            "vision": ai_result.get("vision"),
-            "pc_action": ai_result.get("pc_action"),
         }
 
         return response

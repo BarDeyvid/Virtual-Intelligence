@@ -5,6 +5,7 @@ import warnings
 import time
 from typing import Any, Dict
 
+import torch.multiprocessing as mp
 # ------------------------------
 # 1️⃣  Importações principais
 # ------------------------------
@@ -29,7 +30,7 @@ warnings.filterwarnings(
 # ----------------------------------------------
 vision_queue: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
 
-logging.basicConfig(level=logging.ERROR, filemode="w", filename="logs/alyssa_engine.log",
+logging.basicConfig(level=logging.INFO, filemode="a", filename="logs/alyssa_engine.log",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 
@@ -138,4 +139,5 @@ async def main_loop() -> None:
 # 5 Execução
 # ----------------------------------------------
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
     asyncio.run(main_loop())

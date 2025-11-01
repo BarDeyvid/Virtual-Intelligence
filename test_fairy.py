@@ -14,7 +14,7 @@ from datetime import datetime
 from collections import deque
 from pathlib import Path
 from typing import Any, Optional
-
+import torch.multiprocessing as mp
 from inflect import engine
 import requests
 import psutil
@@ -394,6 +394,7 @@ async def run_main(hud: FairyHUD):
 # Launch
 # ------------------------------
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
     app = QApplication.instance() or QApplication(sys.argv)
     loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(loop)
