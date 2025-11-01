@@ -1,5 +1,3 @@
-# main_test_engine.py
-
 import asyncio
 from collections import deque
 import logging
@@ -10,12 +8,11 @@ from typing import Any, Dict
 # ------------------------------
 # 1️⃣  Importações principais
 # ------------------------------
-from engine.alyssa_engine import AlyssaEngine          # <-- já contém as novas funções
+from engine.alyssa_engine import AlyssaEngine          
 from inOut.voice_output_eleven import StreamingTTSClient as ElevenLabsTTSClient
-from inOut.voice_output import JarvisTTSClient          # local Piper TTS
+from inOut.voice_output import JarvisTTSClient          
 from inOut.voice_input import VoicePipeline
-from config.characters import CHARACTER_CONFIGS        # dicionário de personagens
-
+from config.characters import CHARACTER_CONFIGS        
 # ------------------------------
 # 2️  Configurações globais
 # ------------------------------
