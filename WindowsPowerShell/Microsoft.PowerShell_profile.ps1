@@ -1,1 +1,0 @@
-& "C:\Users\Deyvi\Downloads\AI\.venv\Scripts\Activate.ps1"
