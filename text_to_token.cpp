@@ -7,25 +7,61 @@
 #include <random>
 #include <chrono>
 #include <filesystem>
+#include <cmath>
 
-// 🔹 Função utilitária para salvar tokens em arquivo binário
-void save_tokens(const std::vector<llama_token> &tokens, const std::string &path) {
+// Headers para o formato de memória Alyssa
+#pragma pack(push, 1)
+struct AlyssaMemHeader {
+    uint64_t timestamp;     // segundos desde epoch
+    uint64_t model_hash;    // hash do modelo GGUF
+    uint32_t n_tokens;      // número de tokens armazenados
+    uint32_t emo_dim;       // dimensão do vetor emocional
+};
+#pragma pack(pop)
+
+// 🔹 Salvar memória Alyssa (.mem)
+void save_memory(const std::string &path,
+                 const std::vector<llama_token> &tokens,
+                 const std::vector<float> &v_emo,
+                 const std::vector<float> &v_time,
+                 uint64_t model_hash) {
+
+    AlyssaMemHeader header;
+    header.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    header.model_hash = model_hash;
+    header.n_tokens = tokens.size();
+    header.emo_dim = v_emo.size();
+
     std::ofstream out(path, std::ios::binary);
-    if (!out) throw std::runtime_error("Erro ao abrir arquivo para salvar tokens.");
-    out.write(reinterpret_cast<const char *>(tokens.data()), tokens.size() * sizeof(llama_token));
-    std::cout << "💾 Tokens salvos em: " << path << " (" << tokens.size() << " tokens)\n";
+    out.write(reinterpret_cast<char*>(&header), sizeof(header));
+    out.write(reinterpret_cast<const char*>(tokens.data()), tokens.size() * sizeof(llama_token));
+    out.write(reinterpret_cast<const char*>(v_emo.data()), v_emo.size() * sizeof(float));
+    out.write(reinterpret_cast<const char*>(v_time.data()), v_time.size() * sizeof(float));
+    out.close();
+
+    std::cout << "💾 Memória salva em: " << path << "\n";
 }
 
-// 🔹 Função utilitária para carregar tokens do arquivo binário
-std::vector<llama_token> load_tokens(const std::string &path) {
+// 🔹 Carregar memória Alyssa (.mem)
+void load_memory(const std::string &path,
+                 std::vector<llama_token> &tokens,
+                 std::vector<float> &v_emo,
+                 std::vector<float> &v_time,
+                 AlyssaMemHeader &header_out) {
+
     std::ifstream in(path, std::ios::binary);
-    if (!in) throw std::runtime_error("Erro ao abrir arquivo para ler tokens.");
-    std::vector<llama_token> tokens(
-        std::filesystem::file_size(path) / sizeof(llama_token)
-    );
-    in.read(reinterpret_cast<char *>(tokens.data()), tokens.size() * sizeof(llama_token));
-    std::cout << "📂 Tokens recarregados: " << tokens.size() << " tokens\n";
-    return tokens;
+    in.read(reinterpret_cast<char*>(&header_out), sizeof(AlyssaMemHeader));
+
+    tokens.resize(header_out.n_tokens);
+    v_emo.resize(header_out.emo_dim);
+    v_time.resize(2);
+
+    in.read(reinterpret_cast<char*>(tokens.data()), tokens.size() * sizeof(llama_token));
+    in.read(reinterpret_cast<char*>(v_emo.data()), v_emo.size() * sizeof(float));
+    in.read(reinterpret_cast<char*>(v_time.data()), v_time.size() * sizeof(float));
+    in.close();
+
+    std::cout << "📂 Memória carregada de: " << path << "\n";
 }
 
 // 🔹 Gera vetor emocional aleatório
@@ -37,9 +73,9 @@ std::vector<float> generate_emotion_vector(int dim = 8) {
     return v;
 }
 
-int main(int argc, char **argv) {
-    const char *model_path = "models/gemma-3-270m-it-F16.gguf"; // Modelo 270M em F16 para prototipagem rapida
-    std::string save_path = "tokens.bin";
+int main() {
+    const char *model_path = "models/gemma-3-270m-it-F16.gguf";
+    std::string save_path = "alyssa.mem";
 
     llama_model_params model_params = llama_model_default_params();
     llama_context_params ctx_params = llama_context_default_params();
@@ -60,31 +96,26 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // 🔹 Timestamp atual
+    // Gera hash do modelo
+    char desc_buf[512];
+    llama_model_desc(model, desc_buf, sizeof(desc_buf));
+    uint64_t model_hash = std::hash<std::string>{}(std::string(desc_buf));
+    std::cout << "\n🔗 Modelo hash: 0x" << std::hex << model_hash << std::dec << "\n";
+
+    // Timestamp cíclico
     auto now = std::chrono::system_clock::now();
     auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+    std::vector<float> v_time = { std::sin(ts / 3600.0f), std::cos(ts / 3600.0f) };
 
-    // Normaliza timestamp em vetor cíclico
-    std::vector<float> v_time = {
-    std::sin(ts / 3600.0f), std::cos(ts / 3600.0f)
-    };
-
-    // 🔹 Entrada do usuário
+    // Entrada do usuário
     std::cout << "\n🗨️  Digite uma frase para tokenizar:\n> ";
     std::string input;
     std::getline(std::cin, input);
     input = "[TIME:" + std::to_string(v_time[0]) + "," + std::to_string(v_time[1]) + "] " + input;
 
-
     // Tokenização
     std::vector<llama_token> tokens(4096);
     int n = llama_tokenize(vocab, input.c_str(), input.size(), tokens.data(), tokens.size(), true, true);
-    if (n < 0) {
-        std::cerr << "❌ Erro na tokenização.\n";
-        llama_free(ctx);
-        llama_model_free(model);
-        return 1;
-    }
     tokens.resize(n);
 
     std::cout << "\n✅ Tokenização concluída (" << n << " tokens):\n";
@@ -92,41 +123,26 @@ int main(int argc, char **argv) {
         char buf[64];
         int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true);
         std::string piece(buf, len);
-        std::cout << "Token ID: " << std::setw(6) << t
-                  << " | Token Piece: " << piece << "\n";
-    }
-    
-    // 🔹 Salvar tokens
-    save_tokens(tokens, save_path);
-
-    // 🔹 Recarregar tokens e reconstruir texto
-    auto loaded = load_tokens(save_path);
-    std::string reconstructed;
-    for (auto t : loaded) {
-        char buf[64];
-        int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true);
-        reconstructed.append(buf, len);
+        std::cout << "Token ID: " << std::setw(6) << t << " | Token Piece: " << piece << "\n";
     }
 
-    std::cout << "\n🔁 Texto reconstruído: \033[36m" << reconstructed << "\033[0m\n";
-
-    // 🔹 Gera vetor emocional fake
     auto emo = generate_emotion_vector(8);
-    std::cout << "\n💫 Vetor emocional (8D): [";
-    for (size_t i = 0; i < emo.size(); ++i) {
-        std::cout << std::fixed << std::setprecision(3) << emo[i];
-        if (i < emo.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]\n";
 
+    // Salva .mem
+    save_memory(save_path, tokens, emo, v_time, model_hash);
 
+    // Carrega e imprime .mem
+    AlyssaMemHeader header;
+    std::vector<llama_token> tok2;
+    std::vector<float> emo2, vtime2;
+    load_memory(save_path, tok2, emo2, vtime2, header);
 
+    std::cout << "\n🧩 Header .mem:\n";
+    std::cout << "  Timestamp: " << header.timestamp << "\n";
+    std::cout << "  Model Hash: 0x" << std::hex << header.model_hash << std::dec << "\n";
+    std::cout << "  Tokens: " << header.n_tokens << "\n";
+    std::cout << "  Emoção Dim: " << header.emo_dim << "\n";
 
-    // 🔹 ID do modelo
-    int64_t model_id = llama_model_meta_count(model);
-    std::cout << "\n🔗 Meta Count do modelo: 0x" << std::hex << model_id << std::dec << "\n";
-
-    // 🔹 Limpeza
     llama_free(ctx);
     llama_model_free(model);
     std::cout << "\n🧹 Finalizado com sucesso!\n";
