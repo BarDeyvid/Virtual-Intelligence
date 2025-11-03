@@ -60,10 +60,21 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // 🔹 Timestamp atual
+    auto now = std::chrono::system_clock::now();
+    auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+
+    // Normaliza timestamp em vetor cíclico
+    std::vector<float> v_time = {
+    std::sin(ts / 3600.0f), std::cos(ts / 3600.0f)
+    };
+
     // 🔹 Entrada do usuário
     std::cout << "\n🗨️  Digite uma frase para tokenizar:\n> ";
     std::string input;
     std::getline(std::cin, input);
+    input = "[TIME:" + std::to_string(v_time[0]) + "," + std::to_string(v_time[1]) + "] " + input;
+
 
     // Tokenização
     std::vector<llama_token> tokens(4096);
@@ -84,7 +95,7 @@ int main(int argc, char **argv) {
         std::cout << "Token ID: " << std::setw(6) << t
                   << " | Token Piece: " << piece << "\n";
     }
-
+    
     // 🔹 Salvar tokens
     save_tokens(tokens, save_path);
 
@@ -107,6 +118,9 @@ int main(int argc, char **argv) {
         if (i < emo.size() - 1) std::cout << ", ";
     }
     std::cout << "]\n";
+
+
+
 
     // 🔹 ID do modelo
     int64_t model_id = llama_model_meta_count(model);
