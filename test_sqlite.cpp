@@ -26,7 +26,6 @@ std::vector<uint8_t> load_binary(const std::string &path) {
     return data;
 }
 
-// Insere no SQLite
 void insert_memory(sqlite3 *db, const std::string &path) {
     auto data = load_binary(path);
     AlyssaMemHeader header;
@@ -36,22 +35,56 @@ void insert_memory(sqlite3 *db, const std::string &path) {
     size_t blob_size = data.size() - sizeof(AlyssaMemHeader);
 
     sqlite3_stmt *stmt;
+    // Inclui n_tokens e emo_dim (4 colunas agora)
     const char *sql =
-        "INSERT INTO memories (timestamp, model_hash, tokens) VALUES (?, ?, ?);";
+        "INSERT INTO memories (timestamp, model_hash, n_tokens, emo_dim, tokens) VALUES (?, ?, ?, ?, ?);";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
         throw std::runtime_error("Erro ao preparar statement SQLite");
 
+    // 1. Timestamp
     sqlite3_bind_int64(stmt, 1, header.timestamp);
-    sqlite3_bind_text(stmt, 2, std::to_string(header.model_hash).c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_blob(stmt, 3, blob_data, blob_size, SQLITE_STATIC);
+    // 2. Model Hash
+    sqlite3_bind_int64(stmt, 2, header.model_hash);
+    // 3. n_tokens 
+    sqlite3_bind_int(stmt, 3, header.n_tokens);
+    // 4. emo_dim 
+    sqlite3_bind_int(stmt, 4, header.emo_dim);
+    // 5. Tokens (BLOB)
+    sqlite3_bind_blob(stmt, 5, blob_data, blob_size, SQLITE_STATIC);
 
     if (sqlite3_step(stmt) != SQLITE_DONE)
         throw std::runtime_error("Erro ao inserir memória");
 
     sqlite3_finalize(stmt);
-    std::cout << "💾 Memória inserida no banco com sucesso.\n";
+    std::cout << "💾 Memória inserida no banco com sucesso (Tokens: " << header.n_tokens << ", Emo Dim: " << header.emo_dim << ").\n";
 }
+
+void select_memory(sqlite3 *db, int id) {
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT timestamp, model_hash, tokens FROM memories WHERE id = ?;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        throw std::runtime_error("Erro ao preparar statement SQLite");
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        int64_t timestamp = sqlite3_column_int64(stmt, 0);
+        const unsigned char *model_hash = sqlite3_column_text(stmt, 1);
+        const void *tokens = sqlite3_column_blob(stmt, 2);
+        int token_size = sqlite3_column_bytes(stmt, 2);
+
+        std::cout << "Timestamp: " << timestamp << "\n";
+        std::cout << "Model Hash: " << model_hash << "\n";
+        std::cout << "Token Size: " << token_size << " bytes\n";
+    } else {
+        std::cout << "Memória com ID " << id << " não encontrada.\n";
+    }
+
+    sqlite3_finalize(stmt);
+}
+
 
 int main() {
     sqlite3 *db;
@@ -63,7 +96,9 @@ int main() {
         CREATE TABLE IF NOT EXISTS memories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp INTEGER,
-            model_hash TEXT,
+            model_hash INTEGER, 
+            n_tokens INTEGER,
+            emo_dim INTEGER,
             tokens BLOB
         );
     )SQL";
@@ -75,6 +110,8 @@ int main() {
     }
 
     insert_memory(db, "alyssa.mem");
+
+    select_memory(db, 1);
 
     sqlite3_close(db);
     return 0;

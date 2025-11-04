@@ -74,38 +74,38 @@ std::vector<float> generate_emotion_vector(int dim = 8) {
 }
 
 int main() {
-    const char *model_path = "models/gemma-3-270m-it-F16.gguf";
-    std::string save_path = "alyssa.mem";
+    const char *model_path = "models/gemma-3-270m-it-F16.gguf"; //
+    std::string save_path = "alyssa.mem"; //
 
-    llama_model_params model_params = llama_model_default_params();
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = 512;
+    llama_model_params model_params = llama_model_default_params(); //
+    llama_context_params ctx_params = llama_context_default_params(); //
+    ctx_params.n_ctx = 512; //
 
-    std::cout << "🧠 Carregando modelo: " << model_path << std::endl;
-    llama_model *model = llama_model_load_from_file(model_path, model_params);
-    if (!model) {
-        std::cerr << "❌ Falha ao carregar modelo.\n";
-        return 1;
-    }
+    std::cout << "🧠 Carregando modelo: " << model_path << std::endl; //
+    llama_model *model = llama_model_load_from_file(model_path, model_params); //
+    if (!model) { //
+        std::cerr << "❌ Falha ao carregar modelo.\n"; //
+        return 1; //
+    } //
 
-    const llama_vocab *vocab = llama_model_get_vocab(model);
-    llama_context *ctx = llama_init_from_model(model, ctx_params);
-    if (!ctx) {
-        std::cerr << "❌ Falha ao criar contexto.\n";
-        llama_model_free(model);
-        return 1;
-    }
+    const llama_vocab *vocab = llama_model_get_vocab(model); //
+    llama_context *ctx = llama_init_from_model(model, ctx_params); //
+    if (!ctx) { //
+        std::cerr << "❌ Falha ao criar contexto.\n"; //
+        llama_model_free(model); //
+        return 1; //
+    } //
 
     // Gera hash do modelo
-    char desc_buf[512];
-    llama_model_desc(model, desc_buf, sizeof(desc_buf));
-    uint64_t model_hash = std::hash<std::string>{}(std::string(desc_buf));
-    std::cout << "\n🔗 Modelo hash: 0x" << std::hex << model_hash << std::dec << "\n";
+    char desc_buf[512]; //
+    llama_model_desc(model, desc_buf, sizeof(desc_buf)); //
+    uint64_t model_hash = std::hash<std::string>{}(std::string(desc_buf)); //
+    std::cout << "\n🔗 Modelo hash: 0x" << std::hex << model_hash << std::dec << "\n"; //
 
     // Timestamp cíclico
-    auto now = std::chrono::system_clock::now();
-    auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-    std::vector<float> v_time = { std::sin(ts / 3600.0f), std::cos(ts / 3600.0f) };
+    auto now = std::chrono::system_clock::now(); //
+    auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count(); //
+    std::vector<float> v_time = { std::sin(ts / 3600.0f), std::cos(ts / 3600.0f) }; //
 
     // Entrada do usuário
     std::cout << "\n🗨️  Digite uma frase para tokenizar:\n> ";
@@ -114,17 +114,17 @@ int main() {
     input = "[TIME:" + std::to_string(v_time[0]) + "," + std::to_string(v_time[1]) + "] " + input;
 
     // Tokenização
-    std::vector<llama_token> tokens(4096);
-    int n = llama_tokenize(vocab, input.c_str(), input.size(), tokens.data(), tokens.size(), true, true);
-    tokens.resize(n);
+    std::vector<llama_token> tokens(4096); //
+    int n = llama_tokenize(vocab, input.c_str(), input.size(), tokens.data(), tokens.size(), true, true); //
+    tokens.resize(n); //
 
-    std::cout << "\n✅ Tokenização concluída (" << n << " tokens):\n";
-    for (auto t : tokens) {
-        char buf[64];
-        int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true);
-        std::string piece(buf, len);
-        std::cout << "Token ID: " << std::setw(6) << t << " | Token Piece: " << piece << "\n";
-    }
+    std::cout << "\n✅ Tokenização concluída (" << n << " tokens):\n"; //
+    for (auto t : tokens) { //
+        char buf[64]; //
+        int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true); //
+        std::string piece(buf, len); //
+        std::cout << "Token ID: " << std::setw(6) << t << " | Token Piece: " << piece << "\n"; //
+    } //
 
     auto emo = generate_emotion_vector(8);
 
