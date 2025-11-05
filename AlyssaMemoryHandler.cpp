@@ -11,16 +11,13 @@
 #include "llama.h"
 #include <cmath>
 #include <stdexcept> // Para std::runtime_error
+#include <algorithm> // Para std::sort
 
 // --- Classe Utils Melhorada ---
-// Não há necessidade de uma instância se ela só tem métodos utilitários.
-// Usar 'static' é mais eficiente.
 class Utils {
 public:
-    // Não precisamos de construtor ou destrutor se a classe for puramente estática
-    
     static std::vector<float> getTimeStamp() {
-        // Timestamp cíclico
+        // Timestamp cíclico (hora do dia em formato seno/cosseno)
         auto now = std::chrono::system_clock::now();
         auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
         std::vector<float> v_time = { std::sin(ts / 3600.0f), std::cos(ts / 3600.0f) };
@@ -29,17 +26,15 @@ public:
 };
 
 // --- Classe AlyssaInterprets Melhorada ---
-// Adicionado gerenciamento de recursos RAII (Destrutor) e tratamento de exceções.
 class AlyssaInterprets { 
     int ctx;
-    llama_model *model; // Mover para membro da classe para gerenciar o ciclo de vida
+    llama_model *model;
     llama_context *model_ctx;
     const llama_vocab *vocab;
     llama_model_params model_params;
     llama_context_params ctx_params;
 
 public:
-    // O 'save_path' não estava sendo usado, mas mantive na assinatura
     AlyssaInterprets(const char *model_path, const std::string save_path, int ctx_val)
         : ctx(ctx_val), model(nullptr), model_ctx(nullptr), 
           model_params(llama_model_default_params()), 
@@ -50,21 +45,17 @@ public:
         
         this->model = llama_model_load_from_file(model_path, model_params);
         if (!model) {
-            // MUDANÇA: Usar exceções é o padrão C++. 'exit()' é ruim.
             throw std::runtime_error("❌ Falha ao carregar modelo.");
         }
 
         this->vocab = llama_model_get_vocab(model); 
         this->model_ctx = llama_init_from_model(model, ctx_params); 
-        // Duplicata Removida
         if (!model_ctx) {
-            // Se a criação do contexto falhar, devemos liberar o modelo antes de sair.
-            llama_model_free(model); // Limpa o recurso alocado
+            llama_model_free(model);
             throw std::runtime_error("❌ Falha ao criar contexto.");
         }
     };
 
-    // Destrutor para RAII: Isso garante que os recursos da LLaMA sejam liberados quando o objeto sair de escopo.
     ~AlyssaInterprets() {
         if (model_ctx) {
             llama_free(model_ctx);
@@ -75,7 +66,6 @@ public:
         std::cout << "AlyssaInterprets finalizado e recursos liberados.\n";
     }
 
-    // MUDANÇA: Agora usa o 'this->model'
     uint64_t ModelHash() {
         std::vector<char> desc_vef(ctx);
         llama_model_desc(model, desc_vef.data(), desc_vef.size());
@@ -85,7 +75,6 @@ public:
     };
     
     std::vector<llama_token> Tokenizer(std::string input) {
-        // MUDANÇA: Usando o método estático
         std::vector<float> v_time = Utils::getTimeStamp();
         input = "[TIME:" + std::to_string(v_time[0]) + "," + std::to_string(v_time[1]) + "] " + input;
         
@@ -99,7 +88,6 @@ public:
         std::cout << "\nTokenização concluída (" << n << " tokens):\n";
         for (auto t : tokens) {
             char buf[64];
-            // MUDANÇA: Passando o tamanho do buffer corretamente
             int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true);
             if (len >= 0) {
                 std::string piece(buf, len);
@@ -109,10 +97,18 @@ public:
         return tokens;
     }
 
-    // MUDANÇA: Corrigido o bug 'sizeof(char*)'. 
     int32_t token_to_piece(llama_token t, char *piece_buf, size_t buf_size) {
         return llama_token_to_piece(vocab, t, piece_buf, buf_size, 0, true);
     }
+};
+
+// Struct para retornar as memórias mais relevantes
+struct MemoryMatch {
+    int id;
+    double similarity;
+    uint64_t timestamp;
+    uint32_t n_tokens;
+    uint32_t emo_dim;
 };
 
 class SqliteHandler {
@@ -128,7 +124,29 @@ private:
     #pragma pack(pop)
     sqlite3_stmt *stmt;
 
-    // Função privada para garantir que a tabela exista
+    // Função auxiliar privada: Cálculo da Similaridade de Cosseno
+    double calculate_cosine_similarity(const std::vector<float>& v1, const std::vector<float>& v2) {
+        if (v1.size() != v2.size() || v1.empty()) {
+            return 0.0; 
+        }
+
+        double dot_product = 0.0;
+        double norm_v1 = 0.0;
+        double norm_v2 = 0.0;
+
+        for (size_t i = 0; i < v1.size(); ++i) {
+            dot_product += static_cast<double>(v1[i]) * static_cast<double>(v2[i]);
+            norm_v1 += static_cast<double>(v1[i]) * static_cast<double>(v1[i]);
+            norm_v2 += static_cast<double>(v2[i]) * static_cast<double>(v2[i]);
+        }
+
+        if (norm_v1 == 0.0 || norm_v2 == 0.0) {
+            return 0.0;
+        }
+
+        return dot_product / (std::sqrt(norm_v1) * std::sqrt(norm_v2));
+    }
+
     void create_table_if_not_exists() {
          const char *create_sql = R"SQL(
             CREATE TABLE IF NOT EXISTS memories (
@@ -144,20 +162,20 @@ private:
         const char *create_index = R"SQL(
             CREATE INDEX IF NOT EXISTS idx_timestamp ON memories(timestamp);
             CREATE INDEX IF NOT EXISTS idx_model_hash ON memories(model_hash);
-            )SQL"; // 
+            )SQL";
 
         char *errMsg = nullptr;
         if (sqlite3_exec(db, create_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
             std::string err = "Erro ao criar tabela: ";
             err += errMsg;
             sqlite3_free(errMsg);
-            throw std::runtime_error(err); // Lança exceção
+            throw std::runtime_error(err);
         }
         if (sqlite3_exec(db, create_index, nullptr, nullptr, &errMsg) != SQLITE_OK) {
             std::string err = "Erro ao criar index: ";
             err += errMsg;
             sqlite3_free(errMsg);
-            throw std::runtime_error(err); // Lança exceção
+            throw std::runtime_error(err);
         }
     }
 
@@ -172,7 +190,6 @@ public:
         }
         std::cout << "Memoria (SQLite) aberta: " << db_path << std::endl;
         
-        // Garante que a tabela exista assim que o handler for criado
         create_table_if_not_exists(); 
     }
 
@@ -186,17 +203,131 @@ public:
         }
     }
 
-    // Sua função, está perfeita.
-    std::vector<uint8_t> load_binary(const std::string &path) {
-        std::ifstream in(path, std::ios::binary);
-        if (!in) throw std::runtime_error("Falha ao abrir .mem: " + path);
+    // Função para salvar memória no SQLite
+    bool save_memory_to_sqlite(const std::vector<llama_token> &tokens,
+                               const std::vector<float> &v_emo,
+                               const std::vector<float> &v_time,
+                               uint64_t model_hash) {
         
-        // Use std::filesystem::file_size para segurança
-        size_t file_size = std::filesystem::file_size(path);
-        std::vector<uint8_t> data(file_size);
+        AlyssaMemHeader header;
+        header.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        header.model_hash = model_hash;
+        header.n_tokens = tokens.size();
+        header.emo_dim = v_emo.size();
+
+        const int VTIME_DIM = 2; 
+        size_t tokens_size_bytes = tokens.size() * sizeof(llama_token);
+        size_t emo_size_bytes = v_emo.size() * sizeof(float);
+        size_t vtime_size_bytes = v_time.size() * sizeof(float);
+
+        if (v_time.size() != VTIME_DIM) {
+             std::cerr << "Alerta: v_time.size() (" << v_time.size() << ") e diferente de VTIME_DIM (2)\n";
+        }
+
+        std::vector<uint8_t> blob_data(tokens_size_bytes + emo_size_bytes + vtime_size_bytes);
         
-        in.read(reinterpret_cast<char*>(data.data()), data.size());
-        return data;
+        uint8_t *current_ptr = blob_data.data();
+        std::memcpy(current_ptr, tokens.data(), tokens_size_bytes);
+        current_ptr += tokens_size_bytes;
+        std::memcpy(current_ptr, v_emo.data(), emo_size_bytes);
+        current_ptr += emo_size_bytes;
+        std::memcpy(current_ptr, v_time.data(), vtime_size_bytes);
+        
+        const char *sql = "INSERT INTO memories (timestamp, model_hash, n_tokens, emo_dim, tokens) VALUES (?, ?, ?, ?, ?);";
+
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            std::string err = "Erro ao preparar statement SQLite: ";
+            err += sqlite3_errmsg(db);
+            throw std::runtime_error(err);
+        }
+        
+        sqlite3_bind_int64(stmt, 1, header.timestamp);
+        sqlite3_bind_int64(stmt, 2, header.model_hash);
+        sqlite3_bind_int(stmt, 3, header.n_tokens);
+        sqlite3_bind_int(stmt, 4, header.emo_dim);
+        sqlite3_bind_blob(stmt, 5, blob_data.data(), blob_data.size(), SQLITE_STATIC);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            std::string err = "Erro ao Inserir Memoria: ";
+            err += sqlite3_errmsg(db);
+            sqlite3_finalize(stmt);
+            stmt = nullptr;
+            throw std::runtime_error(err);
+        }
+        
+        std::cout << "Memoria inserida no SQLITE (Tokens: " << header.n_tokens << ", Emo Dim: " << header.emo_dim << ")\n";
+        sqlite3_finalize(stmt);
+        stmt = nullptr; 
+        return true;
+    };
+
+    // Busca contextual por similaridade emocional
+    std::vector<MemoryMatch> find_similar_memories(const std::vector<float>& v_emo_query, int top_k) {
+        std::vector<MemoryMatch> matches;
+        if (v_emo_query.empty()) {
+            std::cerr << "Erro: Vetor emocional de busca esta vazio.\n";
+            return matches;
+        }
+
+        // Seleciona as colunas necessárias para o cálculo e identificação
+        const char *sql = "SELECT id, timestamp, n_tokens, emo_dim, tokens FROM memories;";
+        sqlite3_stmt *select_stmt = nullptr;
+
+        if (sqlite3_prepare_v2(db, sql, -1, &select_stmt, nullptr) != SQLITE_OK) {
+            std::cerr << "Erro ao preparar busca por similaridade: " << sqlite3_errmsg(db) << "\n";
+            return matches;
+        }
+
+        // Itera sobre todos os registros
+        while (sqlite3_step(select_stmt) == SQLITE_ROW) {
+            int id = sqlite3_column_int(select_stmt, 0);
+            uint64_t timestamp = sqlite3_column_int64(select_stmt, 1);
+            int n_tokens_stored = sqlite3_column_int(select_stmt, 2);
+            int emo_dim_stored = sqlite3_column_int(select_stmt, 3);
+            const uint8_t *blob_data = (const uint8_t*)sqlite3_column_blob(select_stmt, 4);
+
+            if (emo_dim_stored != v_emo_query.size()) {
+                std::cerr << "Aviso: Memória ID " << id << " ignorada (Dimensoes incompativeis: " << emo_dim_stored << " != " << v_emo_query.size() << ").\n";
+                continue;
+            }
+
+            // 1. Calcular offsets para a seção v_emo dentro do BLOB
+            size_t tokens_size_bytes = n_tokens_stored * sizeof(llama_token);
+            size_t emo_size_bytes = emo_dim_stored * sizeof(float);
+
+            // 2. Ponteiro para o início do vetor emocional armazenado
+            const uint8_t *emo_ptr = blob_data + tokens_size_bytes;
+
+            // 3. Copia o vetor emocional do BLOB para um vetor C++ temporário
+            std::vector<float> v_emo_stored(emo_dim_stored);
+            std::memcpy(v_emo_stored.data(), emo_ptr, emo_size_bytes);
+
+            // 4. Calcula a similaridade
+            double similarity = calculate_cosine_similarity(v_emo_query, v_emo_stored);
+
+            // 5. Armazena o resultado
+            matches.push_back({
+                id,
+                similarity,
+                timestamp,
+                static_cast<uint32_t>(n_tokens_stored),
+                static_cast<uint32_t>(emo_dim_stored)
+            });
+        }
+
+        sqlite3_finalize(select_stmt);
+
+        // Ordena os resultados por similaridade (maior para menor)
+        std::sort(matches.begin(), matches.end(), [](const MemoryMatch& a, const MemoryMatch& b) {
+            return a.similarity > b.similarity;
+        });
+
+        // Retorna top_k resultados
+        if (matches.size() > top_k) {
+            matches.resize(top_k);
+        }
+
+        return matches;
     }
 
     bool save_memory_to_file(const std::string &path,
@@ -226,68 +357,6 @@ public:
         std::cout << "Memoria salva em ARQUIVO: " << path << "\n";
         return true;
     }
-
-
-    // MUDANÇA: Função 'save_memory_to_sqlite' refatorada
-    bool save_memory_to_sqlite(const std::vector<llama_token> &tokens,
-                               const std::vector<float> &v_emo,
-                               const std::vector<float> &v_time,
-                               uint64_t model_hash) {
-        
-        AlyssaMemHeader header;
-        header.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        header.model_hash = model_hash;
-        header.n_tokens = tokens.size();
-        header.emo_dim = v_emo.size();
-
-        // 1. Em vez de salvar em disco, criamos o BLOB em um vetor na memória
-        const int VTIME_DIM = 2; 
-        size_t tokens_size_bytes = tokens.size() * sizeof(llama_token);
-        size_t emo_size_bytes = v_emo.size() * sizeof(float);
-        size_t vtime_size_bytes = v_time.size() * sizeof(float); // Mais seguro que usar VTIME_DIM
-
-        if (v_time.size() != VTIME_DIM) {
-             std::cerr << "Alerta: v_time.size() (" << v_time.size() << ") e diferente de VTIME_DIM (2)\n";
-        }
-
-        std::vector<uint8_t> blob_data(tokens_size_bytes + emo_size_bytes + vtime_size_bytes);
-        
-        // 2. Copiamos os dados para o vetor (nosso BLOB)
-        uint8_t *current_ptr = blob_data.data();
-        std::memcpy(current_ptr, tokens.data(), tokens_size_bytes);
-        current_ptr += tokens_size_bytes;
-        std::memcpy(current_ptr, v_emo.data(), emo_size_bytes);
-        current_ptr += emo_size_bytes;
-        std::memcpy(current_ptr, v_time.data(), vtime_size_bytes);
-        
-        // 3. Agora, inserimos no SQLite
-        const char *sql = "INSERT INTO memories (timestamp, model_hash, n_tokens, emo_dim, tokens) VALUES (?, ?, ?, ?, ?);";
-
-        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            std::string err = "Erro ao preparar statement SQLite: ";
-            err += sqlite3_errmsg(db);
-            throw std::runtime_error(err);
-        }
-        
-        sqlite3_bind_int64(stmt, 1, header.timestamp);
-        sqlite3_bind_int64(stmt, 2, header.model_hash);
-        sqlite3_bind_int(stmt, 3, header.n_tokens);
-        sqlite3_bind_int(stmt, 4, header.emo_dim);
-        sqlite3_bind_blob(stmt, 5, blob_data.data(), blob_data.size(), SQLITE_STATIC); // Usamos o vetor
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            std::string err = "Erro ao Inserir Memoria: ";
-            err += sqlite3_errmsg(db);
-            sqlite3_finalize(stmt); // Limpa antes de lançar
-            stmt = nullptr;
-            throw std::runtime_error(err);
-        }
-        
-        std::cout << "Memoria inserida no SQLITE (Tokens: " << header.n_tokens << ", Emo Dim: " << header.emo_dim << ")\n";
-        sqlite3_finalize(stmt);
-        stmt = nullptr; 
-        return true;
-    };
 
     bool load_memory_from_sqlite(int id, 
                                  AlyssaInterprets &interpreter,
@@ -366,47 +435,70 @@ public:
 
 // --- Main (Atualizada para testar as novas funções) ---
 int main() {
-    // Inicializa a biblioteca LLaMA (boa prática)
     llama_backend_init(); 
     
     try {
         const char *model_path = "models/gemma-3-270m-it-F16.gguf"; 
         std::string save_path = "alyssa.mem";
         
-        // O SqliteHandler agora criará a tabela com a query SQL corrigida.
         SqliteHandler mem("alyssa_memories.db"); 
-        AlyssaInterprets interpreter(model_path, save_path, 512);
+        // O AlyssaInterprets irá falhar se o arquivo do modelo não existir.
+        AlyssaInterprets interpreter(model_path, save_path, 512); 
         
-        std::cout << "\n--- Testando Tokenizer ---\n";
-        std::vector<llama_token> tokens_ola = interpreter.Tokenizer("Ola, este e um teste de persistencia de memoria.");
-        std::cout << "\n--- Fim do Teste Tokenizer ---\n\n";
+        // --- Setup de Memórias para Teste de Similaridade ---
+        std::vector<llama_token> tokens_base = interpreter.Tokenizer("Eu gosto de programar em C++. Fui dormir tarde hoje.");
+        uint64_t hash_exemplo = interpreter.ModelHash();
 
-        // Vamos criar dados de exemplo para salvar
-        std::vector<float> v_emo_exemplo = { 0.1f, 0.8f, -0.2f }; // Emoção: 3 dimensões
-        std::vector<float> v_time_exemplo = Utils::getTimeStamp(); // Pega o tempo atual
-        uint64_t hash_exemplo = interpreter.ModelHash(); // Pega o hash do modelo
+        // 1. Memória 1 (Foco na Positividade/Energia)
+        std::vector<float> v_emo_1 = { 0.9f, 0.2f, -0.1f }; // Alta Positividade (Primeira dimensão)
+        mem.save_memory_to_sqlite(tokens_base, v_emo_1, Utils::getTimeStamp(), hash_exemplo);
+        
+        // 2. Memória 2 (Foco na Negatividade/Cansaço)
+        std::vector<llama_token> tokens_2 = interpreter.Tokenizer("O dia foi estressante e tive problemas no trabalho.");
+        std::vector<float> v_emo_2 = { -0.8f, 0.1f, 0.4f }; // Alta Negatividade
+        mem.save_memory_to_sqlite(tokens_2, v_emo_2, Utils::getTimeStamp(), hash_exemplo);
 
-        // --- Testando as funções de salvar ---
-        std::cout << "--- Testando Salvar em Arquivo ---\n";
-        mem.save_memory_to_file("teste.mem", tokens_ola, v_emo_exemplo, v_time_exemplo, hash_exemplo);
+        // 3. Memória 3 (Foco na Neutralidade/Programação)
+        std::vector<llama_token> tokens_3 = interpreter.Tokenizer("Estudei sobre algoritmos de busca por 3 horas.");
+        std::vector<float> v_emo_3 = { 0.1f, 0.1f, 0.1f }; // Neutro
+        mem.save_memory_to_sqlite(tokens_3, v_emo_3, Utils::getTimeStamp(), hash_exemplo);
+
+        // --- Testando a Busca Contextual ---
+        std::cout << "\n\n=== Teste de Busca Contextual (Top 2) ===\n";
         
-        std::cout << "\n--- Testando Salvar em SQLite ---\n";
-        mem.save_memory_to_sqlite(tokens_ola, v_emo_exemplo, v_time_exemplo, hash_exemplo);
+        // Vetor de busca: Alta Positividade, similar ao v_emo_1
+        std::vector<float> v_emo_busca = { 0.95f, 0.0f, 0.0f }; 
+        int top_k = 2;
         
-        // --- Testando o carregamento ---
+        std::vector<MemoryMatch> resultados = mem.find_similar_memories(v_emo_busca, top_k);
+
+        std::cout << "\nResultado da Busca (v_emo_busca={0.95, 0.0, 0.0}):\n";
+        std::cout << std::left << std::setw(5) << "ID" << std::setw(15) << "Similaridade" << std::setw(10) << "Tokens" << "Emo Dim\n";
+        std::cout << "-------------------------------------------\n";
+
+        for (const auto& match : resultados) {
+            std::cout << std::left 
+                      << std::setw(5) << match.id
+                      << std::setw(15) << std::fixed << std::setprecision(4) << match.similarity
+                      << std::setw(10) << match.n_tokens
+                      << match.emo_dim << "\n";
+        }
+        std::cout << "===========================================\n";
+
+        // --- Teste de Carregamento (para provar que a ID 1 funciona) ---
         std::cout << "\n--- Testando Carregar do SQLite (ID 1) ---\n";
-        std::vector<llama_token> tok2;
-        std::vector<float> emo2, vtime2;
+        std::vector<llama_token> tok_loaded;
+        std::vector<float> emo_loaded, vtime_loaded;
 
-        mem.load_memory_from_sqlite(1, interpreter, tok2, emo2, vtime2);
+        mem.load_memory_from_sqlite(1, interpreter, tok_loaded, emo_loaded, vtime_loaded);
+
 
     } catch (const std::exception &e) {
         std::cerr << "Uma excecao fatal ocorreu: " << e.what() << std::endl;
-        llama_backend_free(); // Libera o backend em caso de erro
+        llama_backend_free();
         return EXIT_FAILURE;
     }
 
-    // Libera a biblioteca LLaMA
     llama_backend_free();
     return 0;
 }
