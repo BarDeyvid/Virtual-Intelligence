@@ -140,10 +140,21 @@ private:
                 tokens BLOB
             );
         )SQL";
+        
+        const char *create_index = R"SQL(
+            CREATE INDEX IF NOT EXISTS idx_timestamp ON memories(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_model_hash ON memories(model_hash);
+            )SQL"; // 
 
         char *errMsg = nullptr;
         if (sqlite3_exec(db, create_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
             std::string err = "Erro ao criar tabela: ";
+            err += errMsg;
+            sqlite3_free(errMsg);
+            throw std::runtime_error(err); // Lança exceção
+        }
+        if (sqlite3_exec(db, create_index, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            std::string err = "Erro ao criar index: ";
             err += errMsg;
             sqlite3_free(errMsg);
             throw std::runtime_error(err); // Lança exceção
@@ -188,8 +199,6 @@ public:
         return data;
     }
 
-    // ✅ NOVO: Função dedicada para salvar o ARQUIVO .mem
-    // (Era a primeira metade da sua save_memory_to_sqlite)
     bool save_memory_to_file(const std::string &path,
                              const std::vector<llama_token> &tokens,
                              const std::vector<float> &v_emo,
@@ -220,7 +229,6 @@ public:
 
 
     // MUDANÇA: Função 'save_memory_to_sqlite' refatorada
-    // Agora ela salva APENAS no SQLite e é muito mais eficiente.
     bool save_memory_to_sqlite(const std::vector<llama_token> &tokens,
                                const std::vector<float> &v_emo,
                                const std::vector<float> &v_time,
@@ -358,15 +366,19 @@ public:
 
 // --- Main (Atualizada para testar as novas funções) ---
 int main() {
+    // Inicializa a biblioteca LLaMA (boa prática)
+    llama_backend_init(); 
+    
     try {
         const char *model_path = "models/gemma-3-270m-it-F16.gguf"; 
         std::string save_path = "alyssa.mem";
         
-        SqliteHandler mem("alyssa_memories.db");
+        // O SqliteHandler agora criará a tabela com a query SQL corrigida.
+        SqliteHandler mem("alyssa_memories.db"); 
         AlyssaInterprets interpreter(model_path, save_path, 512);
         
         std::cout << "\n--- Testando Tokenizer ---\n";
-        std::vector<llama_token> tokens_ola = interpreter.Tokenizer("Ola, este e um teste.");
+        std::vector<llama_token> tokens_ola = interpreter.Tokenizer("Ola, este e um teste de persistencia de memoria.");
         std::cout << "\n--- Fim do Teste Tokenizer ---\n\n";
 
         // Vamos criar dados de exemplo para salvar
@@ -381,18 +393,20 @@ int main() {
         std::cout << "\n--- Testando Salvar em SQLite ---\n";
         mem.save_memory_to_sqlite(tokens_ola, v_emo_exemplo, v_time_exemplo, hash_exemplo);
         
-        // --- Testando o carregamento (vamos carregar o ID 1) ---
+        // --- Testando o carregamento ---
         std::cout << "\n--- Testando Carregar do SQLite (ID 1) ---\n";
         std::vector<llama_token> tok2;
         std::vector<float> emo2, vtime2;
 
         mem.load_memory_from_sqlite(1, interpreter, tok2, emo2, vtime2);
 
-
     } catch (const std::exception &e) {
         std::cerr << "Uma excecao fatal ocorreu: " << e.what() << std::endl;
+        llama_backend_free(); // Libera o backend em caso de erro
         return EXIT_FAILURE;
     }
 
+    // Libera a biblioteca LLaMA
+    llama_backend_free();
     return 0;
 }
