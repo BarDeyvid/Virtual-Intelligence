@@ -44,5 +44,6 @@ libQt6WebEngineCore.so.6
 3249fe98bfc62fcbc26067f724716a6ec49d12c4728a2af1df659013905dff21
 6180a447f726e4a2ab8b50effaf0a96f5b161489c620087c3b05418f0179f875
 llama.cpp/
+whisper.cpp/
 models/
 *
