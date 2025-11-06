@@ -21,6 +21,8 @@ struct SimpleModelConfig {
     std::string id;
     std::string model_path;
     std::string system_prompt;
+    bool usa_LoRA;
+    std::string lora_path;
     SimpleModelParameters params;
 };
 

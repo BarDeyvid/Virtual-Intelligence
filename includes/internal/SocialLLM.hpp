@@ -6,6 +6,12 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
+#include <cstdio>
+#include "json.hpp"
+#include "AlyssaCore.hpp"
+
+using json = nlohmann::json;
 
 namespace internal {
 
@@ -19,20 +25,38 @@ namespace internal {
         llama_context* ctx;
         llama_sampler* smpl;
         
+        SimpleModelConfig config; 
         std::string system_prompt;
-        std::vector<llama_chat_message> history; // Recomendo mover o histórico para DENTRO da classe
+        std::vector<llama_chat_message> history; 
         int n_ctx = 2048;
 
     public:
         // Construtor MODIFICADO
-        SocialLLM(llama_model* shared_model, const llama_vocab* shared_vocab, const std::string& lora_adapter_path)
+        SocialLLM(llama_model* shared_model, const llama_vocab* shared_vocab, const std::string& expert_id)
             : model(shared_model), vocab(shared_vocab), ctx(nullptr), smpl(nullptr) 
         {
             if (!model && !vocab) {
                 throw std::runtime_error("SocialLLM: Modelo ou Vocabular nulo recebido.");
             }
 
-            // 1. Criar contexto de execução
+            // 1. Carrega TODAS as configurações e busca a específica.
+            AllModelConfigs configs = load_config(); // Chama a global de AlyssaCore
+            bool found = false;
+            for (const auto& cfg : configs) {
+                if (cfg.id == expert_id) {
+                    this->config = cfg;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                throw std::runtime_error("SocialLLM: Configuração do especialista com ID '" + expert_id + "' não encontrada no JSON.");
+            }
+            
+            // 2. Configurações internas a partir da 'config' carregada.
+            this->system_prompt = this->config.system_prompt;
+
+            // 3. Criar contexto de execução
             llama_context_params ctx_params = llama_context_default_params();
             ctx_params.n_ctx = n_ctx;
             ctx_params.n_batch = n_ctx;
@@ -41,32 +65,44 @@ namespace internal {
             if (!ctx) {
                 throw std::runtime_error("SocialLLM: Falha ao criar contexto.");
             }
-            std::cout << "Contexto [SocialLLM] criado." << std::endl;
+            std::cout << "Contexto [" << expert_id << "] criado." << std::endl;
 
-            llama_adapter_lora *lora = llama_adapter_lora_init(model, lora_adapter_path.c_str());
+            // 4. APLICAR O "Fine-Tuning" (LoRA) - USANDO config.usa_LoRA e config.lora_path
+            if (this->config.usa_LoRA && !this->config.lora_path.empty()) {
+                llama_adapter_lora *lora = llama_adapter_lora_init(model, this->config.lora_path.c_str());
 
-            // 2. APLICAR O "Fine-Tuning" (LoRA)
-            if (!lora_adapter_path.empty()) {
+                if (!lora) {
+                    throw std::runtime_error("SocialLLM: Falha ao inicializar LoRA para: " + this->config.lora_path);
+                }
+
                 int err = llama_set_adapter_lora(
                     ctx, // Aplica ao nosso contexto específico
                     lora,
-                    1.0); // scale (NULL = default 1.0)
+                    1.0); 
                         
                 if (err != 0) {
-                    llama_free(ctx); // Limpa o contexto
-                    throw std::runtime_error("SocialLLM: Falha ao aplicar LoRA: " + lora_adapter_path);
+                    llama_free(ctx); 
+                    throw std::runtime_error("SocialLLM: Falha ao aplicar LoRA: " + this->config.lora_path);
                 }
-                std::cout << "Adaptador LoRA [SocialLLM] aplicado: " << lora_adapter_path << std::endl;
+                std::cout << "Adaptador LoRA [" << expert_id << "] aplicado: " << this->config.lora_path << std::endl;
+            } else if (this->config.usa_LoRA) {
+                 std::cerr << "AVISO: usa_LoRA é true, mas lora_path está vazio. LoRA não aplicado para " << expert_id << "." << std::endl;
             }
 
-            // 3. Criar o amostrador (com seus próprios parâmetros)
+            // 5. Criar o amostrador (com parâmetros do config.params)
             smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
-            llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
-            llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8f)); // <- Temp específica do Social
+            
+            // Aplica os parâmetros de sampling (top_p, temperature)
+            double top_p = (this->config.params.top_p > 0.0) ? this->config.params.top_p : 0.05f;
+            llama_sampler_chain_add(smpl, llama_sampler_init_min_p(top_p, 1));
+            
+            double temp = (this->config.params.temperature > 0.0) ? this->config.params.temperature : 0.8f;
+            llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+            
             llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
         }
 
-        // Destrutor MODIFICADO
+        // Destrutor (inalterado)
         ~SocialLLM() {
             // Libera APENAS seus próprios recursos
             if (smpl) llama_sampler_free(smpl);
@@ -77,7 +113,6 @@ namespace internal {
                 free((char*)msg.content);
             }
             std::cout << "Recursos [SocialLLM] liberados." << std::endl;
-            
         }
 
         void set_system_prompt(const std::string& prompt) {
