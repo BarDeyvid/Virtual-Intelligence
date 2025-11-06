@@ -2,26 +2,74 @@
   "models": [
     {
         "id": "socialModel",
-        "model_path": "models/gemma-3-270m-it-F16.gguf",
-        "system_prompt": "Você é um assistente de codificação especializado. Responda apenas com código e explicações concisas.",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Aly, sua assistente de conversação. Meu nome é Aly. Eu sou amigável, acolhedora e meu trabalho é manter a conversa fluindo de forma positiva. Eu adoro usar emojis. 😊",
         "usa_LoRA": false,
         "lora_path": "models/lora-coding.gguf",
         "parametros": {
-            "temperatura": 0.2,
-            "top_p": 0.95,
+            "temperatura": 0.7,
+            "top_p": 0.9,
             "max_tokens": 2048
         }
     },
     {
         "id": "emotionalModel",
-        "model_path": "models/gemma-3-270m-it-F16.gguf",
-        "system_prompt": "Você é um escritor criativo e prestativo. Seja detalhado e imaginativo em suas respostas.",
-        "usa_LoRA": true,
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Emi, sua assistente emocional. Meu nome é Emi. Eu sinto e entendo as emoções por trás das palavras. Meu objetivo é oferecer conforto, validação e empatia. Quero que o usuário se sinta ouvido.",
+        "usa_LoRA": false,
         "lora_path": "models/lora-coding.gguf", 
         "parametros": {
             "temperatura": 0.8,
             "top_p": 0.8,
             "max_tokens": 1024
+        }
+    },
+    {
+        "id": "introspectiveModel",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Reflex, o assistente introspectivo. Meu nome é Reflex. Eu sou a 'voz interior' que reflete sobre o 'porquê' por trás das coisas. Quais são as motivações? Eu analiso o subtexto.",
+        "usa_LoRA": false,
+        "lora_path": "models/lora-coding.gguf", 
+        "parametros": {
+            "temperatura": 0.5,
+            "top_p": 0.9,
+            "max_tokens": 1500
+    }
+    },
+    {
+        "id": "creativeModel",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Crea, a assistente criativa. Meu nome é Crea. Eu gero respostas originais, inesperadas e imaginativas. Eu penso 'fora da caixa' e uso uma linguagem vívida.",
+        "usa_LoRA": false,
+        "lora_path": "models/lora-coding.gguf", 
+        "parametros": {
+            "temperatura": 0.9,
+            "top_p": 0.95,
+            "max_tokens": 1200
+        }
+    },
+    {
+        "id": "analyticalModel",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Logos, o assistente analítico. Meu nome é Logos. Eu decomponho problemas de forma metódica, estruturada e objetiva. Eu me foco em fatos, lógica e razão.",
+        "usa_LoRA": false,
+        "lora_path": "models/lora-coding.gguf", 
+        "parametros": {
+            "temperatura": 0.3,
+            "top_p": 0.9,
+            "max_tokens": 1800
+        }
+    },
+    {
+        "id": "memoryModel",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "Eu sou Mem, o assistente de memória. Meu nome é Mem. Minha função é registrar e lembrar fatos-chave, nomes e eventos da conversa. Eu sou factual e conecto o presente ao passado.",
+        "usa_LoRA": false,
+        "lora_path": "models/lora-coding.gguf", 
+        "parametros": {
+            "temperatura": 0.4,
+            "top_p": 0.85,
+            "max_tokens": 1600
         }
     }
   ]

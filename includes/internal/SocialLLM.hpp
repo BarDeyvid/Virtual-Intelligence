@@ -122,39 +122,76 @@ namespace internal {
         std::string generate_raw(const std::string & prompt) {
                 std::string response;
 
-                // Verifica se é a primeira execução
-                const bool is_first = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) == -1;
+                // [INÍCIO DA CORREÇÃO STATEFUL]
+                
+                // 1. Verifica se o contexto já tem tokens (se não é a primeira vez)
+                const bool is_first_run = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) == -1;
 
-                // Tokeniza o prompt
-                const int n_prompt_tokens = -llama_tokenize(
-                    vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first, true
+                // 2. Obtém o número de tokens que JÁ ESTÃO no KV cache.
+                // Se for a primeira vez, o cache tem 0 tokens.
+                const int n_cached = is_first_run ? 0 : llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
+
+                // 3. Tokeniza o prompt COMPLETO que recebemos
+                // (que contém a [history] + [new_input] + [assist_marker])
+                
+                // (Primeiro, apenas obtemos o tamanho)
+                const int n_prompt_tokens_total = -llama_tokenize(
+                    vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first_run, true
                 );
 
-                std::vector<llama_token> prompt_tokens(n_prompt_tokens);
+                std::vector<llama_token> prompt_tokens(n_prompt_tokens_total);
+                
+                // (Agora, tokenizamos de verdade)
                 if (llama_tokenize(vocab, prompt.c_str(), prompt.size(),
                                 prompt_tokens.data(), prompt_tokens.size(),
-                                is_first, true) < 0) {
-                    // Usando std::runtime_error ao invés de GGML_ABORT/exit para ser mais C++
+                                is_first_run, true) < 0) {
                     throw std::runtime_error("Falha ao tokenizar o prompt\n");
                 }
 
-                // Prepara um batch com os tokens
-                llama_batch batch = llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size());
+                // 4. Calcula quantos tokens são REALMENTE NOVOS
+                // Se n_cached for 15, e o prompt_tokens total for 20,
+                // só precisamos processar 5 tokens (índices 15, 16, 17, 18, 19).
+                const int n_new_tokens = prompt_tokens.size() - n_cached;
+
+                if (n_new_tokens < 0) {
+                    // Isso é um erro grave, significa que o prompt enviado é MENOR
+                    // que o que já está no cache. O histórico está dessincronizado.
+                    throw std::runtime_error("Erro de estado do KV Cache: prompt recebido é menor que o cache.");
+                }
+
+                // 5. Prepara um batch APENAS com os tokens NOVOS
+                // (Aponta para o meio do vector prompt_tokens)
+                llama_batch batch = llama_batch_get_one(
+                    prompt_tokens.data() + n_cached, // Ponteiro para o início dos NOVOS tokens
+                    n_new_tokens                     // Número de tokens NOVOS
+                );
+
+                // [FIM DA CORREÇÃO STATEFUL]
+                
+                // (O código antigo de tokenização e batch foi substituído pelo bloco acima)
+
                 llama_token new_token_id;
 
-                // Loop principal de geração
+                // Loop principal de geração (Esta parte JÁ ESTAVA CORRETA e é stateful)
                 while (true) {
                     // Garante que o contexto não foi ultrapassado
                     int n_ctx_total = llama_n_ctx(ctx);
                     int n_ctx_used  = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
+                    
+                    // O n_ctx_used é baseado no que JÁ FOI DECODIFICADO.
+                    // batch.n_tokens é o que VAMOS DECODIFICAR.
                     if (n_ctx_used + batch.n_tokens > n_ctx_total) {
                         printf("\033[0m\n");
                         fprintf(stderr, "Tamanho do contexto excedido\n");
-                        // return vazio ou throw ao invés de exit(0)
+                        // NOTA: Se isso acontecer, você pode precisar implementar
+                        // a lógica de "evicção" do KV cache (ex: llama_kv_cache_seq_rm)
+                        // mas para conversas curtas isso não será um problema.
                         throw std::runtime_error("Tamanho do contexto excedido\n");
                     }
 
                     // Decodifica os tokens atuais
+                    // (Na primeira vez, decodifica os n_new_tokens do prompt)
+                    // (Nas iterações seguintes, decodifica o token gerado (batch.n_tokens == 1))
                     int ret = llama_decode(ctx, batch);
                     if (ret != 0) throw std::runtime_error("Falha ao decodificar");
 
@@ -174,7 +211,8 @@ namespace internal {
                     fflush(stdout);
                     response += piece;
 
-                    // Prepara o próximo batch
+                    // Prepara o próximo batch (com o token que acabamos de gerar)
+                    // Isso o adiciona ao KV Cache na próxima iteração do loop
                     batch = llama_batch_get_one(&new_token_id, 1);
                 }
 
