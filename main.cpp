@@ -1,7 +1,8 @@
 // main.cpp
 #include "llama.h"
-#include "AlyssaCore.h"
-#include "SocialLLM.h"
+#include "includes/CoreLLM.hpp"
+#include "includes/internal/SocialLLM.hpp"
+#include "AlyssaCore.hpp"
 // #include "EmotionLLM.h" // Você criaria este arquivo similar ao SocialLLM
 
 int main() {
@@ -14,10 +15,10 @@ int main() {
 
    try {
         // 1. Carrega o MODELO BASE (pesado) uma única vez
-        AlyssaCore core("models/gemma-3-270m-it-F16.gguf"); // <-- Modelo BASE
+        alyssa_core::AlyssaCore core("models/gemma-3-270m-it-F16.gguf"); // <-- Modelo BASE
 
         // 2. Cria os ESPECIALISTAS passando o modelo e seus LoRAs
-        SocialLLM social_expert(
+        internal::SocialLLM social_expert(
             core.get_model(), 
             core.get_vocab(), 
             "models/lora_social_adapter.gguf" // <-- Fine-tune SOCIAL
