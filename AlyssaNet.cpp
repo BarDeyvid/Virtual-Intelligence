@@ -50,8 +50,9 @@ class SocialLLM {
         llama_model_params mParams = llama_model_default_params();
         llama_model * model = nullptr; 
         const llama_vocab * vocab = nullptr; 
-        const llama_context * ctx = nullptr; 
+        llama_context * ctx = nullptr; 
         llama_sampler * smpl = nullptr;
+        std::string system_prompt = "";
 
     public:
         // Construtor: Inicializa tudo
@@ -90,6 +91,10 @@ class SocialLLM {
             llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
         }
 
+        void set_system_prompt(const std::string& prompt) {
+            system_prompt = prompt;
+        }
+
         // Destrutor: Para liberar recursos
         ~SocialLLM() {
             if (smpl) {
@@ -103,42 +108,8 @@ class SocialLLM {
                 llama_model_free(model); 
             }
         }
-        
-        // --- Getters para permitir que DebugLLM use os recursos ---
-        llama_sampler * get_sampler() const { return smpl; }
-        llama_context * get_context() const { return const_cast<llama_context *>(ctx); }
-        llama_model * get_model() const { return model; }
-        const llama_vocab * get_vocab() const { return vocab; }
-    };
-    
-class IntrospectionLLM {
-    //=================================================================================
-    // Análise interna, autocorreção e evolução comportamental
-    // Ativo em estados de reflexão
-    //=================================================================================
-};
 
-class CentralMemory{
-    //=================================================================================
-    // Armazenamento de embeddings, vetores de contexto e registros cognitivos
-    // Compartilhado entre todos os módulos
-    //=================================================================================
-};
-
-class DebugLLM {
-    private: 
-        const llama_vocab * vocab = nullptr;
-        llama_context * ctx = nullptr;
-        llama_model * model = nullptr; 
-        llama_sampler * smpl = nullptr;
-
-    public:
-        DebugLLM(llama_sampler * smpl_ptr, llama_context * ctx_ptr, 
-                 llama_model * model_ptr, const llama_vocab * vocab_ptr) 
-            : vocab(vocab_ptr), ctx(ctx_ptr), model(model_ptr), smpl(smpl_ptr) {
-        }
-
-        std::string generate(const std::string & prompt) {
+        std::string generate_raw(const std::string & prompt) {
             std::string response;
 
             // Verifica se é a primeira execução
@@ -199,62 +170,84 @@ class DebugLLM {
 
             return response;
         }
+        
+        // O método principal que recebe o input e retorna a resposta
+        std::string generate_response(const std::string& user_input, 
+                                    std::vector<llama_chat_message>& history) {
+            
+            // 1. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO
+            history.push_back({"user", strdup(user_input.c_str())});
 
-        void Inference() {
-            std::vector<llama_chat_message> messages;
+            // 2. MONTA A LISTA COMPLETA DE MENSAGENS (System + Histórico)
+            std::vector<llama_chat_message> messages_to_template;
+            
+            // Adiciona o System Prompt no início
+            if (!system_prompt.empty()) {
+                messages_to_template.push_back({"system", strdup(system_prompt.c_str())}); 
+                // NOTA: Esta memória também deve ser liberada (strdup)
+            }
+            
+            // Adiciona o histórico da conversa
+            messages_to_template.insert(messages_to_template.end(), history.begin(), history.end());
+
+            // 3. APLICA O TEMPLATE E GERA O PROMPT
             std::vector<char> formatted(llama_n_ctx(ctx));
-            int prev_len = 0;
+            const char * tmpl = llama_model_chat_template(model, nullptr);
 
-            while (true) {
-                printf("\033[32m> \033[0m"); 
-                std::string user;
-                std::getline(std::cin, user);
+            int len = llama_chat_apply_template(
+                tmpl, messages_to_template.data(), messages_to_template.size(), true, formatted.data(), formatted.size()
+            );
+            
+            // Libera o System Prompt alocado com strdup
+            if (!system_prompt.empty()) {
+                free((char*)messages_to_template[0].content);
+            }
 
-                if (user.empty()) break;
-
-                const char * tmpl = llama_model_chat_template(model, nullptr);
-
-                messages.push_back({"user", strdup(user.c_str())});
-                int new_len = llama_chat_apply_template(
-                    tmpl, messages.data(), messages.size(), true, formatted.data(), formatted.size()
-                );
-
-                if (new_len > (int)formatted.size()) {
-                    formatted.resize(new_len);
-                    new_len = llama_chat_apply_template(
-                        tmpl, messages.data(), messages.size(), true, formatted.data(), formatted.size()
+            if (len < 0 || len > (int)formatted.size()) {
+                 if (len > (int)formatted.size()) {
+                    formatted.resize(len);
+                    len = llama_chat_apply_template(
+                        tmpl, messages_to_template.data(), messages_to_template.size(), true, formatted.data(), formatted.size()
                     );
-                }
-
-                if (new_len < 0) {
-                    fprintf(stderr, "Falha ao aplicar template de chat\n");
-                    continue;
-                }
-
-                std::string prompt(formatted.begin() + prev_len, formatted.begin() + new_len);
-
-                printf("\033[33m"); 
-                std::string response = generate(prompt); // Chama a função generate corrigida
-                printf("\n\033[0m");
-
-                messages.push_back({"assistant", strdup(response.c_str())});
-                prev_len = llama_chat_apply_template(
-                    tmpl, messages.data(), messages.size(), false, nullptr, 0
-                );
-
-                if (prev_len < 0) {
-                    fprintf(stderr, "Falha ao aplicar template de chat\n");
-                }
+                 }
+                 if (len < 0) {
+                     fprintf(stderr, "Falha ao aplicar template de chat\n");
+                     return "Erro ao processar a conversa.";
+                 }
             }
-            // Não se esqueça de liberar a memória alocada por strdup em 'messages'
-            for (auto& msg : messages) {
-                free((char*)msg.content);
-            }
+            
+            std::string prompt(formatted.begin(), formatted.begin() + len);
+            
+            // 4. CHAMA A GERAÇÃO DE BAIXO NÍVEL
+            std::string response = generate_raw(prompt); 
+
+            // 5. ADICIONA A RESPOSTA DO ASSISTENTE AO HISTÓRICO
+            history.push_back({"assistant", strdup(response.c_str())});
+
+            // 6. RETORNA A RESPOSTA
+            return response;
         }
 
-        // Destrutor: Não precisa liberar nada, pois os ponteiros são "emprestados" de SocialLLM
-        ~DebugLLM() {
-        }
+        // --- Getters para permitir que DebugLLM use os recursos ---
+        llama_sampler * get_sampler() const { return smpl; }
+        llama_context * get_context() const { return const_cast<llama_context *>(ctx); }
+        llama_model * get_model() const { return model; }
+        const std::string& get_system_prompt() const { return system_prompt; }
+        const llama_vocab * get_vocab() const { return vocab; }
+    };
+    
+class IntrospectionLLM {
+    //=================================================================================
+    // Análise interna, autocorreção e evolução comportamental
+    // Ativo em estados de reflexão
+    //=================================================================================
+};
+
+class CentralMemory{
+    //=================================================================================
+    // Armazenamento de embeddings, vetores de contexto e registros cognitivos
+    // Compartilhado entre todos os módulos
+    //=================================================================================
 };
 
 int main() {
@@ -267,27 +260,36 @@ int main() {
     // Carrega backends
     ggml_backend_load_all();
 
-    try {
-        // 1. Instanciação CORRIGIDA de SocialLLM
-        // Note que o caminho do modelo foi definido na classe SocialLLM, mas é mais robusto passá-lo aqui. Menos Erros = Mais Cabelo
+   try {
         SocialLLM social("models/gemma-3-270m-it-F16.gguf"); 
+        
+        // Histórico da conversa (deve ser gerenciado pela função de chat)
+        std::vector<llama_chat_message> chat_history; 
 
-        // 2. Instanciação CORRIGIDA de DebugLLM usando os Getters
-        DebugLLM debug(
-            social.get_sampler(), 
-            social.get_context(), 
-            social.get_model(), 
-            social.get_vocab()
-        );
+        // Simulação de um loop de interação:
+        std::cout << "AlyssaNet carregada. Digite 'sair' para encerrar.\n";
 
-        // Chamada de inferência para iniciar o loop de chat
-        debug.Inference();
+        std::string user_input;
+        while (true) {
+            printf("\033[32m> \033[0m"); 
+            std::getline(std::cin, user_input);
+
+            if (user_input == "sair" || user_input.empty()) break;
+
+            // Chame o novo método da SocialLLM
+            printf("\033[33m"); 
+            std::string response = social.generate_response(user_input, chat_history);
+            printf("\n\033[0m");
+        }
+        
+        // Lembre-se de liberar os conteúdos de chat_history aqui!
+        for (auto& msg : chat_history) {
+            free((char*)msg.content);
+        }
 
     } catch (const std::exception& e) {
-        // Captura exceções para um shutdown limpo
         fprintf(stderr, "Erro Crítico: %s\n", e.what());
         return 1;
     }
-
     return 0;
 }
