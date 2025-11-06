@@ -1,0 +1,24 @@
+{
+  "models": [
+    {
+      "id": "socialModel",
+      "model_path": "models/gemma-3-270m-it-F16.gguf",
+      "system_prompt": "Você é um assistente de codificação especializado. Responda apenas com código e explicações concisas.",
+      "parametros": {
+        "temperatura": 0.2,
+        "top_p": 0.95,
+        "max_tokens": 2048
+      }
+    },
+    {
+      "id": "emotionalModel",
+      "model_path": "models/gemma-3-270m-it-F16.gguf",
+      "system_prompt": "Você é um escritor criativo e prestativo. Seja detalhado e imaginativo em suas respostas.",
+      "parametros": {
+        "temperatura": 0.8,
+        "top_p": 0.8,
+        "max_tokens": 1024
+      }
+    }
+  ]
+}
