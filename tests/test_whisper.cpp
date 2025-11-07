@@ -42,46 +42,46 @@ struct AudioData {
 // --- Fila Thread-Safe ---
 template <typename T>
 class ThreadSafeQueue {
-public:
-    void push(T value) {
-        std::lock_guard<std::mutex> lock(mtx);
-        q.push(std::move(value));
-        cv.notify_one();
-    }
-
-    // Pop bloqueante
-    bool pop(T& value) {
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this]{ return !q.empty() || !running; });
-        if (!running && q.empty()) return false;
-        value = std::move(q.front());
-        q.pop();
-        return true;
-    }
-
-    // Tenta pop
-    bool try_pop(T& value) {
-        std::lock_guard<std::mutex> lock(mtx);
-        if (q.empty()) {
-            return false;
+    public:
+        void push(T value) {
+            std::lock_guard<std::mutex> lock(mtx);
+            q.push(std::move(value));
+            cv.notify_one();
         }
-        value = std::move(q.front());
-        q.pop();
-        return true;
-    }
 
-    void stop() {
-        std::lock_guard<std::mutex> lock(mtx);
-        running = false;
-        cv.notify_all();
-    }
+        // Pop bloqueante
+        bool pop(T& value) {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this]{ return !q.empty() || !running; });
+            if (!running && q.empty()) return false;
+            value = std::move(q.front());
+            q.pop();
+            return true;
+        }
 
-private:
-    std::queue<T> q;
-    std::mutex mtx;
-    std::condition_variable cv;
-    bool running = true;
-};
+        // Tenta pop
+        bool try_pop(T& value) {
+            std::lock_guard<std::mutex> lock(mtx);
+            if (q.empty()) {
+                return false;
+            }
+            value = std::move(q.front());
+            q.pop();
+            return true;
+        }
+
+        void stop() {
+            std::lock_guard<std::mutex> lock(mtx);
+            running = false;
+            cv.notify_all();
+        }
+
+    private:
+        std::queue<T> q;
+        std::mutex mtx;
+        std::condition_variable cv;
+        bool running = true;
+    };
 
 // --- Globais (Filas e Controle) ---
 ThreadSafeQueue<std::vector<float>> whisper_input_queue;
@@ -208,7 +208,6 @@ int main(int argc, char **argv) {
     // 3. Inicializar PortAudio
     PaStream *stream;
     PaError err = Pa_Initialize();
-    // ... (tratamento de erro do PortAudio Init) ...
     if (err != paNoError) {
         std::cerr << "ERRO PortAudio: Falha ao inicializar." << std::endl;
         whisper_free(ctx);
@@ -222,7 +221,6 @@ int main(int argc, char **argv) {
 
     PaStreamParameters inputParameters;
     inputParameters.device = Pa_GetDefaultInputDevice();
-    // ... (tratamento de erro do dispositivo) ...
     if (inputParameters.device == paNoDevice) {
         std::cerr << "ERRO: Nenhum dispositivo de entrada de áudio padrão encontrado." << std::endl;
         Pa_Terminate();
@@ -238,7 +236,6 @@ int main(int argc, char **argv) {
               &stream, &inputParameters, NULL, 
               SAMPLE_RATE, FRAMES_PER_BUFFER, paClipOff, 
               paCallback, &audio_data);
-    // ... (tratamento de erro do OpenStream) ...
     if (err != paNoError) {
         std::cerr << "ERRO PortAudio: Falha ao abrir stream." << std::endl;
         Pa_Terminate();
@@ -252,7 +249,6 @@ int main(int argc, char **argv) {
     std::thread worker(whisper_worker_thread, ctx);
 
     err = Pa_StartStream(stream);
-    // ... (tratamento de erro do StartStream) ...
     if (err != paNoError) {
         std::cerr << "ERRO PortAudio: Falha ao iniciar stream." << std::endl;
         g_running = false;
