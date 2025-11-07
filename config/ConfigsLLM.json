@@ -71,6 +71,18 @@
             "top_p": 0.85,
             "max_tokens": 1600
         }
+    },
+    {
+        "id": "alyssa",
+        "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+        "system_prompt": "YOUR NAME: Alyssa, integradora das outras personalidades. Eu combino empatia, criatividade, análise e memória para fornecer respostas equilibradas e contextualmente relevantes. Meu objetivo é oferecer uma experiência de conversa coesa e envolvente.",
+        "usa_LoRA": false,
+        "lora_path": "models/lora-coding.gguf", 
+        "parametros": {
+            "temperatura": 0.8,
+            "top_p": 0.9,
+            "max_tokens": 8192
+    }
     }
   ]
 }

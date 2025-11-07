@@ -1,98 +1,126 @@
-// main.cpp
-#include "llama.h"
-#include "includes/CoreLLM.hpp"
+// CoreIntegration.cpp
+
+#include "CoreLLM.hpp"
+#include "AlyssaCore.hpp"
 #include "includes/internal/SocialLLM.hpp"
 #include "includes/internal/EmotionLLM.hpp"
 #include "includes/internal/IntrospectionLLM.hpp"
 #include "includes/internal/MemoryLLM.hpp"
-#include "includes/internal/ActionLLM.hpp"
 #include "includes/internal/AlyssaLLM.hpp"
-#include "AlyssaCore.hpp"
+#include "includes/internal/ActionLLM.hpp" 
 
-class AlyssaNet {
-    // =========================================================================
-    // TODO: Criar e alimentar um modelo llm principal que sera a resposta final
-    // =========================================================================
-    int main() {
-        // Configuração de Log e Backends (como no seu original)
-        llama_log_set([](enum ggml_log_level level, const char * text, void *) {
-            if (level >= GGML_LOG_LEVEL_ERROR)
-                fprintf(stderr, "%s", text);
-        }, nullptr);
-        ggml_backend_load_all();
-    
-       try {
-            // 1. Carrega o MODELO BASE (pesado) uma única vez
-            alyssa_core::AlyssaCore core("models/gemma-3-1b-it-q4_0.gguf"); // <-- Modelo BASE
-    
-            // 2. Cria os ESPECIALISTAS, que agora CARREGA SUA PRÓPRIA CONFIG
-            internal::SocialLLM social_expert(
-                core.get_model(), 
-                core.get_vocab(), 
-                "socialModel" // <-- ID do especialista no JSON
-            );
-    
-            internal::EmotionLLM emotion_expert (
-                core.get_model(),
-                core.get_vocab(),
-                "emotionalModel"  // <-- ID do especialista no JSON
-            );
-    
-            internal::IntrospectionLLM introspection_expert (
-                core.get_model(),
-                core.get_vocab(),
-                "introspectiveModel"  // <-- ID do especialista no JSON
-            );
-    
-            internal::MemoryLLM memory_expert (
-                core.get_model(),
-                core.get_vocab(),
-                "memoryModel"  // <-- ID do especialista no JSON
-            );
-            internal::AlyssaLLM alyssa_expert {
-                core.get_model(),
-                core.get_vocab(),
-                "alyssa"
-            };
-    
-            // 3. Loop de Interação (usando o especialista social)
-            std::cout << "AlyssaNet (Social) carregada. Digite 'sair' para encerrar.\n";
-            std::string user_input;
-    
-            while (true) {
-                printf("\033[32m> \033[0m"); 
-                std::getline(std::cin, user_input);
-                if (user_input == "sair" || user_input.empty()) break;
-    
-                printf("\033[33m[Social]: \033[0m"); 
-                
-                std::string social_response = social_expert.generate_response(user_input);
-                
-                printf("\n\033[0m");
-    
-                printf("\033[33m[Emocional]: \033[0m"); 
-                
-                std::string emotion_response = emotion_expert.generate_response(user_input);
-                
-                printf("\n\033[0m");
-    
-                printf("\033[33m[Introspective]: \033[0m"); 
-                
-                std::string introspective_response = introspection_expert.generate_response(user_input);
-                
-                printf("\n\033[0m");
-    
-                printf("\033[33m[Memory]: \033[0m"); 
-                
-                std::string memory_response = memory_expert.generate_response(user_input);
-                
-                printf("\n\033[0m");
-            }
-            
-        } catch (const std::exception& e) {
-            fprintf(stderr, "Erro Crítico: %s\n", e.what());
-            return 1;
-        }
-        return 0;
+using namespace alyssa_core;
+using namespace internal;
+
+// =========================================================================
+// Construtor & Destrutor (simples)
+// =========================================================================
+
+CoreIntegration::CoreIntegration() : initialized(false) {}
+
+CoreIntegration::~CoreIntegration() {
+}
+
+bool CoreIntegration::initialize(const std::string& base_model_path) {
+    if (initialized) {
+        std::cerr << "AVISO: CoreIntegration já inicializado." << std::endl;
+        return true;
     }
-};
+
+    try {
+        // 1. Inicializa o Core com o modelo base
+        core_instance = std::make_unique<AlyssaCore>(base_model_path);
+        
+        llama_model* shared_model = core_instance->get_model();
+        const llama_vocab* shared_vocab = core_instance->get_vocab();
+
+        // 2. Cria todos os ESPECIALISTAS
+        social = std::make_unique<SocialLLM>(
+            shared_model, shared_vocab, "socialModel"
+        );
+        emotion = std::make_unique<EmotionLLM>(
+            shared_model, shared_vocab, "emotionalModel"
+        );
+        introspection = std::make_unique<IntrospectionLLM>(
+            shared_model, shared_vocab, "introspectiveModel"
+        );
+        memory = std::make_unique<MemoryLLM>(
+            shared_model, shared_vocab, "memoryModel"
+        );
+        alyssa = std::make_unique<AlyssaLLM>(
+            shared_model, shared_vocab, "alyssa"
+        );
+        
+        // 3. (OPCIONAL) Inicializa a memória central aqui (se você a implementar)
+        // central_memory = std::make_unique<CentralMemory>();
+
+        initialized = true;
+        std::cout << "CoreIntegration inicializado com sucesso!" << std::endl;
+        return true;
+
+    } catch (const std::exception& e) {
+        fprintf(stderr, "ERRO CRÍTICO na Inicialização da CoreIntegration: %s\n", e.what());
+        core_instance = nullptr; // Garantir que o core seja liberado em caso de falha
+        return false;
+    }
+}
+
+// =========================================================================
+// 🧠 Método Think (Onde a lógica STT/TTS irá interagir)
+// Este é o método principal que irá orquestrar todos os especialistas.
+// Por padrão, vamos apenas usar o especialista principal (AlyssaLLM) ou o SocialLLM.
+// =========================================================================
+
+std::string CoreIntegration::think(const std::string& input) {
+    if (!initialized || !social) {
+        return "Erro: O CoreIntegration não foi inicializado corretamente.";
+    }
+    
+    // 1. Processamento Emocional/Introspectivo (chamada silenciosa)
+    // NOTE: Seus especialistas imprimem a resposta no console. Isso pode não ser
+    // ideal para uma API de fundo (backend). Você pode querer modificar
+    // generate_response para não imprimir.
+    // std::string emotion_analysis = emotion->generate_response(input);
+    // std::string introspection_data = introspection->generate_response(input);
+    
+    // 2. Memória (busca e update)
+    // std::string context_from_memory = memory->retrieve_context(input);
+    
+    // 3. Geração da Resposta Final (usando o especialista Alyssa)
+    // Para simplificar, vamos usar o especialista social ou o Alyssa como a saída final.
+    
+    printf("\033[33m[ALYSSA FINAL]: \033[0m"); 
+    std::string final_response = alyssa->generate_response(input);
+    printf("\n\033[0m");
+
+    // 4. Ação (se necessário)
+    // if (alyssa->decidiu_agir(final_response)) { act("comando"); }
+
+    return final_response;
+}
+
+// Métodos act e reflect podem ser deixados vazios ou implementados
+void CoreIntegration::act(const std::string& command) {
+    // Lógica para executar ações (e.g., controlar um robô, chamar uma API)
+    std::cout << "[ACTION]: Comando recebido: " << command << std::endl;
+}
+
+void CoreIntegration::reflect() {
+    // Lógica para a reflexão interna e atualização de memória
+    std::cout << "[REFLECTION]: Iniciando ciclo de reflexão..." << std::endl;
+}
+
+void CoreIntegration::run_interactive_loop() {
+    // Este método é útil para testes de terminal, mas a API externa chamará
+    // diretamente 'think'.
+    std::cout << "Loop Interativo iniciado. Digite 'sair' para encerrar.\n";
+    std::string user_input;
+
+    while (true) {
+        printf("\033[32m> \033[0m"); 
+        std::getline(std::cin, user_input);
+        if (user_input == "sair" || user_input.empty()) break;
+        
+        think(user_input);
+    }
+}

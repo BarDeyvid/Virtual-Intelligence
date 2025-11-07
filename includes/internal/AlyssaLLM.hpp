@@ -1,4 +1,4 @@
-// ActionLLM.hpp
+// AlyssaLLM.hpp
 #pragma once
 #include "llama.h"
 #include <cstring>
@@ -15,7 +15,7 @@ using json = nlohmann::json;
 
 namespace internal {
 
-    class ActionLLM {
+    class AlyssaLLM {
     private:
         // Ponteiros compartilhados (NÃO deletar no destrutor)
         llama_model* model;
@@ -32,11 +32,11 @@ namespace internal {
 
     public:
         // Construtor MODIFICADO
-        ActionLLM(llama_model* shared_model, const llama_vocab* shared_vocab, const std::string& expert_id)
+        AlyssaLLM(llama_model* shared_model, const llama_vocab* shared_vocab, const std::string& expert_id)
             : model(shared_model), vocab(shared_vocab), ctx(nullptr), smpl(nullptr) 
         {
             if (!model && !vocab) {
-                throw std::runtime_error("ActionLLM: Modelo ou Vocabular nulo recebido.");
+                throw std::runtime_error("AlyssaLLM: Modelo ou Vocabular nulo recebido.");
             }
 
             // 1. Carrega TODAS as configurações e busca a específica.
@@ -50,7 +50,7 @@ namespace internal {
                 }
             }
             if (!found) {
-                throw std::runtime_error("ActionLLM: Configuração do especialista com ID '" + expert_id + "' não encontrada no JSON.");
+                throw std::runtime_error("AlyssaLLM: Configuração do especialista com ID '" + expert_id + "' não encontrada no JSON.");
             }
             
             // 2. Configurações internas a partir da 'config' carregada.
@@ -63,7 +63,7 @@ namespace internal {
 
             ctx = llama_init_from_model(model, ctx_params);
             if (!ctx) {
-                throw std::runtime_error("ActionLLM: Falha ao criar contexto.");
+                throw std::runtime_error("AlyssaLLM: Falha ao criar contexto.");
             }
             std::cout << "Contexto [" << expert_id << "] criado." << std::endl;
 
@@ -72,7 +72,7 @@ namespace internal {
                 llama_adapter_lora *lora = llama_adapter_lora_init(model, this->config.lora_path.c_str());
 
                 if (!lora) {
-                    throw std::runtime_error("ActionLLM: Falha ao inicializar LoRA para: " + this->config.lora_path);
+                    throw std::runtime_error("AlyssaLLM: Falha ao inicializar LoRA para: " + this->config.lora_path);
                 }
 
                 int err = llama_set_adapter_lora(
@@ -82,7 +82,7 @@ namespace internal {
                         
                 if (err != 0) {
                     llama_free(ctx); 
-                    throw std::runtime_error("ActionLLM: Falha ao aplicar LoRA: " + this->config.lora_path);
+                    throw std::runtime_error("AlyssaLLM: Falha ao aplicar LoRA: " + this->config.lora_path);
                 }
                 std::cout << "Adaptador LoRA [" << expert_id << "] aplicado: " << this->config.lora_path << std::endl;
             } else if (this->config.usa_LoRA) {
@@ -103,7 +103,7 @@ namespace internal {
         }
 
         // Destrutor (inalterado)
-        ~ActionLLM() {
+        ~AlyssaLLM() {
             // Libera APENAS seus próprios recursos
             if (smpl) llama_sampler_free(smpl);
             if (ctx) llama_free(ctx);
@@ -112,7 +112,7 @@ namespace internal {
             for (auto& msg : history) {
                 free((char*)msg.content);
             }
-            std::cout << "Recursos [ActionLLM] liberados." << std::endl;
+            std::cout << "Recursos [AlyssaLLM] liberados." << std::endl;
         }
 
         void set_system_prompt(const std::string& prompt) {
@@ -228,10 +228,8 @@ namespace internal {
                 // 2. MONTA A LISTA COMPLETA DE MENSAGENS (System + Histórico)
                 std::vector<llama_chat_message> messages_to_template;
                 
-                // Adiciona o System Prompt no início
-                if (!system_prompt.empty()) {
-                    messages_to_template.push_back({"system", strdup(system_prompt.c_str())}); 
-                    // NOTA: Esta memória também deve ser liberada (strdup)
+                if (!this->config.system_prompt.empty()) {
+                    this->history.push_back({"system", strdup(this->config.system_prompt.c_str())});
                 }
                 
                 // Adiciona o histórico da conversa
