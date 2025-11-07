@@ -12,6 +12,11 @@ namespace internal {
     class ActionLLM;
     class IntrospectionLLM;
     class CentralMemory;
+    class AlyssaLLM;
+}
+
+namespace alyssa_core {
+    class AlyssaCore;
 }
 
 class CoreIntegration {
@@ -22,7 +27,13 @@ private:
     std::unique_ptr<internal::MemoryLLM> memory;
     std::unique_ptr<internal::ActionLLM> action;
     std::unique_ptr<internal::IntrospectionLLM> introspection;
-    std::unique_ptr<internal::CentralMemory> central_memory;
+    std::unique_ptr<internal::AlyssaLLM> alyssa;
+    
+    //TODO: Make this shit work
+    //std::unique_ptr<internal::CentralMemory> central_memory;
+
+    // Membro Ativc
+    std::unique_ptr<alyssa_core::AlyssaCore> core_instance;
 
     std::string system_prompt;
     bool initialized = false;
