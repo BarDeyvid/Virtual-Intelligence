@@ -1,3 +1,4 @@
+// test_main.cpp
 #include "CoreLLM.hpp" 
 #include "llama.h"
 #include <iostream>
@@ -14,7 +15,7 @@ int main() {
 
     std::cout << "Inicializando CoreIntegration..." << std::endl;
     
-    // 1. Chama a Inicialização com o caminho do modelo BASE (Argumento Mínimo)
+    // 1. Chama a Inicialização com o caminho do modelo BASE
     if (!alyssa_brain.initialize("models/gemma-3-1b-it-q4_0.gguf")) {
         std::cerr << "Falha Crítica ao inicializar o CoreIntegration. Encerrando." << std::endl;
         return 1;

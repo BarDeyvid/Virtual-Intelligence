@@ -32,7 +32,7 @@ private:
     bool initialized = false;
 
     // Novo método privado para executar um especialista
-    std::string run_expert(const std::string& expert_id, const std::string& input, PiperTTS& tts);
+    std::string run_expert(const std::string& expert_id, const std::string& input, bool use_tts, PiperTTS& tts);
 
     // Método para limpar o KV Cache quando trocamos de especialista
     void clear_kv_cache();

@@ -100,7 +100,7 @@ void PiperTTS::synthesizeAndPlay(const std::string& text) {
         return;
     }
 
-    std::cout << "TTS: \"" << text << "\"" << std::endl;
+    std::cout << "\n TTS: \"" << text << "\"" << std::endl;
 
     piper_synthesize_options options = piper_default_synthesize_options(synth_);
 
