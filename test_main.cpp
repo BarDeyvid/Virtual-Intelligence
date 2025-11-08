@@ -36,12 +36,14 @@ int main() {
     while (true) {
         printf("\033[32m> \033[0m");
         if (stt.get_last_result(user_input)) {
-            std::cout << " [Trasncricao]: " << user_input << std::endl;
+            std::cout << " [Transcrição]: " << user_input << std::endl;
             stt.pause(); 
-            std::string alyssa_response = alyssa_brain.think(user_input, tts);
+            
+            // 🆕 Usa Weighted Fusion em vez de think simples
+            std::string alyssa_response = alyssa_brain.think_with_fusion(user_input, tts);
+            
             stt.resume();
         }
-
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     return 0;
