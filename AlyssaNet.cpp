@@ -2,6 +2,7 @@
 
 #include "CoreLLM.hpp"
 #include "AlyssaCore.hpp"
+#include "voice/PiperTTS.hpp"
 
 using namespace alyssa_core;
 
@@ -87,7 +88,7 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 // 🧠 Método Think (Orquestração)
 // =========================================================================
 
-std::string CoreIntegration::think(const std::string& input) {
+std::string CoreIntegration::think(const std::string& input, PiperTTS& tts) {
     if (!initialized || !core_instance) {
         return "Erro: O CoreIntegration não foi inicializado corretamente.";
     }
@@ -108,7 +109,7 @@ std::string CoreIntegration::think(const std::string& input) {
     const std::string expert_to_use = "alyssa";
 
     printf("\033[33m[ALYSSA FINAL]: \033[0m"); 
-    std::string final_response = run_expert(expert_to_use, input);
+    std::string final_response = run_expert(expert_to_use, input, tts);
     printf("\n\033[0m");
 
     return final_response;
@@ -119,8 +120,10 @@ std::string CoreIntegration::think(const std::string& input) {
 // 🛠️ Método run_expert (O novo centro lógico)
 // =========================================================================
 
-std::string CoreIntegration::run_expert(const std::string& expert_id, const std::string& input) {
-    
+std::string CoreIntegration::run_expert(const std::string& expert_id, 
+                                        const std::string& input, 
+                                        PiperTTS& tts) {
+
     // 1. Verifica se o especialista existe
     if (expert_configs.find(expert_id) == expert_configs.end()) {
         throw std::runtime_error("Especialista desconhecido: " + expert_id);
@@ -183,12 +186,47 @@ std::string CoreIntegration::run_expert(const std::string& expert_id, const std:
     }
     
     std::string prompt(formatted.begin(), formatted.begin() + len);
-                
-    // 7. CHAMA A GERAÇÃO DE BAIXO NÍVEL (no motor central)
-    // Passamos o prompt, os parâmetros de sampling (da config) e o LoRA
-    std::string response = core_instance->generate_raw(prompt, config.params, lora); 
 
-    // 8. ADICIONA A RESPOSTA DO ASSISTENTE AO HISTÓRICO (do especialista)
+    std::string sentence_buffer;
+    
+    auto stream_callback = [&](const std::string& piece) {
+        sentence_buffer += piece;
+        
+        // Quebra a resposta por pontuação (simples)
+        size_t punctuation_pos = sentence_buffer.find_first_of(".!?");
+        
+        if (punctuation_pos != std::string::npos) {
+            // Extrai a sentença
+            std::string sentence = sentence_buffer.substr(0, punctuation_pos + 1);
+            // Remove a sentença do buffer
+            sentence_buffer = sentence_buffer.substr(punctuation_pos + 1);
+            
+            // Limpa espaços em branco do início
+            sentence.erase(0, sentence.find_first_not_of(" \t\n\r"));
+            
+            if (!sentence.empty()) {
+                tts.synthesizeAndPlay(sentence); 
+            }
+        }
+    };
+                
+    // 7. CHAMA A GERAÇÃO DE BAIXO NÍVEL (com o callback)
+    std::string response = core_instance->generate_raw(
+        prompt, 
+        config.params, 
+        lora, 
+        stream_callback // <--- PASSA O CALLBACK
+    ); 
+
+    // Toca qualquer texto que sobrou no buffer
+    if (!sentence_buffer.empty()) {
+        sentence_buffer.erase(0, sentence_buffer.find_first_not_of(" \t\n\r"));
+        if (!sentence_buffer.empty()) {
+            tts.synthesizeAndPlay(sentence_buffer);
+        }
+    }
+
+    // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
     history.push_back({"assistant", strdup(response.c_str())});
 
     return response;
@@ -218,6 +256,6 @@ void CoreIntegration::run_interactive_loop() {
         std::getline(std::cin, user_input);
         if (user_input == "sair" || user_input.empty()) break;
         
-        think(user_input); // 'think' agora cuida da orquestração
+        // think(user_input, nullptr); // 'think' agora cuida da orquestração
     }
 }

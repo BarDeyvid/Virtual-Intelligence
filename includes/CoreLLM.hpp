@@ -6,10 +6,13 @@
 #include <map>
 #include "llama.h"
 #include "AlyssaCore.hpp" 
+#include "voice/PiperTTS.hpp" 
 
 namespace alyssa_core {
     class AlyssaCore;
 }
+
+class PiperTTS;
 
 class CoreIntegration {
 private:
@@ -29,7 +32,7 @@ private:
     bool initialized = false;
 
     // Novo método privado para executar um especialista
-    std::string run_expert(const std::string& expert_id, const std::string& input);
+    std::string run_expert(const std::string& expert_id, const std::string& input, PiperTTS& tts);
 
     // Método para limpar o KV Cache quando trocamos de especialista
     void clear_kv_cache();
@@ -42,7 +45,7 @@ public:
     ~CoreIntegration();
 
     bool initialize(const std::string& model_path);
-    std::string think(const std::string& input); // (Interface pública inalterada)
+    std::string think(const std::string& input, PiperTTS& tts); // (Interface pública inalterada)
     void act(const std::string& command);
     void reflect();
     void run_interactive_loop();

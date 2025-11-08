@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
+#include <functional>
 
 using json = nlohmann::json;
 
@@ -149,7 +150,8 @@ namespace alyssa_core {
         std::string generate_raw(
             const std::string & prompt, 
             const SimpleModelParameters& params,
-            llama_adapter_lora* lora // LoRA a ser aplicado
+            llama_adapter_lora* lora, // LoRA a ser aplicado
+            std::function<void(const std::string& piece)> stream_callback
         ) {
             std::string response;
 
@@ -214,7 +216,7 @@ namespace alyssa_core {
                 std::cerr << "AVISO: Detectada dessincronização do KV Cache. Limpando cache." << std::endl;
                 llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1); // Limpa tudo
                 // E tentamos novamente como se fosse a primeira vez
-                return generate_raw(prompt, params, lora);
+                return generate_raw(prompt, params, lora, nullptr);
             }
 
             // 7. Prepara um batch APENAS com os tokens NOVOS
@@ -253,6 +255,11 @@ namespace alyssa_core {
                 printf("%s", piece.c_str());
                 fflush(stdout);
                 response += piece;
+
+                // CHAMA O CALLBACK COM O NOVO PEDAÇO DE TEXTO
+                if (stream_callback) {
+                    stream_callback(piece);
+                }
 
                 batch = llama_batch_get_one(&new_token_id, 1);
             }
