@@ -219,7 +219,7 @@ namespace internal {
                 return response;
             }
             
-            // O método principal que recebe o input e retorna a resposta
+           // O método principal que recebe o input e retorna a resposta
             std::string generate_response(const std::string& user_input) {
                 
                 // 1. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO
@@ -228,10 +228,8 @@ namespace internal {
                 // 2. MONTA A LISTA COMPLETA DE MENSAGENS (System + Histórico)
                 std::vector<llama_chat_message> messages_to_template;
                 
-                // Adiciona o System Prompt no início
-                if (!system_prompt.empty()) {
-                    messages_to_template.push_back({"system", strdup(system_prompt.c_str())}); 
-                    // NOTA: Esta memória também deve ser liberada (strdup)
+                if (!this->config.system_prompt.empty()) {
+                    this->history.push_back({"system", strdup(this->config.system_prompt.c_str())});
                 }
                 
                 // Adiciona o histórico da conversa

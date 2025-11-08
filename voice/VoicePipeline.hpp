@@ -33,7 +33,7 @@ public:
      * @brief Construtor. Carrega o modelo e inicializa o PortAudio.
      * @param model_path Caminho para o modelo GGML (ex: "models/ggml-base.bin")
      */
-    VoicePipeline(const std::string& model_path, Options options = {4, "pt", 0.02f, 1000, 200});
+    VoicePipeline(const std::string& model_path, Options options = {4, "en", 0.02f, 1000, 200});
 
     /**
      * @brief Destrutor. Para tudo e libera todos os recursos.
