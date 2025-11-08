@@ -1,0 +1,11 @@
+{
+    "host": "localhost",
+    "port": 8080,
+    "endpoint": "/embedding",
+    "model_path": "models/embeddinggemma-300M-Q8_0.gguf",
+    "server_executable": "llama.cpp/build/bin/llama-server",
+    "auto_start_server": true,
+    "server_timeout": 30,
+    "request_timeout": 30,
+    "embedding_dimension": 4096
+}
