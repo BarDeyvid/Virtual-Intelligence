@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <queue>
 #include <chrono>
+#include <atomic>
 
 // Define a 16kHz
 #define SAMPLE_RATE 16000
@@ -57,6 +58,12 @@ public:
      * @return true se um novo resultado foi obtido, false se a fila estava vazia.
      */
     bool get_last_result(std::string& result);
+
+    /** @brief Pausa o processamento de áudio (VAD e Callback). */
+    void pause();
+
+    /** @brief Retoma o processamento de áudio. */
+    void resume();
 
 
 private:
@@ -145,6 +152,7 @@ private:
 
     // Controle de Threads
     std::atomic<bool> m_running{false};
+    std::atomic<bool> m_is_paused{false}; 
     std::thread m_worker_thread; // Thread do Whisper
     std::thread m_vad_thread;    // Thread do VAD
 };

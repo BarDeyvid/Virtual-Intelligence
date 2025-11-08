@@ -1,4 +1,6 @@
 #include "PiperTTS.hpp"
+#include <vector>
+
 
 // --- Construtor e Destrutor ---
 
@@ -73,7 +75,7 @@ void PiperTTS::openAudioStream() {
     }
 
     // Iniciar o stream imediatamente, ele pausará se não houver dados.
-    err = Pa_StartStream(stream_);
+    // err = Pa_StartStream(stream_);
     if (err != paNoError) {
         Pa_CloseStream(stream_);
         terminatePortAudio();
@@ -98,10 +100,6 @@ void PiperTTS::synthesizeAndPlay(const std::string& text) {
         return;
     }
 
-    if (!Pa_IsStreamActive(stream_)) {
-        Pa_StartStream(stream_);
-    }
-
     std::cout << "TTS: \"" << text << "\"" << std::endl;
 
     piper_synthesize_options options = piper_default_synthesize_options(synth_);
@@ -109,19 +107,42 @@ void PiperTTS::synthesizeAndPlay(const std::string& text) {
     // 1. Iniciar a síntese
     piper_synthesize_start(synth_, text.c_str(), &options);
 
-    // 2. Streaming de áudio para o PortAudio
+    // 2. Criar um buffer para armazenar o áudio COMPLETO
+    std::vector<float> audio_buffer;
     piper_audio_chunk chunk;
-    while (piper_synthesize_next(synth_, &chunk) != PIPER_DONE) {
-        PaError err = Pa_WriteStream(stream_, chunk.samples, chunk.num_samples); 
 
-        if (err != paNoError) {
-            std::cerr << "Erro durante a escrita no stream de áudio: " << Pa_GetErrorText(err) << std::endl;
-            break;
-        }
+    // 3. Loop de síntese: PREENCHE o buffer na memória
+    while (piper_synthesize_next(synth_, &chunk) != PIPER_DONE) {
+        // Adiciona os samples do chunk ao nosso buffer principal
+        audio_buffer.insert(audio_buffer.end(), 
+                            chunk.samples, 
+                            chunk.samples + chunk.num_samples);
     }
     
-    // 3. Esperar o stream terminar de tocar o buffer (Opcional, mas útil)
-    // Pa_Sleep(100); 
+    // 4. Agora que temos o áudio completo, TOCA TUDO DE UMA VEZ
+    if (audio_buffer.empty()) {
+        std::cerr << "TTS: Nenhum áudio foi sintetizado." << std::endl;
+        return; // Não faz nada se não houver áudio
+    }
     
+    // 5. Inicia o stream de áudio
+    PaError err = Pa_StartStream(stream_);
+    if (err != paNoError) {
+        std::cerr << "Erro ao iniciar stream: " << Pa_GetErrorText(err) << std::endl;
+        return;
+    }
+
+    // 6. Escreve o buffer COMPLETO no stream
+    err = Pa_WriteStream(stream_, audio_buffer.data(), audio_buffer.size()); 
+    if (err != paNoError) {
+        std::cerr << "Erro durante a escrita no stream de áudio: " << Pa_GetErrorText(err) << std::endl;
+    }
+
+    // 7. Para o stream (ele vai esperar o buffer terminar de tocar)
+    err = Pa_StopStream(stream_);
+    if (err != paNoError) {
+        std::cerr << "Erro ao parar stream: " << Pa_GetErrorText(err) << std::endl;
+    }
+        
     std::cout << "Reprodução concluída." << std::endl;
 }

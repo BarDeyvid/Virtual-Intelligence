@@ -37,11 +37,13 @@ int main() {
         if (stt.get_last_result(user_input)) {
             std::cout << " [Trasncricao]: " << user_input << std::endl;
             std::string alyssa_response = alyssa_brain.think(user_input);
-            tts.synthesizeAndPlay(alyssa_response);
+
+            stt.pause(); 
+            tts.synthesizeAndPlay(alyssa_response); 
+            stt.resume(); 
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
     }
     return 0;
 }

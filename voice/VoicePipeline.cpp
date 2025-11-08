@@ -147,6 +147,20 @@ void VoicePipeline::_whisper_worker_func() {
     std::cout << "🛑 Whisper worker thread encerrando." << std::endl;
 }
 
+void VoicePipeline::pause() {
+    std::cout << "[VAD] Pausado." << std::endl;
+    m_is_paused = true;
+}
+
+void VoicePipeline::resume() {
+    std::cout << "[VAD] Retomado." << std::endl;
+    // Limpa qualquer áudio capturado durante a pausa
+    if (m_running) {
+        m_audio_data.write_pos = 0; 
+    }
+    m_is_paused = false;
+}
+
 void VoicePipeline::_vad_loop_func() {
     size_t last_read_pos = 0;
     std::vector<float> speech_buffer;
@@ -157,6 +171,10 @@ void VoicePipeline::_vad_loop_func() {
 
     while (m_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Poll 10x/s
+
+        if (m_is_paused) { // <-- ADICIONE ESTA VERIFICAÇÃO
+            continue; 
+        }
 
         size_t current_write_pos = m_audio_data.write_pos;
         if (current_write_pos == last_read_pos) {
@@ -245,6 +263,10 @@ int VoicePipeline::_pa_callback_impl(const void* input, unsigned long frameCount
     const int16_t *input_i16 = (const int16_t*)input;
 
     if (!m_audio_data.stream_ready) {
+        return paContinue;
+    }
+
+    if (!m_audio_data.stream_ready || m_is_paused) { 
         return paContinue;
     }
 
