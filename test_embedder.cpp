@@ -41,3 +41,16 @@ int main() {
     
     return 0;
 }
+
+// Results:
+// ------------------------------------------------
+// QUERY: Which planet is known as the Red Planet?
+// ------------------------------------------------
+// TOP 3 RESULTADOS:
+// [0.8277] -> Mars, known for its reddish appearance, is often referred to as the Red Planet.
+// 
+// [0.7574] -> Saturn, famous for its rings, is sometimes mistaken for the Red Planet.
+// 
+// [0.7358] -> Jupiter, the largest planet in our solar system, has a prominent red spot.
+// 
+// ------------------------------------------------
