@@ -1,9 +1,9 @@
 #pragma once
-#include "AlyssaCore.hpp"
-#include "WeightedFusion/WeightedFusion.hpp"
-#include "voice/PiperTTS.hpp"
-#include "voice/ElevenLabsTTS.hpp"
-#include "AlyssaMemoryHandler.hpp"
+#include "includes/AlyssaCore.hpp"
+#include "includes/WeightedFusion/WeightedFusion.hpp"
+#include "includes/voice/PiperTTS.hpp"
+#include "includes/voice/ElevenLabsTTS.hpp"
+#include "includes/AlyssaMemoryHandler.hpp"
 #include <memory>
 #include <map>
 #include <vector>

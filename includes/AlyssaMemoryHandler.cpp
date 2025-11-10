@@ -1,5 +1,5 @@
 // AlyssaMemoryHandler.cpp
-#include <AlyssaMemoryHandler.hpp> 
+#include <includes/AlyssaMemoryHandler.hpp> 
 #include "Embedding/Embedder.hpp"            
 #include <filesystem>
 #include <sqlite3.h>

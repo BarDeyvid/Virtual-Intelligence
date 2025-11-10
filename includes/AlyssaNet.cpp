@@ -1,8 +1,8 @@
 // AlyssaNet.cpp
 
-#include "CoreLLM.hpp"
-#include "AlyssaCore.hpp"
-#include "voice/PiperTTS.hpp"
+#include "includes/CoreLLM.hpp"
+#include "includes/AlyssaCore.hpp"
+#include "includes/voice/PiperTTS.hpp"
 
 using namespace alyssa_core;
 
