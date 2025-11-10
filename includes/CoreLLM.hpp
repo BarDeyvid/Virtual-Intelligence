@@ -2,6 +2,8 @@
 #include "AlyssaCore.hpp"
 #include "WeightedFusion/WeightedFusion.hpp"
 #include "voice/PiperTTS.hpp"
+#include "voice/ElevenLabsTTS.hpp"
+#include "AlyssaMemoryHandler.hpp"
 #include <memory>
 #include <map>
 #include <vector>
@@ -11,6 +13,8 @@ private:
     std::unique_ptr<alyssa_core::AlyssaCore> core_instance;
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;
     std::unique_ptr<Embedder> embedder;
+
+    std::unique_ptr<AlyssaMemoryManager> memory_manager;
     
     // Mapas de configuração e estado
     std::map<std::string, SimpleModelConfig> expert_configs;
@@ -28,7 +32,7 @@ public:
     std::string think(const std::string& input, PiperTTS& tts);
     
     // 🆕 Método com Weighted Fusion
-    std::string think_with_fusion(const std::string& input, PiperTTS& tts);
+    std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
     
 private:
     std::string run_expert(const std::string& expert_id, 

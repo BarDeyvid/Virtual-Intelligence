@@ -3,7 +3,8 @@
 #include "llama.h"
 #include <iostream>
 #include <string>
-#include "voice/PiperTTS.hpp"
+// #include "voice/PiperTTS.hpp"
+#include "voice/ElevenLabsTTS.hpp"
 #include "voice/VoicePipeline.hpp"
 
 int main() {
@@ -22,9 +23,11 @@ int main() {
     }
     std::cout << "CoreIntegration Inicializado...";
     
-    PiperTTS tts("models/en_US-ljspeech-high.onnx", "models/en_US-ljspeech-high.onnx.json", "piper/libpiper/build/espeak_ng-install/share/espeak-ng-data");
+    // PiperTTS tts("models/en_US-ljspeech-high.onnx", "models/en_US-ljspeech-high.onnx.json", "piper/libpiper/build/espeak_ng-install/share/espeak-ng-data");
 
-    VoicePipeline stt("models/ggml-large-v3-turbo.bin");
+    ElevenLabsTTS tts;
+
+    VoicePipeline stt("models/ggml-large-v3.bin");
 
     if (!stt.start()) {
         std::cerr << "Falha ao inciar Pipeline TTS." << std::endl;
