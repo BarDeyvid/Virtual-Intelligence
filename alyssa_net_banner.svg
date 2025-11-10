@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#082032"/>
+      <stop offset="100%" stop-color="#041526"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .title { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:48px; font-weight:700; fill: white; }
+      .subtitle { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:18px; fill: #cbd5e1; }
+      .tag { font-family: 'Courier New', monospace; font-size:12px; fill:#94a3b8; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="320" fill="url(#bg)" />
+
+  <!-- Neural circuit / brain icon -->
+  <g transform="translate(-60,-30) scale(1.2)">
+    <!-- outer rounded shape -->
+    <path d="M160 40 C220 40 260 90 260 150 C260 210 220 260 160 260 C100 260 60 210 60 150 C60 90 100 40 160 40 Z" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linejoin="round"/>
+
+    <!-- inner network lines -->
+    <g stroke="#9EE7F7" stroke-width="3" stroke-linecap="round">
+      <line x1="120" y1="80" x2="180" y2="60" opacity="0.85"/>
+      <line x1="140" y1="120" x2="200" y2="100" opacity="0.85"/>
+      <line x1="100" y1="140" x2="160" y2="140" opacity="0.85"/>
+      <line x1="140" y1="180" x2="200" y2="160" opacity="0.85"/>
+      <line x1="120" y1="200" x2="180" y2="220" opacity="0.85"/>
+    </g>
+
+    <!-- neural nodes -->
+    <g filter="url(#softGlow)">
+      <circle cx="120" cy="80" r="8" fill="#7c3aed" />
+      <circle cx="180" cy="60" r="8" fill="#06b6d4" />
+      <circle cx="140" cy="120" r="7" fill="#34d399" />
+      <circle cx="200" cy="100" r="7" fill="#7c3aed" />
+      <circle cx="100" cy="140" r="6" fill="#06b6d4" />
+      <circle cx="160" cy="140" r="9" fill="#34d399" />
+      <circle cx="140" cy="180" r="7" fill="#7c3aed" />
+      <circle cx="200" cy="160" r="6" fill="#06b6d4" />
+      <circle cx="120" cy="200" r="8" fill="#34d399" />
+      <circle cx="180" cy="220" r="6" fill="#7c3aed" />
+    </g>
+  </g>
+
+  <!-- Title and subtitle -->
+  <g transform="translate(320,90)">
+    <text class="title">AlyssaNet</text>
+    <text class="subtitle" transform="translate(0,36)">Cognitive AI Framework — Emotional · Introspective · Memory-driven</text>
+
+    <!-- Tagline box -->
+    <rect x="0" y="56" rx="6" ry="6" width="820" height="42" fill-opacity="0.06" fill="#ffffff"/>
+    <text class="tag" transform="translate(12,84)">v0.01 — IMMORTAL • Built with C++20 · Whisper.cpp · Gemma · ElevenLabs</text>
+  </g>
+
+  <!-- Decorative dots on the right -->
+  <g transform="translate(1160,40)" opacity="0.6">
+    <circle cx="0" cy="0" r="4" fill="#34d399"/>
+    <circle cx="24" cy="24" r="6" fill="#06b6d4"/>
+    <circle cx="-20" cy="48" r="5" fill="#7c3aed"/>
+    <circle cx="10" cy="80" r="3.5" fill="#94a3b8"/>
+  </g>
+
+  <!-- Footer small credit -->
+  <text x="20" y="306" class="tag">© 2025 Deyvid Barcelos — AlyssaNet</text>
+</svg>
