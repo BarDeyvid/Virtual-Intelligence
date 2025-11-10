@@ -82,6 +82,9 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             }
         }
 
+        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
+        std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
+
         initialized = true;
         std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
         return true;
@@ -94,14 +97,39 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 }
 
 // 🆕 Think com Weighted Fusion
-std::string CoreIntegration::think_with_fusion(const std::string& input, PiperTTS& tts) {
+std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
     }
 
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
 
-    // 1. Executa comitê de especialistas
+    // =========================================================
+    // ⬇️ RECUPERAR MEMÓRIAS E AUMENTAR O INPUT ⬇️
+    // =========================================================
+    std::string memory_context = "";
+    std::string augmented_input = input; // Começa como o input original
+    
+    if (memory_manager) {
+        auto memories = memory_manager->getHybridMemories(input); 
+        
+        if (!memories.empty()) {
+            memory_context = "\n[CONTEXTO RELEVANTE DE LTM]\n";
+            for (const auto& mem : memories) {
+                // Formato: User: [conteudo] | Alyssa: [contexto] (Emoção: [emocao])
+                memory_context += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
+            }
+            memory_context += "[FIM CONTEXTO LTM]\n";
+            
+            std::cout << "🧠 " << memory_context; 
+            
+            // O input que vai para os especialistas é o prompt aumentado
+            augmented_input = memory_context + input;
+        }
+    }
+
+
+    // 1. Executa comitê de especialistas, usando o INPUT AUMENTADO
     std::vector<std::string> expert_committee = {
         "emotionalModel", 
         "memoryModel", 
@@ -109,7 +137,8 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, PiperTT
         "alyssa"  // especialista geral
     };
     
-    auto contributions = run_expert_committee(expert_committee, input);
+    // Altera a chamada para usar 'augmented_input'
+    auto contributions = run_expert_committee(expert_committee, augmented_input); 
     
     // 2. Aplica Weighted Fusion
     std::string emotion = fusion_engine->detect_emotion_from_input(input);
@@ -119,6 +148,18 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, PiperTT
     printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
     tts.synthesizeAndPlay(final_response);
     
+    // =========================================================
+    // ⬇️ SALVAR A INTERAÇÃO COMPLETA NA MEMÓRIA ⬇️
+    // =========================================================
+    if (memory_manager) {
+        // Salva o input ORIGINAL do usuário e a resposta final de Alyssa
+        memory_manager->processInteraction(
+            input,          
+            final_response  
+        );
+        std::cout << "\n✅ Interação salva na LTM." << std::endl;
+    }
+
     return final_response;
 }
 
@@ -177,8 +218,6 @@ std::string CoreIntegration::think(const std::string& input, PiperTTS& tts) {
     }
 
     // --- LÓGICA MoE ---
-    // Aqui você decidiria qual especialista chamar.
-    // Por enquanto, vamos chamar "alyssa" como padrão.
     
     // Exemplo de lógica MoE (futuro):
     // 1. Chamar "emotionModel" para analisar o input

@@ -1,504 +1,1341 @@
+// AlyssaMemoryHandler.cpp
+#include <AlyssaMemoryHandler.hpp> 
+#include "Embedding/Embedder.hpp"            
 #include <filesystem>
 #include <sqlite3.h>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <cstring> // Para memcpy
+#include <cstring>
 #include <vector>
 #include <string>
 #include <random>
 #include <chrono>
-#include "llama.h"
 #include <cmath>
-#include <stdexcept> // Para std::runtime_error
-#include <algorithm> // Para std::sort
+#include <stdexcept>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
+#include <memory>
+#include <ctime>
+#include <curl/curl.h>
+#include <thread>
+#include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <regex>
+#include <unordered_map>
+#include <numeric>
+#include "includes/json.hpp"
 
-// --- Classe Utils Melhorada ---
-class Utils {
-public:
-    static std::vector<float> getTimeStamp() {
-        // Timestamp cíclico (hora do dia em formato seno/cosseno)
-        auto now = std::chrono::system_clock::now();
-        auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-        std::vector<float> v_time = { std::sin(ts / 3600.0f), std::cos(ts / 3600.0f) };
-        return v_time;
-    };
-};
+using json = nlohmann::json;
+namespace fs = std::filesystem;
 
-// --- Classe AlyssaInterprets Melhorada ---
-class AlyssaInterprets { 
-    int ctx;
-    llama_model *model;
-    llama_context *model_ctx;
-    const llama_vocab *vocab;
-    llama_model_params model_params;
-    llama_context_params ctx_params;
+// ============================================================================
+// Implementações das Estruturas
+// ============================================================================
 
-public:
-    AlyssaInterprets(const char *model_path, const std::string save_path, int ctx_val)
-        : ctx(ctx_val), model(nullptr), model_ctx(nullptr), 
-          model_params(llama_model_default_params()), 
-          ctx_params(llama_context_default_params())
-    {
-        ctx_params.n_ctx = ctx;
-        std::cout << "Carregando modelo: " << model_path << std::endl;
-        
-        this->model = llama_model_load_from_file(model_path, model_params);
-        if (!model) {
-            throw std::runtime_error("❌ Falha ao carregar modelo.");
-        }
+EmotionalState::EmotionalState(const std::string& n, double i) 
+    : name(n), intensity(i) {
+    timestamp = std::chrono::system_clock::to_time_t(
+        std::chrono::system_clock::now());
+}
 
-        this->vocab = llama_model_get_vocab(model); 
-        this->model_ctx = llama_init_from_model(model, ctx_params); 
-        if (!model_ctx) {
-            llama_model_free(model);
-            throw std::runtime_error("❌ Falha ao criar contexto.");
-        }
-    };
+Intention::Intention(const std::string& desc, const std::string& t, const std::string& trig)
+    : description(desc), type(t), trigger(trig), active(true), motivation(0.5) {
+    created_at = Utils::getCurrentISOTime();
+}
 
-    ~AlyssaInterprets() {
-        if (model_ctx) {
-            llama_free(model_ctx);
-        }
-        if (model) {
-            llama_model_free(model);
-        }
-        std::cout << "AlyssaInterprets finalizado e recursos liberados.\n";
-    }
+MemoryLink::MemoryLink(int src, int tgt, double w, const std::string& t)
+    : source_id(src), target_id(tgt), weight(w), type(t) {}
 
-    uint64_t ModelHash() {
-        std::vector<char> desc_vef(ctx);
-        llama_model_desc(model, desc_vef.data(), desc_vef.size());
-        uint64_t model_hash = std::hash<std::string>{} (std::string(desc_vef.begin(), desc_vef.end()));
-        std::cout << "\n Model Hash: 0x" << std::hex << model_hash << std::dec << "\n";
-        return model_hash;
+Reflection::Reflection(int mem_id, const std::string& t, const std::string& c)
+    : memory_id(mem_id), type(t), content(c) {
+    created_at = Utils::getCurrentISOTime();
+}
+
+
+// ============================================================================
+// Implementação de EmotionalAnalyzer
+// ============================================================================
+
+EmotionalAnalyzer::EmotionalAnalyzer() {
+    // Inicializar categorias de emoções
+    emotion_categories = {"alegria", "tristeza", "raiva", "medo", "surpresa", "confiança", "antecipacao", "desgosto"};
+    
+    // Inicializar pesos emocionais
+    emotion_weights = {
+        {"alegria", 1.0}, {"tristeza", 1.0}, {"raiva", 1.0}, 
+        {"medo", 1.0}, {"surpresa", 0.8}, {"confiança", 0.9},
+        {"antecipacao", 0.7}, {"desgosto", 0.9}
     };
     
-    std::vector<llama_token> Tokenizer(std::string input) {
-        std::vector<float> v_time = Utils::getTimeStamp();
-        input = "[TIME:" + std::to_string(v_time[0]) + "," + std::to_string(v_time[1]) + "] " + input;
-        
-        std::vector<llama_token> tokens(4096);
-        int n = llama_tokenize(vocab, input.c_str(), input.size(), tokens.data(), tokens.size(), true, true);
-        if (n < 0) {
-            throw std::runtime_error("Falha na tokenização (retornou < 0)");
-        }
-        tokens.resize(n);
-        
-        std::cout << "\nTokenização concluída (" << n << " tokens):\n";
-        for (auto t : tokens) {
-            char buf[64];
-            int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true);
-            if (len >= 0) {
-                std::string piece(buf, len);
-                std::cout << "Token ID: " << std::setw(6) << t << " | Token Piece: " << piece << "\n";
-            }
-        }
-        return tokens;
-    }
+    initializeEmotionLexicons();
+}
 
-    int32_t token_to_piece(llama_token t, char *piece_buf, size_t buf_size) {
-        return llama_token_to_piece(vocab, t, piece_buf, buf_size, 0, true);
-    }
-};
-
-// Struct para retornar as memórias mais relevantes
-struct MemoryMatch {
-    int id;
-    double similarity;
-    uint64_t timestamp;
-    uint32_t n_tokens;
-    uint32_t emo_dim;
-};
-
-class SqliteHandler {
-private:
-    sqlite3 *db;
-    #pragma pack(push, 1)
-    struct AlyssaMemHeader {
-        uint64_t timestamp;
-        uint64_t model_hash;
-        uint32_t n_tokens;
-        uint32_t emo_dim;
+void EmotionalAnalyzer::initializeEmotionLexicons() {
+    // Lexicon para alegria
+    emotion_lexicons["alegria"] = {
+        "feliz", "alegre", "contente", "satisfeito", "animado", "entusiasmado",
+        "grato", "orgulhoso", "esperançoso", "optimista", "radiante", "eufórico",
+        "maravilhoso", "incrível", "fantástico", "excelente", "ótimo", "bom",
+        "adoro", "amo", "gosto", "prazer", "diversão", "risada", "sorriso",
+        "sucesso", "vitória", "conquista", "comemoração", "parabéns"
     };
-    #pragma pack(pop)
-    sqlite3_stmt *stmt;
-
-    // Função auxiliar privada: Cálculo da Similaridade de Cosseno
-    double calculate_cosine_similarity(const std::vector<float>& v1, const std::vector<float>& v2) {
-        if (v1.size() != v2.size() || v1.empty()) {
-            return 0.0; 
-        }
-
-        double dot_product = 0.0;
-        double norm_v1 = 0.0;
-        double norm_v2 = 0.0;
-
-        for (size_t i = 0; i < v1.size(); ++i) {
-            dot_product += static_cast<double>(v1[i]) * static_cast<double>(v2[i]);
-            norm_v1 += static_cast<double>(v1[i]) * static_cast<double>(v1[i]);
-            norm_v2 += static_cast<double>(v2[i]) * static_cast<double>(v2[i]);
-        }
-
-        if (norm_v1 == 0.0 || norm_v2 == 0.0) {
-            return 0.0;
-        }
-
-        return dot_product / (std::sqrt(norm_v1) * std::sqrt(norm_v2));
-    }
-
-    void create_table_if_not_exists() {
-         const char *create_sql = R"SQL(
-            CREATE TABLE IF NOT EXISTS memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp INTEGER,
-                model_hash INTEGER, 
-                n_tokens INTEGER,
-                emo_dim INTEGER,
-                tokens BLOB
-            );
-        )SQL";
-        
-        const char *create_index = R"SQL(
-            CREATE INDEX IF NOT EXISTS idx_timestamp ON memories(timestamp);
-            CREATE INDEX IF NOT EXISTS idx_model_hash ON memories(model_hash);
-            )SQL";
-
-        char *errMsg = nullptr;
-        if (sqlite3_exec(db, create_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-            std::string err = "Erro ao criar tabela: ";
-            err += errMsg;
-            sqlite3_free(errMsg);
-            throw std::runtime_error(err);
-        }
-        if (sqlite3_exec(db, create_index, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-            std::string err = "Erro ao criar index: ";
-            err += errMsg;
-            sqlite3_free(errMsg);
-            throw std::runtime_error(err);
-        }
-    }
-
-public:
-    SqliteHandler(const std::string &db_path) : db(nullptr), stmt(nullptr) {
-        int rc = sqlite3_open(db_path.c_str(), &db);
-        if (rc != SQLITE_OK) {
-            std::string errMsg = "Erro ao abrir SQLite DB: ";
-            errMsg += sqlite3_errmsg(db);
-            sqlite3_close(db); 
-            throw std::runtime_error(errMsg);
-        }
-        std::cout << "Memoria (SQLite) aberta: " << db_path << std::endl;
-        
-        create_table_if_not_exists(); 
-    }
-
-    ~SqliteHandler() {
-        if (stmt) {
-            sqlite3_finalize(stmt);
-        }
-        if (db) {
-            sqlite3_close(db);
-            std::cout << "Memoria (SQLite) fechada!" << std::endl;
-        }
-    }
-
-    // Função para salvar memória no SQLite
-    bool save_memory_to_sqlite(const std::vector<llama_token> &tokens,
-                               const std::vector<float> &v_emo,
-                               const std::vector<float> &v_time,
-                               uint64_t model_hash) {
-        
-        AlyssaMemHeader header;
-        header.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        header.model_hash = model_hash;
-        header.n_tokens = tokens.size();
-        header.emo_dim = v_emo.size();
-
-        const int VTIME_DIM = 2; 
-        size_t tokens_size_bytes = tokens.size() * sizeof(llama_token);
-        size_t emo_size_bytes = v_emo.size() * sizeof(float);
-        size_t vtime_size_bytes = v_time.size() * sizeof(float);
-
-        if (v_time.size() != VTIME_DIM) {
-             std::cerr << "Alerta: v_time.size() (" << v_time.size() << ") e diferente de VTIME_DIM (2)\n";
-        }
-
-        std::vector<uint8_t> blob_data(tokens_size_bytes + emo_size_bytes + vtime_size_bytes);
-        
-        uint8_t *current_ptr = blob_data.data();
-        std::memcpy(current_ptr, tokens.data(), tokens_size_bytes);
-        current_ptr += tokens_size_bytes;
-        std::memcpy(current_ptr, v_emo.data(), emo_size_bytes);
-        current_ptr += emo_size_bytes;
-        std::memcpy(current_ptr, v_time.data(), vtime_size_bytes);
-        
-        const char *sql = "INSERT INTO memories (timestamp, model_hash, n_tokens, emo_dim, tokens) VALUES (?, ?, ?, ?, ?);";
-
-        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            std::string err = "Erro ao preparar statement SQLite: ";
-            err += sqlite3_errmsg(db);
-            throw std::runtime_error(err);
-        }
-        
-        sqlite3_bind_int64(stmt, 1, header.timestamp);
-        sqlite3_bind_int64(stmt, 2, header.model_hash);
-        sqlite3_bind_int(stmt, 3, header.n_tokens);
-        sqlite3_bind_int(stmt, 4, header.emo_dim);
-        sqlite3_bind_blob(stmt, 5, blob_data.data(), blob_data.size(), SQLITE_STATIC);
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            std::string err = "Erro ao Inserir Memoria: ";
-            err += sqlite3_errmsg(db);
-            sqlite3_finalize(stmt);
-            stmt = nullptr;
-            throw std::runtime_error(err);
-        }
-        
-        std::cout << "Memoria inserida no SQLITE (Tokens: " << header.n_tokens << ", Emo Dim: " << header.emo_dim << ")\n";
-        sqlite3_finalize(stmt);
-        stmt = nullptr; 
-        return true;
+    
+    // Lexicon para tristeza
+    emotion_lexicons["tristeza"] = {
+        "triste", "deprimido", "desanimado", "desapontado", "frustrado",
+        "solitude", "solidão", "saudade", "perda", "luto", "chorar",
+        "decepcionado", "desiludido", "abatido", "desesperançado",
+        "pesar", "arrependimento", "culpa", "remorso", "mágoa",
+        "fracasso", "derrota", "perda", "adeus", "despedida"
     };
+    
+    // Lexicon para raiva
+    emotion_lexicons["raiva"] = {
+        "raiva", "furioso", "irritado", "nervoso", "bravo", "zangado",
+        "frustração", "ódio", "aversão", "ressentimento", "indignação",
+        "revolta", "fúria", "ira", "exasperado", "impaciente",
+        "injustiça", "injusto", "inaceitável", "intolerável",
+        "pare", "basta", "chega", "odeio", "detesto"
+    };
+    
+    // Lexicon para medo
+    emotion_lexicons["medo"] = {
+        "medo", "assustado", "temeroso", "apreensivo", "ansioso",
+        "nervoso", "preocupado", "receoso", "amedrontado", "pavor",
+        "terror", "pânico", "desconfiado", "cauteloso", "hesitante",
+        "perigo", "risco", "ameaça", "incerteza", "insegurança",
+        "assustador", "aterrorizante", "horrível", "temível"
+    };
+    
+    // Lexicon para surpresa
+    emotion_lexicons["surpresa"] = {
+        "surpresa", "surpreso", "espantado", "pasmo", "maravilhado",
+        "impressionado", "admirado", "deslumbrado", "estupefato",
+        "incrível", "extraordinário", "inesperado", "repentino",
+        "improviso", "surpreendente", "espantoso", "assombroso",
+        "uau", "nossa", "caramba", "incrível", "fantástico"
+    };
+    
+    // Lexicon para confiança
+    emotion_lexicons["confiança"] = {
+        "confiança", "confiante", "seguro", "determinado", "decidido",
+        "convicção", "certeza", "confiar", "acreditar", "esperança",
+        "otimismo", "positivo", "forte", "capaz", "competente",
+        "garantia", "segurança", "estabilidade", "controle",
+        "sucesso", "vitória", "conquista", "realização"
+    };
+    
+    // Lexicon para antecipação
+    emotion_lexicons["antecipacao"] = {
+        "antecipação", "expectativa", "espera", "ansiedade", "excitação",
+        "prévia", "preparação", "planejamento", "futuro", "próximo",
+        "aguardar", "esperar", "desejar", "almejar", "almejo",
+        "sonho", "objetivo", "meta", "plano", "estratégia",
+        "amanhã", "futuro", "próximos", "vindouro"
+    };
+    
+    // Lexicon para desgosto
+    emotion_lexicons["desgosto"] = {
+        "desgosto", "nojo", "repulsa", "aversão", "desagrado",
+        "descontentamento", "insatisfação", "decepção", "frustração",
+        "horror", "pavor", "repugnância", "aborrecimento", "enfado",
+        "tedioso", "chato", "desinteressante", "desagradável",
+        "detesto", "odeio", "rejeito", "recuso", "negativo"
+    };
+}
 
-    // Busca contextual por similaridade emocional
-    std::vector<MemoryMatch> find_similar_memories(const std::vector<float>& v_emo_query, int top_k) {
-        std::vector<MemoryMatch> matches;
-        if (v_emo_query.empty()) {
-            std::cerr << "Erro: Vetor emocional de busca esta vazio.\n";
-            return matches;
-        }
-
-        // Seleciona as colunas necessárias para o cálculo e identificação
-        const char *sql = "SELECT id, timestamp, n_tokens, emo_dim, tokens FROM memories;";
-        sqlite3_stmt *select_stmt = nullptr;
-
-        if (sqlite3_prepare_v2(db, sql, -1, &select_stmt, nullptr) != SQLITE_OK) {
-            std::cerr << "Erro ao preparar busca por similaridade: " << sqlite3_errmsg(db) << "\n";
-            return matches;
-        }
-
-        // Itera sobre todos os registros
-        while (sqlite3_step(select_stmt) == SQLITE_ROW) {
-            int id = sqlite3_column_int(select_stmt, 0);
-            uint64_t timestamp = sqlite3_column_int64(select_stmt, 1);
-            int n_tokens_stored = sqlite3_column_int(select_stmt, 2);
-            int emo_dim_stored = sqlite3_column_int(select_stmt, 3);
-            const uint8_t *blob_data = (const uint8_t*)sqlite3_column_blob(select_stmt, 4);
-
-            if (emo_dim_stored != v_emo_query.size()) {
-                std::cerr << "Aviso: Memória ID " << id << " ignorada (Dimensoes incompativeis: " << emo_dim_stored << " != " << v_emo_query.size() << ").\n";
-                continue;
-            }
-
-            // 1. Calcular offsets para a seção v_emo dentro do BLOB
-            size_t tokens_size_bytes = n_tokens_stored * sizeof(llama_token);
-            size_t emo_size_bytes = emo_dim_stored * sizeof(float);
-
-            // 2. Ponteiro para o início do vetor emocional armazenado
-            const uint8_t *emo_ptr = blob_data + tokens_size_bytes;
-
-            // 3. Copia o vetor emocional do BLOB para um vetor C++ temporário
-            std::vector<float> v_emo_stored(emo_dim_stored);
-            std::memcpy(v_emo_stored.data(), emo_ptr, emo_size_bytes);
-
-            // 4. Calcula a similaridade
-            double similarity = calculate_cosine_similarity(v_emo_query, v_emo_stored);
-
-            // 5. Armazena o resultado
-            matches.push_back({
-                id,
-                similarity,
-                timestamp,
-                static_cast<uint32_t>(n_tokens_stored),
-                static_cast<uint32_t>(emo_dim_stored)
-            });
-        }
-
-        sqlite3_finalize(select_stmt);
-
-        // Ordena os resultados por similaridade (maior para menor)
-        std::sort(matches.begin(), matches.end(), [](const MemoryMatch& a, const MemoryMatch& b) {
-            return a.similarity > b.similarity;
-        });
-
-        // Retorna top_k resultados
-        if (matches.size() > top_k) {
-            matches.resize(top_k);
-        }
-
-        return matches;
+EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
+    EmotionalAnalysis result;
+    std::unordered_map<std::string, double> scores;
+    
+    // Converter texto para minúsculas para análise case-insensitive
+    std::string lower_text = text;
+    std::transform(lower_text.begin(), lower_text.end(), lower_text.begin(), ::tolower);
+    
+    // Inicializar scores
+    for (const auto& emotion : emotion_categories) {
+        scores[emotion] = 0.0;
     }
+    
+    // Análise baseada em lexicon
+    analyzeWithLexicon(lower_text, scores);
+    
+    // Análise baseada em padrões e intensificadores
+    analyzePatterns(lower_text, scores);
+    
+    // Análise de pontuação e exclamações
+    analyzePunctuation(text, scores);
+    
+    // Normalizar scores e criar vector emocional
+    result.emotion_scores = scores;
+    result.emotional_vector = normalizeScores(scores);
+    result.dominant_emotion = findDominantEmotion(scores);
+    result.confidence = calculateConfidence(scores);
+    
+    return result;
+}
 
-    bool save_memory_to_file(const std::string &path,
-                             const std::vector<llama_token> &tokens,
-                             const std::vector<float> &v_emo,
-                             const std::vector<float> &v_time,
-                             uint64_t model_hash) {
-        
-        AlyssaMemHeader header;
-        header.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        header.model_hash = model_hash;
-        header.n_tokens = tokens.size();
-        header.emo_dim = v_emo.size();
-
-        std::ofstream out(path, std::ios::binary);
-        if (!out) {
-            std::cerr << "Falha ao abrir arquivo para escrita: " << path << "\n";
-            return false;
-        }
-
-        out.write(reinterpret_cast<char*>(&header), sizeof(header));
-        out.write(reinterpret_cast<const char*>(tokens.data()), tokens.size() * sizeof(llama_token));
-        out.write(reinterpret_cast<const char*>(v_emo.data()), v_emo.size() * sizeof(float));
-        out.write(reinterpret_cast<const char*>(v_time.data()), v_time.size() * sizeof(float));
-        out.close();
-
-        std::cout << "Memoria salva em ARQUIVO: " << path << "\n";
-        return true;
+EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user_input, const std::string& ai_response) {
+    // Combinar análise do input do usuário e resposta da IA
+    auto user_analysis = analyzeText(user_input);
+    auto ai_analysis = analyzeText(ai_response);
+    
+    // Combinar scores (dar mais peso ao input do usuário)
+    EmotionalAnalysis combined;
+    std::unordered_map<std::string, double> combined_scores;
+    
+    for (const auto& emotion : emotion_categories) {
+        combined_scores[emotion] = (user_analysis.emotion_scores[emotion] * 0.7) + 
+                                  (ai_analysis.emotion_scores[emotion] * 0.3);
     }
+    
+    combined.emotion_scores = combined_scores;
+    combined.emotional_vector = normalizeScores(combined_scores);
+    combined.dominant_emotion = findDominantEmotion(combined_scores);
+    combined.confidence = calculateConfidence(combined_scores);
+    
+    return combined;
+}
 
-    bool load_memory_from_sqlite(int id, 
-                                 AlyssaInterprets &interpreter,
-                                 std::vector<llama_token> &tokens,
-                                 std::vector<float> &v_emo,
-                                 std::vector<float> &v_time) {
-        const char *sql = "SELECT timestamp, model_hash, n_tokens, emo_dim, tokens FROM memories WHERE id = ?;";
-        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-            std::cerr << "Erro ao preparar statement SQLite: " << sqlite3_errmsg(db) << "\n";
-            return false;
-        }
-        
-        AlyssaMemHeader header_out;
-        sqlite3_bind_int(stmt, 1, id);
-
-        if (sqlite3_step(stmt) == SQLITE_ROW) {
-            header_out.timestamp = sqlite3_column_int64(stmt, 0);
-            header_out.model_hash = sqlite3_column_int64(stmt, 1);
-            header_out.n_tokens = sqlite3_column_int(stmt, 2);
-            header_out.emo_dim = sqlite3_column_int(stmt, 3);
-            const uint8_t *blob_data = (const uint8_t*)sqlite3_column_blob(stmt, 4);
-            int blob_size = sqlite3_column_bytes(stmt, 4);
-            const int VTIME_DIM = 2;
-            int tokens_size_bytes = header_out.n_tokens * sizeof(llama_token);
-            int emo_size_bytes = header_out.emo_dim * sizeof(float);
-            int vtime_size_bytes = VTIME_DIM * sizeof(float);
-
-            if (blob_size != tokens_size_bytes + emo_size_bytes + vtime_size_bytes) {
-                std::cerr << "Erro de Desserializacao: Tamanho do BLOB (" << blob_size << " bytes) inconsistente com o Header (" << (tokens_size_bytes + emo_size_bytes + vtime_size_bytes) << " bytes).\n";
-                sqlite3_finalize(stmt);
-                stmt = nullptr;
-                return false;
+void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) {
+    for (const auto& [emotion, words] : emotion_lexicons) {
+        for (const auto& word : words) {
+            // Buscar palavra no texto (como palavra completa)
+            std::regex word_regex("\\b" + word + "\\b", std::regex::icase);
+            auto words_begin = std::sregex_iterator(text.begin(), text.end(), word_regex);
+            auto words_end = std::sregex_iterator();
+            
+            int count = std::distance(words_begin, words_end);
+            if (count > 0) {
+                scores[emotion] += count * emotion_weights[emotion] * 0.1;
             }
+        }
+    }
+}
 
-            tokens.resize(header_out.n_tokens);
-            v_emo.resize(header_out.emo_dim);
-            v_time.resize(VTIME_DIM);
-
-            const uint8_t *current_ptr = blob_data;
-            std::memcpy(tokens.data(), current_ptr, tokens_size_bytes);
-            current_ptr += tokens_size_bytes;
-            std::memcpy(v_emo.data(), current_ptr, emo_size_bytes);
-            current_ptr += emo_size_bytes;
-            std::memcpy(v_time.data(), current_ptr, vtime_size_bytes);
-
-            // --- Bloco de Debug ---
-            if (!tokens.empty()) {
-                std::cout << "\n----------------------\n";
-                std::cout << "Decodificacao para debug (ID: " << id << ")\n";
-                std::string decoded_text;
-                for (llama_token t: tokens) {
-                    char piece_buf[256];
-                    int len = interpreter.token_to_piece(t, piece_buf, sizeof(piece_buf));
-                    if (len > 0) decoded_text.append(piece_buf, len);
+void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) {
+    // Detectar intensificadores
+    std::vector<std::string> intensifiers = {"muito", "extremamente", "totalmente", "completamente", 
+                                            "realmente", "verdadeiramente", "absolutamente"};
+    
+    for (const auto& intensifier : intensifiers) {
+        std::regex intensifier_regex("\\b" + intensifier + "\\s+(\\w+)");
+        auto matches_begin = std::sregex_iterator(text.begin(), text.end(), intensifier_regex);
+        auto matches_end = std::sregex_iterator();
+        
+        for (auto it = matches_begin; it != matches_end; ++it) {
+            std::string following_word = (*it)[1];
+            // Verificar se a palavra seguinte está em algum lexicon
+            for (const auto& [emotion, words] : emotion_lexicons) {
+                if (std::find(words.begin(), words.end(), following_word) != words.end()) {
+                    scores[emotion] += 0.15; // Boost para intensificadores
                 }
-                std:: cout << "     - Texto Completo (" << tokens.size() << " tokens):\n";
-                std:: cout << "------------------------------------------\n";
-                std:: cout << decoded_text << "\n";
-                std:: cout << "------------------------------------------\n";
             }
-            // =============================================================
-
-            sqlite3_finalize(stmt);
-            stmt = nullptr; 
-            std::cout << "Memoria carregada do SQLite (ID: " << id << ")\n";
-            return true;
-        } else {
-            std::cout << "Memoria com ID " << id << " nao encontrada.\n";
         }
+    }
+    
+    // Detectar negações
+    std::vector<std::string> negations = {"não", "nem", "nunca", "jamais"};
+    for (const auto& negation : negations) {
+        std::regex negation_regex("\\b" + negation + "\\s+(\\w+)");
+        auto matches_begin = std::sregex_iterator(text.begin(), text.end(), negation_regex);
+        auto matches_end = std::sregex_iterator();
         
-        sqlite3_finalize(stmt);
-        stmt = nullptr;
-        return false;
-    };
-};
+        for (auto it = matches_begin; it != matches_end; ++it) {
+            std::string following_word = (*it)[1];
+            for (const auto& [emotion, words] : emotion_lexicons) {
+                if (std::find(words.begin(), words.end(), following_word) != words.end()) {
+                    scores[emotion] -= 0.1; // Reduzir score para negações
+                }
+            }
+        }
+    }
+}
 
-// --- Main (Atualizada para testar as novas funções) ---
-int main() {
-    llama_backend_init(); 
+void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) {
+    // Contar exclamações (aumenta intensidade emocional)
+    int exclamation_count = std::count(text.begin(), text.end(), '!');
+    if (exclamation_count > 0) {
+        // Aumentar todas as emoções proporcionalmente
+        for (auto& [emotion, score] : scores) {
+            score += exclamation_count * 0.05;
+        }
+    }
+    
+    // Contar pontos de interrogação (aumenta surpresa/confusão)
+    int question_count = std::count(text.begin(), text.end(), '?');
+    if (question_count > 0) {
+        scores["surpresa"] += question_count * 0.08;
+        scores["antecipacao"] += question_count * 0.04;
+    }
+    
+    // Contar pontos finais em excesso (pode indicar frustração)
+    int period_count = std::count(text.begin(), text.end(), '.');
+    if (period_count > 3) {
+        scores["raiva"] += 0.05;
+        // "frustracao" não está nas categorias principais, mas se estivesse:
+        // scores["frustracao"] += 0.05; 
+    }
+}
+
+std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<std::string, double>& scores) {
+    std::vector<float> vector;
+    double max_score = 0.0;
+    
+    // Encontrar score máximo para normalização
+    for (const auto& emotion : emotion_categories) {
+        max_score = std::max(max_score, scores.at(emotion));
+    }
+    
+    // Normalizar para [0, 1]
+    for (const auto& emotion : emotion_categories) {
+        float normalized_score = max_score > 0 ? scores.at(emotion) / max_score : 0.0f;
+        vector.push_back(normalized_score);
+    }
+    
+    return vector;
+}
+
+std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std::string, double>& scores) {
+    std::string dominant = "neutral";
+    double max_score = 0.0;
+    
+    for (const auto& [emotion, score] : scores) {
+        if (score > max_score) {
+            max_score = score;
+            dominant = emotion;
+        }
+    }
+    
+    // Só retornar se tiver confiança mínima
+    return max_score > 0.1 ? dominant : "neutral";
+}
+
+double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::string, double>& scores) {
+    double sum = 0.0;
+    for (const auto& [emotion, score] : scores) {
+        sum += score;
+    }
+    
+    // Confiança baseada na intensidade geral das emoções detectadas
+    return std::min(1.0, sum / 2.0);
+}
+
+// ============================================================================
+// Implementação de Utils
+// ============================================================================
+
+std::vector<float> Utils::getTimeStamp() {
+    auto now = std::chrono::system_clock::now();
+    auto ts = std::chrono::duration_cast<std::chrono::seconds>(
+        now.time_since_epoch()).count();
+    
+    double hours = std::fmod(ts / 3600.0, 24.0);
+    double radians = hours * (M_PI / 12.0);
+    
+    return { 
+        static_cast<float>(std::sin(radians)), 
+        static_cast<float>(std::cos(radians)) 
+    };
+}
+
+std::string Utils::getCurrentISOTime() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::localtime(&time_t);
+    
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return std::string(buffer);
+}
+
+double Utils::sigmoid(double x) {
+    return 1.0 / (1.0 + std::exp(-x));
+}
+
+double Utils::normalizeImportance(double raw_importance) {
+    return std::max(0.0, std::min(1.0, raw_importance));
+}
+
+// ============================================================================
+// Implementação de AdvancedMemorySystem
+// ============================================================================
+
+AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, bool init_embedder) : db(nullptr) {
+    int rc = sqlite3_open(db_path.c_str(), &db);
+    if (rc != SQLITE_OK) {
+        throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
+    }
+    initializeDatabase();
+    loadCurrentState();
+    
+    emotion_weights = {
+        {"alegria", 0.8}, {"tristeza", 0.6}, {"raiva", 0.7}, 
+        {"medo", 0.5}, {"surpresa", 0.4}, {"confiança", 0.9}
+    };
+    
+    // Inicializar embedder
+    if (init_embedder) {
+        try {
+            embedder = std::make_unique<Embedder>();
+            if (!embedder->initialize()) {
+                std::cerr << "Embedder initialization failed, continuing without semantic search" << std::endl;
+            } else {
+                std::cout << "Embedder integrated successfully" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Embedder initialization error: " << e.what() << std::endl;
+        }
+    }
+    emotional_analyzer = std::make_unique<EmotionalAnalyzer>();
+    std::cout << "✅ Emotional Analyzer inicializado\n"; // ADICIONADO
+    std::cout << "Sistema de Memória Avançado Inicializado\n";
+}
+
+AdvancedMemorySystem::~AdvancedMemorySystem() {
+    if (db) {
+        saveCurrentState();
+        sqlite3_close(db);
+    }
+}
+
+void AdvancedMemorySystem::initializeDatabase() {
+    const char* tables[] = {
+        // Tabela de estados emocionais
+        R"(
+        CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            
+            -- Colunas necessárias para a lógica do AdvancedMemorySystem
+            conteudo TEXT NOT NULL,
+            contexto TEXT,
+            emocao TEXT DEFAULT 'neutral',
+            importancia REAL DEFAULT 0.5,
+            timestamp INTEGER,
+            vtime TEXT,
+            last_access INTEGER,
+            access_count INTEGER DEFAULT 0,
+
+            -- Novas colunas para tokens (intenção do usuário)
+            model_hash INTEGER, 
+            n_tokens INTEGER,
+            emo_dim INTEGER,
+            tokens BLOB
+        );
+        )",
+        R"(
+        CREATE TABLE IF NOT EXISTS emotional_states (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            intensity REAL DEFAULT 0.5,
+            timestamp INTEGER
+        );
+        )",
+        
+        // Tabela de intenções
+        R"(
+        CREATE TABLE IF NOT EXISTS intentions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT NOT NULL,
+            type TEXT NOT NULL,
+            trigger TEXT,
+            active BOOLEAN DEFAULT 1,
+            motivation REAL DEFAULT 0.5,
+            created_at TEXT
+        );
+        )",
+        
+        // Tabela de decadência de memórias
+        R"(
+        CREATE TABLE IF NOT EXISTS memory_decay (
+            memory_id INTEGER PRIMARY KEY,
+            last_access INTEGER,
+            current_value REAL,
+            decaying_since INTEGER,
+            FOREIGN KEY(memory_id) REFERENCES memories(id)
+        );
+        )",
+        
+        // Tabela de reflexões
+        R"(
+        CREATE TABLE IF NOT EXISTS reflections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            memory_id INTEGER,
+            type TEXT,
+            content TEXT,
+            created_at TEXT,
+            FOREIGN KEY(memory_id) REFERENCES memories(id)
+        );
+        )",
+        
+        // Tabela de vínculos entre memórias
+        R"(
+        CREATE TABLE IF NOT EXISTS memory_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id INTEGER,
+            target_id INTEGER,
+            weight REAL DEFAULT 1.0,
+            type TEXT,
+            FOREIGN KEY(source_id) REFERENCES memories(id),
+            FOREIGN KEY(target_id) REFERENCES memories(id)
+        );
+        )",
+        
+        // NOVA: Tabela de embeddings vetoriais
+        R"(
+        CREATE TABLE IF NOT EXISTS memory_embeddings (
+            memory_id INTEGER PRIMARY KEY,
+            embedding BLOB,
+            embedding_dimension INTEGER,
+            created_at TEXT,
+            FOREIGN KEY(memory_id) REFERENCES memories(id)
+        );
+        )"
+    };
+    
+    char* errMsg = nullptr;
+    for (const char* table_sql : tables) {
+        if (sqlite3_exec(db, table_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            std::string error = "SQL error: ";
+            error += errMsg;
+            sqlite3_free(errMsg);
+            throw std::runtime_error(error);
+        }
+    }
+}
+
+void AdvancedMemorySystem::loadCurrentState() {
+    const char* sql = "SELECT name, intensity FROM emotional_states ORDER BY timestamp DESC LIMIT 1";
+    sqlite3_stmt* stmt;
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            current_emotional_state.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            current_emotional_state.intensity = sqlite3_column_double(stmt, 1);
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    loadActiveIntentions();
+}
+
+void AdvancedMemorySystem::saveCurrentState() {
+    const char* sql = "INSERT INTO emotional_states (name, intensity, timestamp) VALUES (?, ?, ?)";
+    sqlite3_stmt* stmt;
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, current_emotional_state.name.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 2, current_emotional_state.intensity);
+        sqlite3_bind_int64(stmt, 3, current_emotional_state.timestamp);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+}
+
+void AdvancedMemorySystem::loadActiveIntentions() {
+    active_intentions.clear();
+    const char* sql = "SELECT id, description, type, trigger, motivation, created_at FROM intentions WHERE active = 1";
+    sqlite3_stmt* stmt;
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            Intention intention(
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)),
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)),
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
+            );
+            intention.id = sqlite3_column_int(stmt, 0);
+            intention.motivation = sqlite3_column_double(stmt, 4);
+            intention.created_at = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+            active_intentions.push_back(intention);
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+// === MÉTODOS DE EMBEDDING E BUSCA SEMÂNTICA ===
+
+bool AdvancedMemorySystem::hasEmbedder() const {
+    return embedder != nullptr && embedder->is_initialized();
+}
+
+// Gerar embedding para texto e salvar no banco
+bool AdvancedMemorySystem::generateAndStoreEmbedding(int memory_id, const std::string& content) {
+    if (!hasEmbedder()) {
+        return false;
+    }
     
     try {
-        const char *model_path = "models/gemma-3-270m-it-F16.gguf"; 
-        std::string save_path = "alyssa.mem";
-        
-        SqliteHandler mem("alyssa_memories.db"); 
-        // O AlyssaInterprets irá falhar se o arquivo do modelo não existir.
-        AlyssaInterprets interpreter(model_path, save_path, 512); 
-        
-        // --- Setup de Memórias para Teste de Similaridade ---
-        std::vector<llama_token> tokens_base = interpreter.Tokenizer("Eu gosto de programar em C++. Fui dormir tarde hoje.");
-        uint64_t hash_exemplo = interpreter.ModelHash();
-
-        // 1. Memória 1 (Foco na Positividade/Energia)
-        std::vector<float> v_emo_1 = { 0.9f, 0.2f, -0.1f }; // Alta Positividade (Primeira dimensão)
-        mem.save_memory_to_sqlite(tokens_base, v_emo_1, Utils::getTimeStamp(), hash_exemplo);
-        
-        // 2. Memória 2 (Foco na Negatividade/Cansaço)
-        std::vector<llama_token> tokens_2 = interpreter.Tokenizer("O dia foi estressante e tive problemas no trabalho.");
-        std::vector<float> v_emo_2 = { -0.8f, 0.1f, 0.4f }; // Alta Negatividade
-        mem.save_memory_to_sqlite(tokens_2, v_emo_2, Utils::getTimeStamp(), hash_exemplo);
-
-        // 3. Memória 3 (Foco na Neutralidade/Programação)
-        std::vector<llama_token> tokens_3 = interpreter.Tokenizer("Estudei sobre algoritmos de busca por 3 horas.");
-        std::vector<float> v_emo_3 = { 0.1f, 0.1f, 0.1f }; // Neutro
-        mem.save_memory_to_sqlite(tokens_3, v_emo_3, Utils::getTimeStamp(), hash_exemplo);
-
-        // --- Testando a Busca Contextual ---
-        std::cout << "\n\n=== Teste de Busca Contextual (Top 2) ===\n";
-        
-        // Vetor de busca: Alta Positividade, similar ao v_emo_1
-        std::vector<float> v_emo_busca = { 0.95f, 0.0f, 0.0f }; 
-        int top_k = 2;
-        
-        std::vector<MemoryMatch> resultados = mem.find_similar_memories(v_emo_busca, top_k);
-
-        std::cout << "\nResultado da Busca (v_emo_busca={0.95, 0.0, 0.0}):\n";
-        std::cout << std::left << std::setw(5) << "ID" << std::setw(15) << "Similaridade" << std::setw(10) << "Tokens" << "Emo Dim\n";
-        std::cout << "-------------------------------------------\n";
-
-        for (const auto& match : resultados) {
-            std::cout << std::left 
-                      << std::setw(5) << match.id
-                      << std::setw(15) << std::fixed << std::setprecision(4) << match.similarity
-                      << std::setw(10) << match.n_tokens
-                      << match.emo_dim << "\n";
-        }
-        std::cout << "===========================================\n";
-
-        // --- Teste de Carregamento (para provar que a ID 1 funciona) ---
-        std::cout << "\n--- Testando Carregar do SQLite (ID 1) ---\n";
-        std::vector<llama_token> tok_loaded;
-        std::vector<float> emo_loaded, vtime_loaded;
-
-        mem.load_memory_from_sqlite(1, interpreter, tok_loaded, emo_loaded, vtime_loaded);
-
-
-    } catch (const std::exception &e) {
-        std::cerr << "Uma excecao fatal ocorreu: " << e.what() << std::endl;
-        llama_backend_free();
-        return EXIT_FAILURE;
+        auto embedding = embedder->generate_embedding(content);
+        storeEmbedding(memory_id, embedding);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error generating embedding: " << e.what() << std::endl;
+        return false;
     }
-
-    llama_backend_free();
-    return 0;
 }
+
+
+std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semanticSearch(const std::string& query, int top_k) {
+    std::vector<SemanticMemory> results;
+    
+    if (!hasEmbedder()) {
+        std::cerr << "Embedder not available for semantic search" << std::endl;
+        return results;
+    }
+    
+    try {
+        auto query_embedding = embedder->generate_embedding(query);
+        return semanticSearchWithEmbedding(query_embedding, top_k);
+    } catch (const std::exception& e) {
+        std::cerr << "Error in semantic search: " << e.what() << std::endl;
+        return results;
+    }
+}
+
+std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semanticSearchWithEmbedding(const std::vector<float>& query_embedding, int top_k) {
+    std::vector<SemanticMemory> results;
+    
+    const char* sql = R"(
+        SELECT m.id, m.conteudo, m.emocao, m.importancia, me.embedding
+        FROM memories m
+        JOIN memory_embeddings me ON m.id = me.memory_id
+        WHERE me.embedding IS NOT NULL
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            SemanticMemory mem;
+            mem.memory_id = sqlite3_column_int(stmt, 0);
+            mem.content = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            mem.emotion = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            mem.importance = sqlite3_column_double(stmt, 3);
+            
+            // Extrair embedding do BLOB
+            const void* blob_data = sqlite3_column_blob(stmt, 4);
+            int blob_size = sqlite3_column_bytes(stmt, 4);
+            std::vector<float> memory_embedding(blob_size / sizeof(float));
+            memcpy(memory_embedding.data(), blob_data, blob_size);
+            
+            // Calcular similaridade
+            mem.similarity_score = Embedder::cosine_similarity(query_embedding, memory_embedding);
+            
+            // Aplicar boosting contextual
+            mem.similarity_score += calculateIntentionBoost(mem.content);
+            mem.similarity_score += calculateEmotionalBoost(mem.emotion);
+            
+            results.push_back(mem);
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    // Ordenar por similaridade
+    std::sort(results.begin(), results.end(), 
+        [](const SemanticMemory& a, const SemanticMemory& b) {
+            return a.similarity_score > b.similarity_score;
+        });
+    
+    if (results.size() > (size_t)top_k) {
+        results.resize(top_k);
+    }
+    
+    return results;
+}
+
+std::vector<AdvancedMemorySystem::HybridMemoryResult> AdvancedMemorySystem::hybridSearch(const std::string& query, int top_k) {
+    std::vector<HybridMemoryResult> results;
+    
+    // Busca textual tradicional
+    auto text_results = searchContextualMemories(query, top_k * 2);
+    
+    // Busca semântica
+    auto semantic_results = semanticSearch(query, top_k * 2);
+    
+    // Combinar resultados
+    std::unordered_map<int, HybridMemoryResult> combined;
+    
+    // Adicionar resultados textuais
+    for (const auto& text_mem : text_results) {
+        HybridMemoryResult result;
+        result.memory_id = text_mem.id;
+        result.content = text_mem.content;
+        result.text_score = text_mem.relevance_score;
+        result.semantic_score = 0.0;
+        result.emotion = text_mem.emotion;
+        combined[text_mem.id] = result;
+    }
+    
+    // Adicionar/atualizar com resultados semânticos
+    for (const auto& semantic_mem : semantic_results) {
+        if (combined.find(semantic_mem.memory_id) != combined.end()) {
+            combined[semantic_mem.memory_id].semantic_score = semantic_mem.similarity_score;
+        } else {
+            HybridMemoryResult result;
+            result.memory_id = semantic_mem.memory_id;
+            result.content = semantic_mem.content;
+            result.text_score = 0.0;
+            result.semantic_score = semantic_mem.similarity_score;
+            result.emotion = semantic_mem.emotion;
+            combined[semantic_mem.memory_id] = result;
+        }
+    }
+    
+    // Calcular scores combinados e coletar
+    for (auto& [id, result] : combined) {
+        result.combined_score = (result.text_score * 0.4) + (result.semantic_score * 0.6);
+        results.push_back(result);
+    }
+    
+    // Ordenar por score combinado
+    std::sort(results.begin(), results.end(),
+        [](const HybridMemoryResult& a, const HybridMemoryResult& b) {
+            return a.combined_score > b.combined_score;
+        });
+    
+    if (results.size() > (size_t)top_k) {
+        results.resize(top_k);
+    }
+    
+    return results;
+}
+
+void AdvancedMemorySystem::storeEmbedding(int memory_id, const std::vector<float>& embedding) {
+    const char* sql = R"(
+        INSERT OR REPLACE INTO memory_embeddings (memory_id, embedding, embedding_dimension, created_at)
+        VALUES (?, ?, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        // Converter vector<float> para BLOB
+        sqlite3_bind_int(stmt, 1, memory_id);
+        sqlite3_bind_blob(stmt, 2, embedding.data(), embedding.size() * sizeof(float), SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, static_cast<int>(embedding.size()));
+        sqlite3_bind_text(stmt, 4, Utils::getCurrentISOTime().c_str(), -1, SQLITE_STATIC);
+        
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+}
+
+// === INTERFACE HIGH-LEVEL PARA INTEGRAÇÃO ===
+
+void AdvancedMemorySystem::setEmotionalState(const std::string& emotion, double intensity) {
+    current_emotional_state.name = emotion;
+    current_emotional_state.intensity = Utils::normalizeImportance(intensity);
+    current_emotional_state.timestamp = std::chrono::system_clock::to_time_t(
+        std::chrono::system_clock::now());
+    
+    std::cout << "Estado Emocional Atualizado: " << emotion 
+              << " (intensidade: " << intensity << ")\n";
+    
+    checkEmotionalAutoActivation();
+}
+
+EmotionalState AdvancedMemorySystem::getCurrentEmotionalState() const {
+    return current_emotional_state;
+}
+
+void AdvancedMemorySystem::applyMemoryDecay() {
+    const char* sql = R"(
+        UPDATE memory_decay 
+        SET current_value = MAX(?, current_value - ?),
+            last_access = ?
+        WHERE current_value > ?
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        
+        sqlite3_bind_double(stmt, 1, MIN_IMPORTANCE);
+        sqlite3_bind_double(stmt, 2, DECAY_PER_HOUR);
+        sqlite3_bind_int64(stmt, 3, now);
+        sqlite3_bind_double(stmt, 4, MIN_IMPORTANCE);
+        
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            std::cerr << "Erro ao aplicar decadência: " << sqlite3_errmsg(db) << "\n";
+        } else {
+            std::cout << "Decadência de memórias aplicada\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+void AdvancedMemorySystem::activateIntention(const std::string& description, const std::string& type, 
+                      const std::string& trigger, double motivation_boost) {
+    for (const auto& intention : active_intentions) {
+        if (intention.description == description && intention.active) {
+            std::cout << "Intenção já está ativa: " << description << "\n";
+            return;
+        }
+    }
+    
+    const char* sql = R"(
+        INSERT INTO intentions (description, type, trigger, active, motivation, created_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, description.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, type.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, trigger.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 4, 0.5 + motivation_boost);
+        sqlite3_bind_text(stmt, 5, Utils::getCurrentISOTime().c_str(), -1, SQLITE_STATIC);
+        
+        if (sqlite3_step(stmt) == SQLITE_DONE) {
+            loadActiveIntentions();
+            std::cout << "Nova Intenção Ativada: " << description << "\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+void AdvancedMemorySystem::deactivateIntention(int intention_id) {
+    const char* sql = "UPDATE intentions SET active = 0 WHERE id = ?";
+    sqlite3_stmt* stmt;
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, intention_id);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+        
+        active_intentions.erase(
+            std::remove_if(active_intentions.begin(), active_intentions.end(),
+                [intention_id](const Intention& i) { return i.id == intention_id; }),
+            active_intentions.end()
+        );
+        
+        std::cout << "Intenção Desativada: ID " << intention_id << "\n";
+    }
+}
+
+std::vector<Intention> AdvancedMemorySystem::getActiveIntentions() const {
+    return active_intentions;
+}
+
+void AdvancedMemorySystem::generateReflections() {
+    const char* sql = R"(
+        SELECT m.id, m.conteudo, m.emocao, m.importancia 
+        FROM memories m
+        WHERE m.timestamp >= ? AND m.importancia >= 0.5
+        ORDER BY m.timestamp DESC
+    )";
+    
+    sqlite3_stmt* stmt;
+    auto six_hours_ago = std::chrono::system_clock::to_time_t(
+        std::chrono::system_clock::now() - std::chrono::hours(6));
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, six_hours_ago);
+        
+        std::unordered_map<std::string, int> emotion_counts;
+        std::unordered_map<std::string, int> memory_ids;
+        
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::string emotion = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            int memory_id = sqlite3_column_int(stmt, 0);
+            
+            emotion_counts[emotion]++;
+            if (memory_ids.find(emotion) == memory_ids.end()) {
+                memory_ids[emotion] = memory_id;
+            }
+        }
+        sqlite3_finalize(stmt);
+        
+        for (const auto& [emotion, count] : emotion_counts) {
+            if (count >= 3) {
+                std::string reflection_content = 
+                    "Notei que me senti muito " + emotion + 
+                    " recentemente. Talvez isso signifique algo importante.";
+                
+                saveReflection(memory_ids[emotion], "emotional_pattern", reflection_content);
+                std::cout << "Reflexão Gerada: " << reflection_content << "\n";
+            }
+        }
+    }
+}
+
+void AdvancedMemorySystem::createMemoryLink(int source_id, int target_id, double weight, 
+                     const std::string& link_type) {
+    const char* sql = R"(
+        INSERT INTO memory_links (source_id, target_id, weight, type)
+        VALUES (?, ?, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, source_id);
+        sqlite3_bind_int(stmt, 2, target_id);
+        sqlite3_bind_double(stmt, 3, weight);
+        sqlite3_bind_text(stmt, 4, link_type.c_str(), -1, SQLITE_STATIC);
+        
+        if (sqlite3_step(stmt) == SQLITE_DONE) {
+            std::cout << "Vínculo criado: " << source_id << " → " << target_id 
+                      << " (" << link_type << ")\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(int memory_id) {
+    std::vector<MemoryLink> links;
+    const char* sql = R"(
+        SELECT source_id, target_id, weight, type 
+        FROM memory_links 
+        WHERE source_id = ? OR target_id = ?
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, memory_id);
+        sqlite3_bind_int(stmt, 2, memory_id);
+        
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            MemoryLink link(
+                sqlite3_column_int(stmt, 0),
+                sqlite3_column_int(stmt, 1),
+                sqlite3_column_double(stmt, 2),
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
+            );
+            links.push_back(link);
+        }
+        sqlite3_finalize(stmt);
+    }
+    return links;
+}
+
+std::vector<AdvancedMemorySystem::ContextualMemory> AdvancedMemorySystem::searchContextualMemories(const std::string& query, 
+                                                      int top_k) {
+    std::vector<ContextualMemory> results;
+    
+    const char* sql = R"(
+        SELECT id, conteudo, emocao, importancia 
+        FROM memories 
+        WHERE conteudo LIKE ? OR contexto LIKE ?
+        ORDER BY importancia DESC 
+        LIMIT ?
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        std::string like_query = "%" + query + "%";
+        sqlite3_bind_text(stmt, 1, like_query.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, like_query.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, top_k * 2);
+        
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            ContextualMemory mem;
+            mem.id = sqlite3_column_int(stmt, 0);
+            mem.content = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            mem.emotion = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            mem.relevance_score = sqlite3_column_double(stmt, 3);
+            
+            mem.relevance_score += calculateIntentionBoost(mem.content);
+            mem.relevance_score += calculateEmotionalBoost(mem.emotion);
+            
+            results.push_back(mem);
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    std::sort(results.begin(), results.end(), 
+        [](const ContextualMemory& a, const ContextualMemory& b) {
+            return a.relevance_score > b.relevance_score;
+        });
+    
+    if (results.size() > (size_t)top_k) {
+        results.resize(top_k);
+    }
+    
+    return results;
+}
+
+// --- NOVOS MÉTODOS PARA ANÁLISE EMOCIONAL AUTOMÁTICA --- (ADICIONADOS)
+
+EmotionalAnalysis AdvancedMemorySystem::analyzeEmotionalContent(const std::string& text) {
+    return emotional_analyzer->analyzeText(text);
+}
+
+EmotionalAnalysis AdvancedMemorySystem::analyzeConversationEmotions(const std::string& user_input, const std::string& ai_response) {
+    return emotional_analyzer->analyzeConversation(user_input, ai_response);
+}
+
+// Método para processar e armazenar memória com análise emocional automática
+int AdvancedMemorySystem::storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context) {
+    // Analisar conteúdo emocionalmente
+    auto emotional_analysis = analyzeEmotionalContent(content);
+    
+    const char* sql = R"(
+        INSERT INTO memories (conteudo, contexto, emocao, importancia, timestamp, vtime)
+        VALUES (?, ?, ?, ?, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    int memory_id = -1;
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        auto timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        auto vtime = Utils::getTimeStamp();
+        std::string vtime_str;
+        for (const auto& val : vtime) {
+            vtime_str += std::to_string(val) + ",";
+        }
+        if (!vtime_str.empty()) vtime_str.pop_back();
+        
+        double importance = calculateAutomaticImportance(content, emotional_analysis);
+        
+        sqlite3_bind_text(stmt, 1, content.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, context.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, emotional_analysis.dominant_emotion.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 4, importance);
+        sqlite3_bind_int64(stmt, 5, timestamp);
+        sqlite3_bind_text(stmt, 6, vtime_str.c_str(), -1, SQLITE_STATIC);
+        
+        if (sqlite3_step(stmt) == SQLITE_DONE) {
+            memory_id = sqlite3_last_insert_rowid(db);
+            
+            // Gerar embedding se disponível
+            if (hasEmbedder()) {
+                generateAndStoreEmbedding(memory_id, content);
+            }
+            
+            std::cout << "💾 Memória armazenada (ID: " << memory_id 
+                      << ") - Emoção: " << emotional_analysis.dominant_emotion 
+                      << " (confiança: " << emotional_analysis.confidence << ")\n";
+        } else {
+             std::cerr << "Erro ao inserir memória: " << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Erro ao preparar SQL para inserir memória: " << sqlite3_errmsg(db) << "\n";
+    }
+    
+    return memory_id;
+}
+
+// Método para obter emotional_vector automaticamente para integração
+std::vector<float> AdvancedMemorySystem::getAutoEmotionalVector(const std::string& text) {
+    auto analysis = analyzeEmotionalContent(text);
+    return analysis.emotional_vector;
+}
+
+double AdvancedMemorySystem::calculateAutomaticImportance(const std::string& content, const EmotionalAnalysis& analysis) {
+    double importance = 0.5; // Importância base
+    
+    // Aumentar importância baseado na intensidade emocional
+    double emotional_intensity = 0.0;
+    for (const auto& score : analysis.emotional_vector) {
+        emotional_intensity += score;
+    }
+    if (!analysis.emotional_vector.empty()) {
+        emotional_intensity /= analysis.emotional_vector.size();
+    }
+    
+    importance += emotional_intensity * 0.3;
+    
+    // Aumentar importância para conteúdo mais longo (potencialmente mais significativo)
+    double length_factor = std::min(1.0, content.length() / 500.0);
+    importance += length_factor * 0.2;
+    
+    // Aumentar importância para emoções fortes específicas
+    if (analysis.dominant_emotion == "raiva" || analysis.dominant_emotion == "alegria") {
+        importance += 0.1;
+    }
+    
+    return std::min(1.0, importance);
+}
+
+void AdvancedMemorySystem::checkEmotionalAutoActivation() {
+    auto it = emotion_to_intention.find(current_emotional_state.name);
+    if (it != emotion_to_intention.end() && current_emotional_state.intensity > 0.7) {
+        const auto& [description, type] = it->second;
+        
+        bool already_active = false;
+        for (const auto& intention : active_intentions) {
+            if (intention.description == description) {
+                already_active = true;
+                break;
+            }
+        }
+        
+        if (!already_active) {
+            std::string trigger = "emoção: " + current_emotional_state.name;
+            activateIntention(description, type, trigger, 0.3);
+            std::cout << "Auto-ativação por emoção: " << description << "\n";
+        }
+    }
+}
+
+void AdvancedMemorySystem::saveReflection(int memory_id, const std::string& type, const std::string& content) {
+    const char* sql = R"(
+        INSERT INTO reflections (memory_id, type, content, created_at)
+        VALUES (?, ?, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, memory_id);
+        sqlite3_bind_text(stmt, 2, type.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, content.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, Utils::getCurrentISOTime().c_str(), -1, SQLITE_STATIC);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+}
+
+double AdvancedMemorySystem::calculateIntentionBoost(const std::string& content) {
+    double boost = 0.0;
+    for (const auto& intention : active_intentions) {
+        if (content.find(intention.description) != std::string::npos) {
+            boost += 0.3 * intention.motivation;
+        }
+    }
+    return std::min(boost, 0.5);
+}
+
+double AdvancedMemorySystem::calculateEmotionalBoost(const std::string& memory_emotion) {
+    if (memory_emotion == current_emotional_state.name) {
+        return 0.2 * current_emotional_state.intensity;
+    }
+    return 0.0;
+}
+
+// === MÉTODOS DE MONITORAMENTO E DEBUG ===
+
+void AdvancedMemorySystem::printSystemStatus() {
+    std::cout << "\n=== STATUS DO SISTEMA DE MEMÓRIA ===\n";
+    std::cout << "Estado Emocional: " << current_emotional_state.name 
+              << " (intensidade: " << current_emotional_state.intensity << ")\n";
+    std::cout << "Intenções Ativas: " << active_intentions.size() << "\n";
+    
+    for (const auto& intention : active_intentions) {
+        std::cout << "   • " << intention.description 
+                  << " [" << intention.type << "]"
+                  << " (motivação: " << intention.motivation << ")\n";
+    }
+    
+    // Contar memórias
+    const char* sql = "SELECT COUNT(*) FROM memories";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::cout << "Total de Memórias: " << sqlite3_column_int(stmt, 0) << "\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    // Status do embedder
+    std::cout << "Embedder: " << (hasEmbedder() ? "Ativo" : "Inativo") << "\n";
+    
+    std::cout << "====================================\n\n";
+}
+
+// Novo método para demonstrar busca semântica
+void AdvancedMemorySystem::demonstrateSemanticSearch(const std::string& query) {
+    if (!hasEmbedder()) {
+        std::cout << " Embedder não disponível para busca semântica\n";
+        return;
+    }
+    
+    std::cout << "\n🔍 DEMONSTRAÇÃO DE BUSCA SEMÂNTICA\n";
+    std::cout << "Query: \"" << query << "\"\n";
+    
+    auto results = semanticSearch(query, 3);
+    
+    if (results.empty()) {
+        std::cout << "Nenhum resultado encontrado.\n";
+        return;
+    }
+    
+    std::cout << "Top " << results.size() << " resultados:\n";
+    for (const auto& mem : results) {
+        std::cout << std::fixed << std::setprecision(3);
+        std::cout << "[" << mem.similarity_score << "] ";
+        std::cout << "ID " << mem.memory_id << ": " << mem.content.substr(0, 80);
+        if (mem.content.length() > 80) std::cout << "...";
+        std::cout << " [" << mem.emotion << "]\n";
+    }
+    std::cout << "----------------------------------------\n";
+}
+
+
+// ============================================================================
+// Implementação de AlyssaMemoryManager
+// ============================================================================
+
+AlyssaMemoryManager::AlyssaMemoryManager(const std::string& db_path, bool enable_embedder) {
+    memory_system = std::make_unique<AdvancedMemorySystem>(db_path, enable_embedder);
+}
+
+// NOVA VERSÃO: gera emotional_vector automaticamente
+void AlyssaMemoryManager::processInteraction(const std::string& user_input, 
+                      const std::string& ai_response) { // REMOVER parâmetro emotional_vector
+    
+    // ANÁLISE EMOCIONAL AUTOMÁTICA (NOVO)
+    auto emotional_analysis = memory_system->analyzeConversationEmotions(user_input, ai_response);
+    
+    // Usar análise automática para definir estado emocional
+    memory_system->setEmotionalState(
+        emotional_analysis.dominant_emotion, 
+        emotional_analysis.confidence
+    );
+    
+    // Armazenar memória com análise emocional automática
+    int memory_id = memory_system->storeMemoryWithEmotionalAnalysis(
+        user_input + " | " + ai_response, 
+        "conversation"
+    );
+    
+    analyzeInputForIntentions(user_input);
+    
+    static int interaction_count = 0;
+    if (++interaction_count % 10 == 0) {
+        memory_system->applyMemoryDecay();
+        memory_system->generateReflections();
+    }
+    
+    if (interaction_count % 5 == 0) {
+        memory_system->printSystemStatus();
+    }
+    
+    // Demonstração de busca semântica
+    if (interaction_count % 7 == 0) {
+        memory_system->demonstrateSemanticSearch(user_input);
+    }
+    
+    // Mostrar análise emocional (para debug)
+    if (interaction_count % 3 == 0) {
+        printEmotionalAnalysis(emotional_analysis, user_input);
+    }
+}
+
+// Método para compatibilidade com código legado
+void AlyssaMemoryManager::processInteraction(const std::string& user_input, 
+                      const std::string& ai_response,
+                      const std::vector<float>& emotional_vector) {
+    // Se emotional_vector for fornecido, usar ele, senão usar análise automática
+    if (!emotional_vector.empty() && 
+        std::accumulate(emotional_vector.begin(), emotional_vector.end(), 0.0) > 0.1) {
+        // Usar vector fornecido (código legado)
+        std::vector<std::string> emotions = {"alegria", "tristeza", "raiva", "medo", "surpresa"};
+        std::string dominant_emotion = "neutral";
+        double max_intensity = 0.0;
+        
+        for (size_t i = 0; i < emotional_vector.size() && i < emotions.size(); ++i) {
+            if (emotional_vector[i] > max_intensity) {
+                max_intensity = emotional_vector[i];
+                dominant_emotion = emotions[i];
+            }
+        }
+        
+        memory_system->setEmotionalState(dominant_emotion, max_intensity);
+    } else {
+        // Usar análise automática
+        processInteraction(user_input, ai_response);
+        return;
+    }
+    
+    // Resto do processamento...
+    analyzeInputForIntentions(user_input);
+    
+    static int interaction_count = 0;
+    if (++interaction_count % 10 == 0) {
+        memory_system->applyMemoryDecay();
+        memory_system->generateReflections();
+    }
+}
+
+std::vector<AdvancedMemorySystem::ContextualMemory> AlyssaMemoryManager::getRelevantMemories(const std::string& context) {
+    return memory_system->searchContextualMemories(context, 3);
+}
+
+std::vector<AdvancedMemorySystem::SemanticMemory> AlyssaMemoryManager::getSemanticMemories(const std::string& context) {
+    return memory_system->semanticSearch(context, 3);
+}
+
+std::vector<AdvancedMemorySystem::HybridMemoryResult> AlyssaMemoryManager::getHybridMemories(const std::string& context) {
+    return memory_system->hybridSearch(context, 3);
+}
+
+void AlyssaMemoryManager::setCurrentGoal(const std::string& goal, const std::string& type) {
+    memory_system->activateIntention(goal, type, "user_defined", 0.5);
+}
+
+void AlyssaMemoryManager::printEmotionalAnalysis(const EmotionalAnalysis& analysis, const std::string& text) {
+    std::cout << "\n🎭 ANÁLISE EMOCIONAL AUTOMÁTICA\n";
+    std::cout << "Texto: \"" << text.substr(0, 50) << "...\"\n";
+    std::cout << "Emoção dominante: " << analysis.dominant_emotion 
+              << " (confiança: " << std::fixed << std::setprecision(2) << analysis.confidence << ")\n";
+    
+    std::cout << "Scores: ";
+    // Precisa acessar as categorias de emoção. Vamos adicionar isso à struct ou pegar do analyzer.
+    // Solução rápida: usar o map de scores.
+    for (const auto& [emotion, score] : analysis.emotion_scores) {
+         if (score > 0.05) { // Mostrar scores acima de um limiar
+             std::cout << emotion << ": " 
+                       << std::setprecision(2) << score << "  ";
+         }
+    }
+    std::cout << "\n----------------------------------------\n";
+}
+
+void AlyssaMemoryManager::analyzeInputForIntentions(const std::string& input) {
+    std::string lower_input = input;
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    
+    std::vector<std::pair<std::string, std::pair<std::string, std::string>>> triggers = {
+        {"aprender", {"Aprender novo tópico", "aprendizado"}},
+        {"como funciona", {"Entender mecanismos", "curiosidade"}},
+        {"problema", {"Resolver desafio", "resolução"}},
+        {"lembrar", {"Recuperar informação", "memória"}}
+    };
+    
+    for (const auto& [keyword, intention] : triggers) {
+        if (lower_input.find(keyword) != std::string::npos) {
+            memory_system->activateIntention(intention.first, intention.second, keyword, 0.2);
+            break;
+        }
+    }
+}
+
+// ============================================================================
+// Main
+// ============================================================================
+
+// int main() {
+// try {
+//         AlyssaMemoryManager memory_manager("alyssa_advanced_memory.db", true);
+//         
+//         std::vector<std::pair<std::string, std::string>> interactions = {
+//             {"Olá Alyssa, estou muito feliz hoje!", "Que ótimo! Fico contente em ouvir isso!"},
+//             {"Estou extremamente frustrado com este código...", "Entendo sua frustração. Posso ajudar a resolver o problema?"},
+//             {"Tenho medo de não conseguir terminar este projeto a tempo", "Não se preocupe, vamos planejar juntos!"},
+//             {"Que surpresa agradável ver você funcionando tão bem!", "Obrigada! Fico feliz em surpreendê-la positivamente!"},
+//             {"Estou com nojo dessa situação toda", "Sinto muito que esteja passando por isso. Quer conversar sobre?"}
+//         };
+//         
+//         for (size_t i = 0; i < interactions.size(); ++i) {
+//             std::cout << "\n=== Interação " << (i + 1) << " ===\n";
+//             std::cout << "Usuário: " << interactions[i].first << "\n";
+//             std::cout << "Alyssa: " << interactions[i].second << "\n";
+//             
+//             // AGORA SEM PRECISAR PASSAR emotional_vector MANUALMENTE!
+//             memory_manager.processInteraction(
+//                 interactions[i].first, 
+//                 interactions[i].second
+//             );
+//         }
+//         
+//     } catch (const std::exception& e) {
+//         std::cerr << "Erro: " << e.what() << std::endl;
+//         return 1;
+//     }
+//     
+//     return 0;
+// }
