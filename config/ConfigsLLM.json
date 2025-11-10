@@ -9,7 +9,7 @@
       "parametros": {
         "temperatura": 0.9,
         "top_p": 0.95,
-        "max_tokens": 512
+        "max_tokens": 8192
       }
     },
     {
@@ -21,7 +21,7 @@
       "parametros": {
         "temperatura": 0.7,
         "top_p": 0.85,
-        "max_tokens": 1024
+        "max_tokens": 8192
       }
     },
     {
@@ -33,7 +33,7 @@
       "parametros": {
         "temperatura": 0.4,
         "top_p": 0.8,
-        "max_tokens": 1500
+        "max_tokens": 8192
       }
     },
     {
@@ -45,7 +45,7 @@
       "parametros": {
         "temperatura": 1.0,
         "top_p": 0.98,
-        "max_tokens": 1200
+        "max_tokens": 8192
       }
     },
     {
@@ -57,7 +57,7 @@
       "parametros": {
         "temperatura": 0.1,
         "top_p": 0.7,
-        "max_tokens": 1800
+        "max_tokens": 8192
       }
     },
     {
@@ -69,7 +69,7 @@
       "parametros": {
         "temperatura": 0.3,
         "top_p": 0.8,
-        "max_tokens": 1600
+        "max_tokens": 8192
       }
     },
     {
