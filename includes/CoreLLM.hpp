@@ -31,8 +31,9 @@ public:
     bool initialize(const std::string& base_model_path);
     std::string think(const std::string& input, PiperTTS& tts);
     
-    // 🆕 Método com Weighted Fusion
+    // 🆕 Métodos com Weighted Fusion
     std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
+    std::string think_with_fusion_ttsless(const std::string& input); // 🆕 NOVO MÉTODO
     
 private:
     std::string run_expert(const std::string& expert_id, 
