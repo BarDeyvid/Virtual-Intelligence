@@ -65,11 +65,10 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      // Para debug: verificar resposta completa da API
       if (text.toLowerCase().contains('debug')) {
         final debugInfo = await _chatService.debugApiResponse(text);
         final debugMessage = Message(
-          text: '🔧 DEBUG INFO:\n${_formatDebugInfo(debugInfo)}',
+          text: '🔧 DEBUG INFO: ${_formatDebugInfo(debugInfo)}',
           isUser: false,
           timestamp: DateTime.now(),
         );
@@ -137,6 +136,9 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+        contentTextStyle: const TextStyle(color: Colors.white70),
         title: const Text('Erro de Conexão'),
         content: const Text(
           'Não foi possível conectar com a API do chatbot. '
@@ -145,14 +147,14 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _checkApiConnection();
             },
-            child: const Text('Tentar Novamente'),
+            child: const Text('Tentar Novamente', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -171,6 +173,9 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+        contentTextStyle: const TextStyle(color: Colors.white70),
         title: const Text('Informações de Debug'),
         content: SingleChildScrollView(
           child: Column(
@@ -191,7 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: const Text('Fechar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -222,13 +227,13 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('Alyssa'),
-        backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
+        backgroundColor: _apiConnected ? Colors.blueGrey : Colors.deepOrange,
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
@@ -263,7 +268,6 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: _testConnection,
             tooltip: 'Testar Conexão',
           ),
-
         ],
       ),
       body: Column(
@@ -272,23 +276,23 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              color: Colors.orange[100],
+              color: Colors.deepOrange[700],
               child: Row(
                 children: [
-                  const Icon(Icons.warning, color: Colors.orange),
+                  const Icon(Icons.warning, color: Colors.white),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'API desconectada',
-                      style: TextStyle(
-                        color: Colors.orange[800],
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   TextButton(
                     onPressed: _retryConnection,
-                    child: const Text('Tentar Conectar'),
+                    child: const Text('Tentar Conectar', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -302,7 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Icon(
                           _apiConnected ? Icons.chat_bubble_outline : Icons.error_outline,
                           size: 64,
-                          color: _apiConnected ? Colors.blue : Colors.orange,
+                          color: _apiConnected ? Colors.blueGrey : Colors.deepOrange,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -311,7 +315,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               : 'Conecte-se à API para começar',
                           style: TextStyle(
                             fontSize: 18,
-                            color: _apiConnected ? Colors.grey : Colors.orange,
+                            color: _apiConnected ? Colors.white70 : Colors.deepOrange[200],
                           ),
                         ),
                         if (_apiConnected) ...[
@@ -320,7 +324,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             'Dica: Digite "debug" para ver respostas da API',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Colors.white54,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -346,7 +350,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ... métodos _buildMessageBubble, _buildLoadingIndicator, _buildInputArea, _formatTime permanecem iguais ...
   Widget _buildMessageBubble(Message message) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -360,7 +363,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               margin: const EdgeInsets.only(right: 8, top: 4),
               child: CircleAvatar(
-                backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
+                backgroundColor: _apiConnected ? Colors.blueGrey : Colors.deepOrange,
                 radius: 16,
                 child: const Icon(
                   Icons.smart_toy,
@@ -374,8 +377,8 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: message.isUser
-                    ? Colors.blue
-                    : Colors.grey[200],
+                    ? Colors.blueGrey[700]
+                    : Colors.grey[800],
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -384,9 +387,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     message.text,
                     style: TextStyle(
-                      color: message.isUser
-                          ? Colors.white
-                          : Colors.black,
+                      color: Colors.white,
                       fontSize: 16,
                     ),
                   ),
@@ -394,9 +395,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     _formatTime(message.timestamp),
                     style: TextStyle(
-                      color: message.isUser
-                          ? Colors.white70
-                          : Colors.grey[600],
+                      color: Colors.white70,
                       fontSize: 12,
                     ),
                   ),
@@ -432,7 +431,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             margin: const EdgeInsets.only(right: 8, top: 4),
             child: CircleAvatar(
-              backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
+              backgroundColor: _apiConnected ? Colors.blueGrey : Colors.deepOrange,
               radius: 16,
               child: const Icon(
                 Icons.smart_toy,
@@ -444,7 +443,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: Colors.grey[800],
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -456,7 +455,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _apiConnected ? Colors.blue : Colors.orange,
+                      _apiConnected ? Colors.blueGrey : Colors.deepOrange,
                     ),
                   ),
                 ),
@@ -464,7 +463,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   'Processando...',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: Colors.white70,
                     fontSize: 16,
                   ),
                 ),
@@ -480,12 +479,12 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey[900],
         boxShadow: [
           BoxShadow(
             offset: const Offset(0, -2),
             blurRadius: 4,
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.3),
           ),
         ],
       ),
@@ -495,16 +494,18 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _textController,
               enabled: _apiConnected && !_isLoading,
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: _apiConnected 
                     ? 'Digite sua mensagem...'
                     : 'Aguardando conexão com a API...',
+                hintStyle: const TextStyle(color: Colors.white54),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: _apiConnected ? Colors.grey[100] : Colors.grey[200],
+                fillColor: Colors.grey[800],
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
@@ -515,7 +516,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
           CircleAvatar(
-            backgroundColor: _apiConnected && !_isLoading ? Colors.blue : Colors.grey,
+            backgroundColor: _apiConnected && !_isLoading ? Colors.blueGrey : Colors.grey,
             child: IconButton(
               icon: const Icon(
                 Icons.send,
