@@ -1,9 +1,9 @@
 #pragma once
-#include "AlyssaCore.hpp"
-#include "WeightedFusion/WeightedFusion.hpp"
-#include "voice/PiperTTS.hpp"
-#include "voice/ElevenLabsTTS.hpp"
-#include "AlyssaMemoryHandler.hpp"
+#include "includes/AlyssaCore.hpp"
+#include "includes/WeightedFusion/WeightedFusion.hpp"
+#include "includes/voice/PiperTTS.hpp"
+#include "includes/voice/ElevenLabsTTS.hpp"
+#include "includes/AlyssaMemoryHandler.hpp"
 #include <memory>
 #include <map>
 #include <vector>
@@ -31,8 +31,9 @@ public:
     bool initialize(const std::string& base_model_path);
     std::string think(const std::string& input, PiperTTS& tts);
     
-    // 🆕 Método com Weighted Fusion
+    // 🆕 Métodos com Weighted Fusion
     std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
+    std::string think_with_fusion_ttsless(const std::string& input); // 🆕 NOVO MÉTODO
     
 private:
     std::string run_expert(const std::string& expert_id, 

@@ -4,8 +4,8 @@
 #include <iostream>
 #include <string>
 // #include "voice/PiperTTS.hpp"
-#include "voice/ElevenLabsTTS.hpp"
-#include "voice/VoicePipeline.hpp"
+#include "includes/voice/ElevenLabsTTS.hpp"
+#include "includes/voice/VoicePipeline.hpp"
 
 int main() {
     // Configuração de Log e Backends

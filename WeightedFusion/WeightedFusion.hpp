@@ -23,25 +23,25 @@ private:
     double emotion_weight_base = 0.3;
     double context_similarity_weight = 0.4;
     double historical_relevance_weight = 0.3;
+    std::map<std::string, std::vector<float>> expert_affinity_embeddings;
     
     // Cache de similaridades
     std::map<std::string, double> expert_affinities;
 
 public:
-    WeightedFusion(Embedder& embedder_ref) : embedder(embedder_ref) {}
-    
+    WeightedFusion(Embedder& embedder_ref);    
     // 🔹 A. Rule-based Fusion (heurístico simples)
     std::map<std::string, double> calculate_rule_based_weights(
         const std::string& input, 
         const std::vector<std::string>& available_experts);
     
-    // 🔹 B. Feature-based Fusion (similaridade vetorial)
+    // 🔹 B. Feature-based Fusion (Assinatura mantida, lógica interna muda)
     std::map<std::string, double> calculate_feature_based_weights(
         const std::string& input,
         const std::vector<ExpertContribution>& expert_responses);
     
-    // 🔹 C. Neural Fusion (rede neural leve)
-    std::map<std::string, double> calculate_neural_weights(
+    // 🔽 RENOMEADO: De "neural" para "hybrid" (mais preciso)
+    std::map<std::string, double> calculate_hybrid_weights(
         const std::string& input,
         const std::vector<ExpertContribution>& expert_responses,
         const std::string& current_emotion);

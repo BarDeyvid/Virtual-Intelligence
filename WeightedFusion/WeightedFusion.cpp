@@ -4,7 +4,23 @@
 
 namespace alyssa_fusion {
 
-// 🔹 A. Rule-based Fusion
+// 🔽 NOVO: Construtor agora inicializa as afinidades
+WeightedFusion::WeightedFusion(Embedder& embedder_ref) : embedder(embedder_ref) {
+    std::cout << "[Fusion] Inicializando afinidades dos especialistas..." << std::endl;
+    try {
+        // (Usei os IDs do seu log: emotionalModel, memoryModel, introspectiveModel, alyssa)
+        expert_affinity_embeddings["emotionalModel"] = embedder.generate_embedding("emoção, sentimento, feliz, triste, raiva, como você se sente");
+        expert_affinity_embeddings["memoryModel"] = embedder.generate_embedding("memória, lembrar, o que aconteceu antes, passado, recordar");
+        expert_affinity_embeddings["introspectiveModel"] = embedder.generate_embedding("por que, como funciona, analisar, pensar, filosofia, significado");
+        expert_affinity_embeddings["alyssa"] = embedder.generate_embedding("conversa geral, olá, como vai, o que você acha, quem é você");
+        std::cout << "[Fusion] Afinidades carregadas com sucesso." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "AVISO: Falha ao inicializar afinidades do Fusion: " << e.what() << std::endl;
+    }
+}
+
+
+// 🔹 A. Rule-based Fusion (Com pesos mais "agressivos")
 std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     const std::string& input, 
     const std::vector<std::string>& available_experts) {
@@ -13,46 +29,43 @@ std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     std::string lower_input = input;
     std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
     
-    // Inicializa pesos base
     for (const auto& expert : available_experts) {
-        weights[expert] = 0.1; // peso mínimo
+        weights[expert] = 1.0; // Peso base 1.0 (antes do softmax)
     }
     
-    // Regras para emotionalModel
+    // Regras (valores maiores dão mais "força" ao softmax)
     if (lower_input.find("feliz") != std::string::npos ||
         lower_input.find("triste") != std::string::npos ||
         lower_input.find("raiva") != std::string::npos ||
         lower_input.find("medo") != std::string::npos ||
-        lower_input.find("amo") != std::string::npos ||
+        lower_input.find("sinto") != std::string::npos || // Adicionado
         lower_input.find("odeio") != std::string::npos) {
-        weights["emotionalModel"] += 0.6;
+        weights["emotionalModel"] += 5.0; // 0.6 é muito pouco, vamos usar 5.0
     }
     
-    // Regras para memoryModel
     if (lower_input.find("lembr") != std::string::npos ||
         lower_input.find("memória") != std::string::npos ||
         lower_input.find("passado") != std::string::npos ||
-        lower_input.find("antes") != std::string::npos) {
-        weights["memoryModel"] += 0.5;
+        lower_input.find("o que falamos") != std::string::npos) { // Adicionado
+        weights["memoryModel"] += 5.0;
     }
     
-    // Regras para introspectiveModel
-    if (lower_input.find("porque") != std::string::npos ||
+    if (lower_input.find("por que") != std::string::npos || // "porque" -> "por que"
         lower_input.find("como funciona") != std::string::npos ||
-        lower_input.find("pensar") != std::string::npos ||
+        lower_input.find("pensa") != std::string::npos || // "pensar" -> "pensa"
         lower_input.find("analisar") != std::string::npos) {
-        weights["introspectiveModel"] += 0.5;
+        weights["introspectiveModel"] += 5.0;
     }
     
-    // Regras para socialModel
+    // Regras para o especialista 'alyssa' (geral)
     if (lower_input.find("oi") != std::string::npos ||
         lower_input.find("olá") != std::string::npos ||
         lower_input.find("bom dia") != std::string::npos ||
         lower_input.find("tchau") != std::string::npos) {
-        weights["socialModel"] += 0.4;
+        weights["alyssa"] += 3.0;
     }
     
-    // Normalização via softmax
+    // Normalização via softmax (agora os pesos serão bem distintos)
     double sum = 0.0;
     for (const auto& w : weights) sum += exp(w.second);
     for (auto& w : weights) w.second = exp(w.second) / sum;
@@ -60,82 +73,101 @@ std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     return weights;
 }
 
-// 🔹 B. Feature-based Fusion
+// 🔹 B. Feature-based Fusion (🔽 NOVA LÓGICA DE AFINIDADE)
 std::map<std::string, double> WeightedFusion::calculate_feature_based_weights(
     const std::string& input,
     const std::vector<ExpertContribution>& expert_responses) {
     
     std::map<std::string, double> weights;
-    
+
+    // Fallback se afinidades não foram carregadas
+    if (expert_affinity_embeddings.empty()) {
+        double equal_weight = 1.0 / expert_responses.size();
+        for (const auto& c : expert_responses) weights[c.expert_id] = equal_weight;
+        return weights;
+    }
+
     try {
-        // Embedding do input
         auto input_embedding = embedder.generate_embedding(input);
         
-        // Calcula similaridade para cada resposta de especialista
-        std::vector<double> similarities;
         for (const auto& contribution : expert_responses) {
-            double sim = calculate_semantic_similarity(input_embedding, contribution.embedding);
-            similarities.push_back(sim);
-            weights[contribution.expert_id] = sim;
+            const std::string& expert_id = contribution.expert_id;
+            
+            if (expert_affinity_embeddings.count(expert_id)) {
+                // Compara o INPUT com a ESPECIALIDADE (Afinidade)
+                double sim = calculate_semantic_similarity(input_embedding, expert_affinity_embeddings.at(expert_id));
+                weights[expert_id] = sim;
+            } else {
+                weights[expert_id] = 0.1; // Penaliza especialista sem afinidade
+            }
         }
         
-        // Softmax nas similaridades
+        // Softmax para normalizar e acentuar
         double sum = 0.0;
-        for (double sim : similarities) sum += exp(sim);
+        for (const auto& w : weights) sum += exp(w.second);
+        if (sum == 0.0) sum = 1.0; 
         for (auto& w : weights) w.second = exp(w.second) / sum;
         
     } catch (const std::exception& e) {
-        // Fallback: pesos iguais em caso de erro
+        // Fallback em caso de erro no embedding
         double equal_weight = 1.0 / expert_responses.size();
-        for (const auto& contribution : expert_responses) {
-            weights[contribution.expert_id] = equal_weight;
-        }
+        for (const auto& c : expert_responses) weights[c.expert_id] = equal_weight;
     }
-    
     return weights;
 }
 
-// 🔹 C. Neural Fusion (implementação simplificada)
-std::map<std::string, double> WeightedFusion::calculate_neural_weights(
+// 🔹 C. Hybrid Fusion (🔽 RENOMEADO e com LÓGICA DE MULTIPLICAÇÃO)
+std::map<std::string, double> WeightedFusion::calculate_hybrid_weights(
     const std::string& input,
     const std::vector<ExpertContribution>& expert_responses,
     const std::string& current_emotion) {
     
-    // Esta é uma implementação simplificada
-    // Na prática, você teria um modelo neural leve aqui
+    std::map<std::string, double> final_weights;
+
+    // 1. Obter pesos das Regras (Baseado em keywords)
+    std::vector<std::string> expert_ids;
+    for(const auto& c : expert_responses) expert_ids.push_back(c.expert_id);
+    auto rule_weights = calculate_rule_based_weights(input, expert_ids);
     
-    std::map<std::string, double> weights;
+    // 2. Obter pesos da Afinidade (Baseado em semântica)
+    auto affinity_weights = calculate_feature_based_weights(input, expert_responses);
     
-    // Combina abordagens A e B com fatores adicionais
-    auto rule_weights = calculate_rule_based_weights(input, {});
-    auto feature_weights = calculate_feature_based_weights(input, expert_responses);
-    
-    // Fator emocional
-    double emotion_factor = 0.0;
-    if (current_emotion == "happy") emotion_factor = 0.1;
-    else if (current_emotion == "sad") emotion_factor = 0.15;
-    else if (current_emotion == "analytical") emotion_factor = 0.2;
-    
-    // Combinação ponderada
-    for (const auto& contribution : expert_responses) {
-        double rule_w = rule_weights.count(contribution.expert_id) ? 
-                       rule_weights[contribution.expert_id] : 0.1;
-        double feature_w = feature_weights.count(contribution.expert_id) ? 
-                          feature_weights[contribution.expert_id] : 0.1;
+    // 3. Combinar usando Multiplicação (Produto de Especialistas)
+    // Isso amplifica fortemente os especialistas que pontuam bem em AMBAS as métricas
+    double total_weight = 0.0;
+    for (const auto& expert_id : expert_ids) {
+        // Usamos 0.01 como "piso" para evitar zerar a pontuação
+        double rule_w = rule_weights.count(expert_id) ? rule_weights[expert_id] : 0.01;
+        double affinity_w = affinity_weights.count(expert_id) ? affinity_weights[expert_id] : 0.01;
         
-        weights[contribution.expert_id] = 
-            (rule_w * 0.4) + (feature_w * 0.4) + (emotion_factor * 0.2);
+        // A "mágica": multiplicar em vez de somar
+        double combined_score = rule_w * affinity_w; 
+        
+        // Bônus/Penalidade Emocional (Exemplo)
+        if (current_emotion == "analytical" && expert_id == "introspectiveModel") {
+            combined_score *= 1.5; // Bônus de 50%
+        } else if (current_emotion == "happy" && expert_id == "emotionalModel") {
+            combined_score *= 1.3;
+        }
+        
+        final_weights[expert_id] = combined_score;
+        total_weight += combined_score;
     }
     
-    // Normalização final
-    double sum = 0.0;
-    for (const auto& w : weights) sum += w.second;
-    for (auto& w : weights) w.second /= sum;
+    // 4. Normalização final (para que somem 1.0)
+    if (total_weight > 0.0) {
+        for (auto& w : final_weights) {
+            w.second /= total_weight;
+        }
+    } else {
+        // Fallback
+        for (const auto& expert_id : expert_ids) final_weights[expert_id] = 1.0 / expert_ids.size();
+    }
     
-    return weights;
+    return final_weights;
 }
 
-// 🧠 Método principal de fusão
+// 🧠 Método principal de fusão (🔽 ATUALIZADO para chamar a função híbrida)
 std::string WeightedFusion::fuse_responses(
     const std::string& input,
     const std::vector<ExpertContribution>& contributions,
@@ -144,17 +176,16 @@ std::string WeightedFusion::fuse_responses(
     if (contributions.empty()) return "Nenhum especialista respondeu.";
     if (contributions.size() == 1) return contributions[0].response;
     
-    // Calcula pesos usando fusão neural
-    auto weights = calculate_neural_weights(input, contributions, current_emotion);
+    // Calcula pesos usando a NOVA fusão híbrida
+    auto weights = calculate_hybrid_weights(input, contributions, current_emotion);
     
-    // Para debug - mostra os pesos calculados
-    std::cout << "\n[Weighted Fusion] Pesos calculados:\n";
+    // Para debug - mostra os pesos calculados (agora devem ser bem diferentes)
+    std::cout << "\n[Weighted Fusion] Pesos calculados (Híbrido):\n";
     for (const auto& w : weights) {
         std::cout << "  " << w.first << ": " << std::fixed << std::setprecision(3) << w.second << "\n";
     }
     
     // Estratégia: seleciona a resposta do especialista com maior peso
-    // (Futuramente pode-se fazer fusão mais sofisticada dos embeddings)
     std::string best_expert;
     double best_weight = -1.0;
     
