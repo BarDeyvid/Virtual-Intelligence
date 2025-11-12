@@ -7,6 +7,7 @@ namespace alyssa_fusion {
 // 🔽 NOVO: Construtor agora inicializa as afinidades
 WeightedFusion::WeightedFusion(Embedder& embedder_ref) : embedder(embedder_ref) {
     std::cout << "[Fusion] Inicializando afinidades dos especialistas..." << std::endl;
+    embedder.initialize();
     try {
         // (Usei os IDs do seu log: emotionalModel, memoryModel, introspectiveModel, alyssa)
         expert_affinity_embeddings["emotionalModel"] = embedder.generate_embedding("emoção, sentimento, feliz, triste, raiva, como você se sente");
@@ -27,7 +28,9 @@ std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     
     std::map<std::string, double> weights;
     std::string lower_input = input;
-    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
+    [](unsigned char c){ return std::tolower(c); }
+);
     
     for (const auto& expert : available_experts) {
         weights[expert] = 1.0; // Peso base 1.0 (antes do softmax)
@@ -228,7 +231,9 @@ double WeightedFusion::calculate_semantic_similarity(
 
 std::string WeightedFusion::detect_emotion_from_input(const std::string& input) {
     std::string lower_input = input;
-    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
+    [](unsigned char c){ return std::tolower(c); }
+);
     
     if (lower_input.find("feliz") != std::string::npos || 
         lower_input.find("alegre") != std::string::npos ||

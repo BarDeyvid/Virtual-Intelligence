@@ -6,8 +6,15 @@
 // #include "voice/PiperTTS.hpp"
 #include "includes/voice/ElevenLabsTTS.hpp"
 #include "includes/voice/VoicePipeline.hpp"
+#include <windows.h>
+
 
 int main() {
+    // Windows fix
+    SetConsoleOutputCP(CP_UTF8);
+    std::locale::global(std::locale("en_US.UTF-8"));
+    
+    
     // Configuração de Log e Backends
     llama_log_set(nullptr, nullptr); 
     ggml_backend_load_all(); 

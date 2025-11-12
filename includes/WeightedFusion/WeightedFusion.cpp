@@ -1,4 +1,4 @@
-#include "includes/WeightedFusion/WeightedFusion.hpp"
+#include "WeightedFusion/WeightedFusion.hpp"
 #include <algorithm>
 #include <numeric>
 
@@ -11,7 +11,9 @@ std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     
     std::map<std::string, double> weights;
     std::string lower_input = input;
-    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
+    [](unsigned char c){ return std::tolower(c); }
+);
     
     // Inicializa pesos base
     for (const auto& expert : available_experts) {
@@ -67,6 +69,7 @@ std::map<std::string, double> WeightedFusion::calculate_feature_based_weights(
     
     std::map<std::string, double> weights;
     
+    embedder.initialize();
     try {
         // Embedding do input
         auto input_embedding = embedder.generate_embedding(input);
@@ -197,8 +200,9 @@ double WeightedFusion::calculate_semantic_similarity(
 
 std::string WeightedFusion::detect_emotion_from_input(const std::string& input) {
     std::string lower_input = input;
-    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
-    
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
+        [](unsigned char c){ return std::tolower(c); }
+    );    
     if (lower_input.find("feliz") != std::string::npos || 
         lower_input.find("alegre") != std::string::npos ||
         lower_input.find("amo") != std::string::npos) {

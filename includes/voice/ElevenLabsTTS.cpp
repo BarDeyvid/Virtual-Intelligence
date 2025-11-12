@@ -1,4 +1,4 @@
-#include "includes/voice/ElevenLabsTTS.hpp"
+#include "voice/ElevenLabsTTS.hpp"
 #include <curl/curl.h>
 #include <vector>
 #include <sstream>
@@ -53,6 +53,9 @@ ElevenLabsTTS::ElevenLabsTTS(const std::string& api_key,
     : sample_rate_(sample_rate) { 
     
     std::cout << "Inicializando ElevenLabsTTS..." << std::endl;
+    
+    initializePortAudio();
+    initializeFFmpeg();
 
     // TENTA CARREGAR DO ARQUIVO
     std::string temp_key, temp_voice;
@@ -153,7 +156,7 @@ std::string ElevenLabsTTS::cleanText(const std::string& text) {
     std::string cleaned;
     bool last_was_space = false;
     for (char c : result) {
-        if (std::isspace(c)) {
+        if (std::isspace(static_cast<unsigned char>(c))) {
             if (!last_was_space) {
                 cleaned += ' ';
                 last_was_space = true;

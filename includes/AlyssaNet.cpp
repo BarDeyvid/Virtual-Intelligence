@@ -1,8 +1,8 @@
 // AlyssaNet.cpp
 
-#include "includes/CoreLLM.hpp"
-#include "includes/AlyssaCore.hpp"
-#include "includes/voice/PiperTTS.hpp"
+#include "CoreLLM.hpp"
+#include "AlyssaCore.hpp"
+#include "voice/ElevenLabsTTS.hpp"
 
 using namespace alyssa_core;
 
@@ -40,27 +40,37 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
     if (initialized) return true;
 
     try {
-        // 1. Inicializa o Core
+        // 1. INICIALIZA O SISTEMA DE MEMÓRIA PRIMEIRO
+        // Esta etapa (via AdvancedMemorySystem) vai *INICIAR O SERVIDOR DE EMBEDDING*
+        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
+        std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
+        
+        // 2. Inicializa o Core (llama.cpp)
         core_instance = std::make_unique<AlyssaCore>(base_model_path);
         
-        // 2.1 Inicializa o Embedder e Fusion Engine
+        // 3.1 Inicializa o Embedder da CoreIntegration
+        // O servidor de embedding (iniciado pela LTM) já está rodando.
+        // Esta inicialização agora deve funcionar.
         embedder = std::make_unique<Embedder>();
         if (!embedder->initialize("config/embedder_config.json")) {
-            std::cerr << "AVISO: Falha ao inicializar Embedder. Fusion limitado." << std::endl;
+            // Se falhar agora, mesmo após a LTM, é um erro crítico.
+            throw std::runtime_error("Falha ao inicializar Embedder, mesmo após LTM. Encerrando.");
         }
-        
+        std::cout << "Embedder da CoreIntegration inicializado." << std::endl;
+
+        // 3.2 Inicializa o Fusion Engine
         fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
 
         
         llama_model* shared_model = core_instance->get_model();
 
-        // 2.2 Carrega TODAS as configurações
+        // 4. Carrega TODAS as configurações dos especialistas
         AllModelConfigs configs = load_config();
         if (configs.empty()) {
             throw std::runtime_error("Falha ao carregar ConfigsLLM.json");
         }
 
-        // 3. Popula os mapas de especialistas
+        // 5. Popula os mapas de especialistas
         for (const auto& cfg : configs) {
             std::cout << "Configurando especialista: " << cfg.id << std::endl;
             
@@ -82,8 +92,9 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             }
         }
 
-        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
-        std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
+        // (A inicialização da LTM foi movida para o topo)
+        // memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
+        // std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
 
         initialized = true;
         std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
@@ -277,7 +288,7 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
 // 🧠 Método Think (Orquestração)
 // =========================================================================
 
-std::string CoreIntegration::think(const std::string& input, PiperTTS& tts) {
+std::string CoreIntegration::think(const std::string& input, ElevenLabsTTS& tts) {
     if (!initialized || !core_instance) {
         return "Erro: O CoreIntegration não foi inicializado corretamente.";
     }
@@ -307,7 +318,7 @@ std::string CoreIntegration::think(const std::string& input, PiperTTS& tts) {
 std::string CoreIntegration::run_expert(const std::string& expert_id, 
                                         const std::string& input,
                                         bool use_tts, 
-                                        PiperTTS* tts) {
+                                        ElevenLabsTTS* tts) {
 
     // 1. Verifica se o especialista existe
     if (expert_configs.find(expert_id) == expert_configs.end()) {
@@ -330,14 +341,14 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     }
 
     // 4. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO (do especialista)
-    history.push_back({"user", strdup(input.c_str())});
+    history.push_back({"user", _strdup(input.c_str())});
 
     // 5. MONTA O TEMPLATE (Corrigindo o bug do AlyssaLLM.hpp)
     std::vector<llama_chat_message> messages_to_template;
     
     // Adiciona o System Prompt (temporariamente)
     if (!config.system_prompt.empty()) {
-        messages_to_template.push_back({"system", strdup(config.system_prompt.c_str())});
+        messages_to_template.push_back({"system", _strdup(config.system_prompt.c_str())});
     }
     
     // Adiciona o histórico da conversa
@@ -410,7 +421,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
             }
         }
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
-        history.push_back({"assistant", strdup(response.c_str())});
+        history.push_back({"assistant", _strdup(response.c_str())});
     
         return response;
     } else {
@@ -421,7 +432,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
             nullptr
         ); 
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
-        history.push_back({"assistant", strdup(response.c_str())});
+        history.push_back({"assistant", _strdup(response.c_str())});
     
         return response;
     }

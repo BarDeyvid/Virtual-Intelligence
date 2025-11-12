@@ -161,15 +161,15 @@ namespace alyssa_core {
             // 1. APLICAR O LoRA (ou desativar um anterior)
             // O Orquestrador nos diz qual LoRA usar (pode ser nullptr)
             if (usa_LoRA && !lora_path.empty()) {
-                llama_adapter_lora *lora = llama_adapter_lora_init(model, lora_path.c_str());
+                llama_adapter_lora *LoRA = llama_adapter_lora_init(model, lora_path.c_str());
 
-                if (!lora) {
+                if (!LoRA) {
                     throw std::runtime_error("AlyssaLLM: Falha ao inicializar LoRA para: " + lora_path);
                 }
 
                 int err = llama_set_adapter_lora(
                     ctx, // Aplica ao nosso contexto específico
-                    lora,
+                    LoRA,
                     1.0); 
                         
                 if (err != 0) {
@@ -185,10 +185,11 @@ namespace alyssa_core {
             // 2. CRIAR O SAMPLER (com parâmetros do especialista)
             // Temos que recriá-lo ou reconfigurá-lo a cada chamada
             llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
-            double top_p = (params.top_p > 0.0) ? params.top_p : 0.05f;
+            float top_p = (params.top_p > 0.0) ? params.top_p : 0.05f;
             llama_sampler_chain_add(smpl, llama_sampler_init_min_p(top_p, 1));
-            double temp = (params.temperature > 0.0) ? params.temperature : 0.8f;
+            float temp = (params.temperature > 0.0) ? params.temperature : 0.8f;
             llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.1f, 0.0f, 0.0f)); // penalidade por repeticao de tokens
             llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
             
             // 3. Verifica se o contexto já tem tokens

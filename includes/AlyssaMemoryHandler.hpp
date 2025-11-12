@@ -3,7 +3,7 @@
 #define ALYSSA_MEMORY_SYSTEM_HPP
 
 #include <filesystem>
-#include <sqlite3.h>
+#include "sqlite3.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <memory>
 #include <ctime>
-#include <curl/curl.h>
+#include <curl.h>
 #include <thread>
 #include <chrono>
 #include <cstdlib>
@@ -27,7 +27,7 @@
 #include <regex>
 #include <unordered_map>
 #include <numeric>
-#include "includes/json.hpp"
+#include "json.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

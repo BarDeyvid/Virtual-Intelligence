@@ -1,5 +1,10 @@
 // AlyssaMemoryHandler.cpp
-#include <includes/AlyssaMemoryHandler.hpp> 
+#define NOMINMAX
+
+// FIX 2: Enables non-standard math constants like M_PI on MSVC (ADD THIS)
+#define _USE_MATH_DEFINES
+
+#include <AlyssaMemoryHandler.hpp> 
 #include "Embedding/Embedder.hpp"            
 #include <filesystem>
 #include <sqlite3.h>
@@ -26,8 +31,7 @@
 #include <regex>
 #include <unordered_map>
 #include <numeric>
-#include "includes/json.hpp"
-
+#include "json.hpp"
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
@@ -153,7 +157,9 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
     
     // Converter texto para minúsculas para análise case-insensitive
     std::string lower_text = text;
-    std::transform(lower_text.begin(), lower_text.end(), lower_text.begin(), ::tolower);
+    std::transform(lower_text.begin(), lower_text.end(), lower_text.begin(), 
+        [](unsigned char c){ return std::tolower(c); }
+    );
     
     // Inicializar scores
     for (const auto& emotion : emotion_categories) {
@@ -390,9 +396,15 @@ AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, bool init
             std::cerr << "Embedder initialization error: " << e.what() << std::endl;
         }
     }
+    embedder = std::make_unique<Embedder>();
+        if (!embedder->initialize("config/embedder_config.json")) {
+            // Se falhar agora, mesmo após a LTM, é um erro crítico.
+            throw std::runtime_error("Falha ao inicializar Embedder, mesmo após LTM. Encerrando.");
+        }
     emotional_analyzer = std::make_unique<EmotionalAnalyzer>();
     std::cout << "✅ Emotional Analyzer inicializado\n"; // ADICIONADO
     std::cout << "Sistema de Memória Avançado Inicializado\n";
+
 }
 
 AdvancedMemorySystem::~AdvancedMemorySystem() {
@@ -567,7 +579,9 @@ bool AdvancedMemorySystem::generateAndStoreEmbedding(int memory_id, const std::s
     if (!hasEmbedder()) {
         return false;
     }
-    
+    if (!embedder->is_initialized()){
+        embedder->initialize("config\\embedder_config.json");
+    }
     try {
         auto embedding = embedder->generate_embedding(content);
         storeEmbedding(memory_id, embedding);
@@ -1191,7 +1205,9 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
         user_input + " | " + ai_response, 
         "conversation"
     );
-    
+    if (memory_id != -1) {
+        std::cout << "Memória da interação armazenada com ID: " << memory_id << "\n";
+    }
     analyzeInputForIntentions(user_input);
     
     static int interaction_count = 0;
@@ -1287,7 +1303,9 @@ void AlyssaMemoryManager::printEmotionalAnalysis(const EmotionalAnalysis& analys
 
 void AlyssaMemoryManager::analyzeInputForIntentions(const std::string& input) {
     std::string lower_input = input;
-    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
+        [](unsigned char c){ return std::tolower(c); }
+    );
     
     std::vector<std::pair<std::string, std::pair<std::string, std::string>>> triggers = {
         {"aprender", {"Aprender novo tópico", "aprendizado"}},

@@ -1,4 +1,4 @@
-#include "includes/Embedding/Embedder.hpp"
+#include "Embedding/Embedder.hpp"
 
 // Construtores e Destrutores
 Embedder::Embedder() {
@@ -19,20 +19,20 @@ bool Embedder::initialize() {
     return initialize(config_path);
 }
 
-bool Embedder::initialize(const std::string& config_path) {
-    this->config_path = config_path;
+bool Embedder::initialize(const std::string& config_path_) {
+    this->config_path = config_path_;
     
     // Criar diretório config se não existir
-    fs::path config_dir = fs::path(config_path).parent_path();
+    fs::path config_dir = fs::path(config_path_).parent_path();
     if (!config_dir.empty() && !fs::exists(config_dir)) {
         fs::create_directories(config_dir);
     }
     
     // Carregar configuração
-    if (!load_config(config_path)) {
+    if (!load_config(config_path_)) {
         std::cerr << "Falha ao carregar configuração. Criando configuração padrão..." << std::endl;
         create_default_config();
-        if (!load_config(config_path)) {
+        if (!load_config(config_path_)) {
             std::cerr << "Erro: Não foi possível carregar ou criar configuração." << std::endl;
             return false;
         }

@@ -1,9 +1,9 @@
 #pragma once
-#include "includes/AlyssaCore.hpp"
-#include "includes/WeightedFusion/WeightedFusion.hpp"
-#include "includes/voice/PiperTTS.hpp"
-#include "includes/voice/ElevenLabsTTS.hpp"
-#include "includes/AlyssaMemoryHandler.hpp"
+#include "AlyssaCore.hpp"
+#include "WeightedFusion/WeightedFusion.hpp"
+// #include "includes/voice/PiperTTS.hpp"
+#include "voice/ElevenLabsTTS.hpp"
+#include "AlyssaMemoryHandler.hpp"
 #include <memory>
 #include <map>
 #include <vector>
@@ -29,7 +29,7 @@ public:
     ~CoreIntegration();
     
     bool initialize(const std::string& base_model_path);
-    std::string think(const std::string& input, PiperTTS& tts);
+    std::string think(const std::string& input, ElevenLabsTTS& tts);
     
     // 🆕 Métodos com Weighted Fusion
     std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
@@ -39,7 +39,7 @@ private:
     std::string run_expert(const std::string& expert_id, 
                           const std::string& input,
                           bool use_tts, 
-                          PiperTTS* tts = nullptr);
+                          ElevenLabsTTS* tts = nullptr);
     
     // 🆕 Método para executar múltiplos especialistas e fundir
     std::vector<alyssa_fusion::ExpertContribution> run_expert_committee(

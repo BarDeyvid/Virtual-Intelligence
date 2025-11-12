@@ -4,7 +4,7 @@
 #include <map>
 #include <functional>
 #include <cmath>
-#include "includes/Embedding/Embedder.hpp"
+#include "Embedding/Embedder.hpp"
 
 namespace alyssa_fusion {
 
