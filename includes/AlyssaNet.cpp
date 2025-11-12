@@ -40,28 +40,22 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
     if (initialized) return true;
 
     try {
-        // 1. INICIALIZA O SISTEMA DE MEMÓRIA PRIMEIRO
-        // Esta etapa (via AdvancedMemorySystem) vai *INICIAR O SERVIDOR DE EMBEDDING*
-        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
-        std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
-        
-        // 2. Inicializa o Core (llama.cpp)
-        core_instance = std::make_unique<AlyssaCore>(base_model_path);
-        
-        // 3.1 Inicializa o Embedder da CoreIntegration
-        // O servidor de embedding (iniciado pela LTM) já está rodando.
-        // Esta inicialização agora deve funcionar.
-        embedder = std::make_unique<Embedder>();
-        if (!embedder->initialize("config/embedder_config.json")) {
-            // Se falhar agora, mesmo após a LTM, é um erro crítico.
-            throw std::runtime_error("Falha ao inicializar Embedder, mesmo após LTM. Encerrando.");
+
+        embedder = std::make_shared<Embedder>("config/embedder_config.json");
+        if (!embedder->initialize()) {
+             std::cerr << "Falha ao inicializar o Embedder" << std::endl;
+             return false;
         }
-        std::cout << "Embedder da CoreIntegration inicializado." << std::endl;
 
-        // 3.2 Inicializa o Fusion Engine
-        fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
-
+        // 2. Crie o Core
+        core_instance = std::make_unique<alyssa_core::AlyssaCore>(base_model_path);
         
+        // 3. Passe o Embedder existente para o Fusion Engine
+        fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
+        
+        // 4. Passe o MESMO Embedder para o Memory Manager
+        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", embedder);
+
         llama_model* shared_model = core_instance->get_model();
 
         // 4. Carrega TODAS as configurações dos especialistas
@@ -98,7 +92,7 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 
         initialized = true;
         std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
-        return true;
+        return initialized;
 
     } catch (const std::exception& e) {
         fprintf(stderr, "ERRO CRÍTICO na Inicialização: %s\n", e.what());

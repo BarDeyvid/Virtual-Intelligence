@@ -370,7 +370,9 @@ double Utils::normalizeImportance(double raw_importance) {
 // Implementação de AdvancedMemorySystem
 // ============================================================================
 
-AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, bool init_embedder) : db(nullptr) {
+AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref) 
+    : db(nullptr), embedder(embedder_ref) // <-- Recebe e armazena o embedder na lista de inicialização
+{
     int rc = sqlite3_open(db_path.c_str(), &db);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
@@ -383,28 +385,16 @@ AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, bool init
         {"medo", 0.5}, {"surpresa", 0.4}, {"confiança", 0.9}
     };
     
-    // Inicializar embedder
-    if (init_embedder) {
-        try {
-            embedder = std::make_unique<Embedder>();
-            if (!embedder->initialize()) {
-                std::cerr << "Embedder initialization failed, continuing without semantic search" << std::endl;
-            } else {
-                std::cout << "Embedder integrated successfully" << std::endl;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Embedder initialization error: " << e.what() << std::endl;
-        }
+    // NÃO crie um novo embedder. Apenas verifique o que recebemos.
+    if (!embedder || !embedder->is_initialized()) {
+        std::cerr << "AVISO: Embedder recebido pelo AdvancedMemorySystem não está inicializado." << std::endl;
+    } else {
+        std::cout << "Embedder integrado com sucesso no AdvancedMemorySystem" << std::endl;
     }
-    embedder = std::make_unique<Embedder>();
-        if (!embedder->initialize("config/embedder_config.json")) {
-            // Se falhar agora, mesmo após a LTM, é um erro crítico.
-            throw std::runtime_error("Falha ao inicializar Embedder, mesmo após LTM. Encerrando.");
-        }
-    emotional_analyzer = std::make_unique<EmotionalAnalyzer>();
-    std::cout << "✅ Emotional Analyzer inicializado\n"; // ADICIONADO
-    std::cout << "Sistema de Memória Avançado Inicializado\n";
 
+    emotional_analyzer = std::make_unique<EmotionalAnalyzer>();
+    std::cout << "✅ Emotional Analyzer inicializado\n"; 
+    std::cout << "Sistema de Memória Avançado Inicializado\n";
 }
 
 AdvancedMemorySystem::~AdvancedMemorySystem() {
@@ -1183,8 +1173,8 @@ void AdvancedMemorySystem::demonstrateSemanticSearch(const std::string& query) {
 // Implementação de AlyssaMemoryManager
 // ============================================================================
 
-AlyssaMemoryManager::AlyssaMemoryManager(const std::string& db_path, bool enable_embedder) {
-    memory_system = std::make_unique<AdvancedMemorySystem>(db_path, enable_embedder);
+AlyssaMemoryManager::AlyssaMemoryManager(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref) {
+    memory_system = std::make_unique<AdvancedMemorySystem>(db_path, embedder_ref);
 }
 
 // NOVA VERSÃO: gera emotional_vector automaticamente

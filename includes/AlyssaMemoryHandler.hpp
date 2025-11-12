@@ -158,7 +158,7 @@ private:
     EmotionalState current_emotional_state;
     std::vector<Intention> active_intentions;
     std::map<std::string, double> emotion_weights;
-    std::unique_ptr<Embedder> embedder;
+    std::shared_ptr<Embedder> embedder;
     std::unique_ptr<EmotionalAnalyzer> emotional_analyzer;
     
     std::unordered_map<std::string, std::pair<std::string, std::string>> emotion_to_intention = {
@@ -208,7 +208,7 @@ public:
         std::string emotion;
     };
 
-    AdvancedMemorySystem(const std::string& db_path, bool init_embedder = true);
+    AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);
     ~AdvancedMemorySystem();
 
     // Gerenciamento de estado emocional
@@ -268,8 +268,7 @@ private:
     void analyzeInputForIntentions(const std::string& input);
 
 public:
-    AlyssaMemoryManager(const std::string& db_path, bool enable_embedder = true);
-    
+    AlyssaMemoryManager(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);    
     // Processamento de interações
     void processInteraction(const std::string& user_input, const std::string& ai_response);
     void processInteraction(const std::string& user_input, 

@@ -150,12 +150,22 @@ std::vector<float> Embedder::generate_embedding_impl(const std::string& text) {
     // Executar a requisição
     res = curl_easy_perform(curl);
     
+    long http_code = 0;
+    if (res == CURLE_OK) {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    }
+    
     // Limpar
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     
     if (res != CURLE_OK) {
         throw std::runtime_error("Falha na requisição HTTP: " + std::string(curl_easy_strerror(res)));
+    }
+
+    // ✅ NOVA CHECAGEM
+    if (http_code != 200) {
+        throw std::runtime_error("Servidor retornou erro HTTP " + std::to_string(http_code) + "\nResposta: " + response);
     }
     
     // Parse da resposta JSON
@@ -368,11 +378,19 @@ bool Embedder::wait_for_server_ready(int timeout_seconds) {
                 curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD request
                 
                 CURLcode res = curl_easy_perform(curl);
-                curl_easy_cleanup(curl);
                 
+                // ✅ NOVA CHECAGEM
                 if (res == CURLE_OK) {
-                    return true;
+                    long http_code = 0;
+                    // Pega o código de status da resposta
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code); 
+                    
+                    if (http_code == 200) {
+                        curl_easy_cleanup(curl);
+                        return true; // SÓ retorna true se for 200 OK
+                    }
                 }
+                curl_easy_cleanup(curl);
             }
         } catch (...) {
             // Ignorar erros e continuar tentando

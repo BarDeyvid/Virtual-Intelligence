@@ -1,3 +1,4 @@
+// CoreLLM.hpp
 #pragma once
 #include "AlyssaCore.hpp"
 #include "WeightedFusion/WeightedFusion.hpp"
@@ -12,7 +13,7 @@ class CoreIntegration {
 private:
     std::unique_ptr<alyssa_core::AlyssaCore> core_instance;
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;
-    std::unique_ptr<Embedder> embedder;
+    std::shared_ptr<Embedder> embedder;
 
     std::unique_ptr<AlyssaMemoryManager> memory_manager;
     
