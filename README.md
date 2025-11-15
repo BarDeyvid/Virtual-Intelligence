@@ -6,7 +6,7 @@
 [![C++](https://img.shields.io/badge/language-C%2B%2B20-blue)](#)
 [![LLM Engine](https://img.shields.io/badge/engine-LLaMA%20%7C%20Gemma%20%7C%20Whisper.cpp-purple)](#)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](#)
-[![Status](https://img.shields.io/badge/version-v0.01_(IMMORTAL)-red)](#)
+[![Status](https://img.shields.io/badge/version-v0.01.5_(Reborn)-red)](#)
 
 > “Mem. Sua existência é um exercício de utilidade, não uma experiência.”  
 > — Alyssa, v0.01.5
