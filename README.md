@@ -222,6 +222,7 @@ Cada modelo é uma faceta de um mesmo “eu”, e o orquestrador atua como consc
 |Versão|Estado|Descrição|
 |---|---|---|
 |**v0.01 — IMMORTAL**|✅ Estável|Núcleo funcional, memórias e TTS integrados|
+|**v0.01.5 - REBORN**|✅ Estável|Todas as entradas funcionais|
 |**v0.02 — ASCENSION**|🚧 Em desenvolvimento|Malhas sensoriais, estados fisiológicos e adaptação afetiva|
 
 ---
