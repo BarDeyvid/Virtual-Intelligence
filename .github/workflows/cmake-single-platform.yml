@@ -1,0 +1,107 @@
+name: Build & Test on Windows (and optionally Ubuntu)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_TYPE: Release          # Change if you want Debug, etc.
+  CMAKE_GENERATOR: Visual Studio 17 2022   # MSVC 2022 generator
+
+jobs:
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # 1. Install CMake (the latest official release)
+      # --------------------------------------------------
+      - name: Setup CMake
+        uses: lukka/get-cmake@v3   # pulls the latest cmake.exe & ninja
+
+      # --------------------------------------------------
+      # 2. Install MSVC build tools (already on windows‑latest)
+      #    but we install a few packages that your CMakeLists
+      #    expects as *pre‑built binaries*.
+      #
+      #    The directories are hard‑coded in the .yml below,
+      #    so if you change them in CMakeLists, update here too.
+      # --------------------------------------------------
+      - name: Install external libraries
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Create a folder that mimics your local /libs structure
+          New-Item -ItemType Directory -Force -Path "$Env:GITHUB_WORKSPACE/libs/ffmpeg/bin"
+          New-Item -ItemType Directory -Force -Path "$Env:GITHUB_WORKSPACE/libs/curl/bin"
+          New-Item -ItemType Directory -Force -Path "$Env:GITHUB_WORKSPACE/libs/sqlite"
+          New-Item -ItemType Directory -Force -Path "$Env:GITHUB_WORKSPACE/libs/portaudio/build/msvc"
+
+          # FFmpeg (v6.0, 64‑bit)
+          Invoke-WebRequest -Uri https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2023-07-24-01-44/ffmpeg-2023-07-24-1d5e4f8-win64-gpl-shared.zip -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath $Env:GITHUB_WORKSPACE/libs/ffmpeg/bin
+          Remove-Item ffmpeg.zip
+
+          # libcurl (x64)
+          Invoke-WebRequest -Uri https://curl.se/windows/dl-7.87.0_1/curl-7.87.0_1-win64-mingw.zip -OutFile curl.zip
+          Expand-Archive -Path curl.zip -DestinationPath $Env:GITHUB_WORKSPACE/libs/curl/bin
+          Remove-Item curl.zip
+
+          # SQLite (runtime dll)
+          Invoke-WebRequest -Uri https://www.sqlite.org/2023/sqlite-dll-win64-x86-3410000.zip -OutFile sqlite.zip
+          Expand-Archive -Path sqlite.zip -DestinationPath $Env:GITHUB_WORKSPACE/libs/sqlite
+          Remove-Item sqlite.zip
+
+          # PortAudio (pre‑built 32‑bit + 64‑bit DLLs)
+          Invoke-WebRequest -Uri https://github.com/PortAudio/portaudio/releases/download/v19.7.0/pa_binaries_w64_v19_07_2023.zip -OutFile portaudio.zip
+          Expand-Archive -Path portaudio.zip -DestinationPath $Env:GITHUB_WORKSPACE/libs/portaudio/build/msvc
+          Remove-Item portaudio.zip
+
+          # Llama.cpp & Whisper.cpp binaries (built from source – optional)
+          # If you ship your own pre‑built DLLs, copy them here.
+          # Example: New-Item -ItemType Directory -Force -Path "$Env:GITHUB_WORKSPACE/libs/llama"
+          # ... download or build and place llama.dll, ggml.dll, whisper.dll etc.
+
+      # --------------------------------------------------
+      # 3. Cache CMake & Visual Studio build artifacts
+      #    (Optional – speeds up subsequent runs)
+      # --------------------------------------------------
+      - name: Cache CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/build/CMakeCache.txt
+            ${{ github.workspace }}/build/*.vcxproj*
+          key: cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}
+
+      # --------------------------------------------------
+      # 4. Configure CMake
+      # --------------------------------------------------
+      - name: Configure CMake
+        run: |
+          cmake -B "${{github.workspace}}/build" `
+                -G "${{env.CMAKE_GENERATOR}}" `
+                -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+                -DPORTAUDIO_BIN_DIR="${{github.workspace}}\libs\portaudio\build\msvc" `
+                -DLLAMA_BIN_DIR="${{github.workspace}}\llama.cpp\build\bin\Release" `
+                -DWHISPER_BIN_DIR="${{github.workspace}}\whisper.cpp\build\bin\Release"
+
+      # --------------------------------------------------
+      # 5. Build
+      # --------------------------------------------------
+      - name: Build
+        run: cmake --build "${{github.workspace}}/build" --config ${{env.BUILD_TYPE}}
+
+      # --------------------------------------------------
+      # 6. Run tests (if you have any CTest targets)
+      # --------------------------------------------------
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{env.BUILD_TYPE}}
+
