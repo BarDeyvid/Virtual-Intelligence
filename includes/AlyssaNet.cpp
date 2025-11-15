@@ -3,14 +3,18 @@
 #include "CoreLLM.hpp"
 #include "AlyssaCore.hpp"
 #include "voice/ElevenLabsTTS.hpp"
+#include "log.hpp"
 
 using namespace alyssa_core;
+logging::Logger logg;
 
 // =========================================================================
 // Construtor & Destrutor
 // =========================================================================
 
-CoreIntegration::CoreIntegration() : initialized(false), active_expert_in_cache("") {}
+CoreIntegration::CoreIntegration() : initialized(false), active_expert_in_cache("") {
+    logg.info("CoreIntegration constructed");
+}
 
 CoreIntegration::~CoreIntegration() {
     // Libera os históricos de chat
@@ -26,6 +30,7 @@ CoreIntegration::~CoreIntegration() {
             llama_adapter_lora_free(pair.second); 
         }
     }
+    logg.info("CoreIntegration destroyed – freeing resources");
 }
 
 void CoreIntegration::clear_kv_cache() {

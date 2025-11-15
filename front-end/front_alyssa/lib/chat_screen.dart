@@ -32,7 +32,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!isConnected) {
       final warningMessage = Message(
-        text: '⚠️ Não foi possível conectar com a API em http://localhost:8181. '
+        text: '⚠️ Não foi possível conectar com a API. '
               'Verifique se o servidor está rodando.',
         isUser: false,
         timestamp: DateTime.now(),

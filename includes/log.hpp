@@ -4,9 +4,9 @@
 #include <iostream>
 #include <mutex>
 
-namespace log {
+namespace logging {
 
-enum class Level { DEBUG, INFO, WARN, ERROR };
+enum class Level { DEBUG, INFO, WARN};
 
 struct Logger {
     std::ofstream file;
@@ -21,8 +21,7 @@ struct Logger {
         std::string prefix;
         switch (lvl) { case Level::DEBUG: prefix = "[D] "; break;
                        case Level::INFO :  prefix = "[I] "; break;
-                       case Level::WARN :  prefix = "[W] "; break;
-                       case Level::ERROR: prefix = "[E] "; break; }
+                       case Level::WARN :  prefix = "[W] "; break; }
         std::string line = prefix + msg + "\n";
         std::cout << line;
         if (file.is_open()) file << line;
@@ -31,7 +30,6 @@ struct Logger {
     void debug(const std::string &msg) { write(Level::DEBUG, msg); }
     void info (const std::string &msg) { write(Level::INFO , msg); }
     void warn (const std::string &msg) { write(Level::WARN , msg); }
-    void error(const std::string &msg) { write(Level::ERROR, msg); }
 };
 
 inline Logger &instance() {
