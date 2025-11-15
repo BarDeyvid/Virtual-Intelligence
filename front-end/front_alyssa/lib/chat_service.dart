@@ -101,7 +101,7 @@ class ChatService {
     final lowerMessage = originalMessage.toLowerCase();
     
     if (lowerMessage.contains('alyssa') || lowerMessage.contains('gestora')) {
-      return '🤔 Hmm, sobre a Alyssa e o código com outro dev... Parece que isso tocou em algo complexo no meu sistema. Pode me contar mais sobre essa situação?';
+      return '🤔 Hmm, sobre a alyssa e o código com outro dev... Parece que isso tocou em algo complexo no meu sistema. Pode me contar mais sobre essa situação?';
     } else if (lowerMessage.contains('código') || lowerMessage.contains('dev')) {
       return '💻 Sobre desenvolvimento... Meu processamento emocional ficou confuso com esse contexto. Pode reformular?';
     } else {

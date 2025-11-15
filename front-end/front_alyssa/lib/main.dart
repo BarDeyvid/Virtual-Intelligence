@@ -1,8 +1,39 @@
 import 'package:flutter/material.dart';
-import 'chat_screen.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const ChatBotApp());
+import 'chat_screen.dart';
+import 'theme_notifier.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Configurações de janela (opcional)
+  await windowManager.ensureInitialized();
+  const size = Size(1280, 720);
+  const center = true;
+
+  WindowOptions options = const WindowOptions(
+    titleBarStyle: TitleBarStyle.normal,
+    size: size,
+    center: center,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    alwaysOnTop: false,
+  );
+
+  await windowManager.waitUntilReadyToShow(options, () async {
+    await windowManager.setTitle('Alys​sa');
+    await windowManager.show();
+  });
+
+  runApp(
+    ChangeNotifierProvider<ThemeNotifier>(
+      create: (_) => ThemeNotifier(),
+      child: const ChatBotApp(),
+    ),
+  );
+
 }
 
 class ChatBotApp extends StatelessWidget {
@@ -10,14 +41,14 @@ class ChatBotApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // O tema é obtido do provider, e o app reage a mudanças
+    final theme = Provider.of<ThemeNotifier>(context);
+
     return MaterialApp(
-      title: 'ChatBot',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: const ChatScreen(),
+      title: 'Alyssa',
+      theme: theme.currentTheme,
       debugShowCheckedModeBanner: false,
+      home: const ChatScreen(),
     );
   }
 }

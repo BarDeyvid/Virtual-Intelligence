@@ -1,5 +1,12 @@
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'responsive_input_bar.dart';
+import 'theme_notifier.dart';
+import 'emoji_mapper.dart';
 import 'chat_service.dart';
+import 'text_parser.dart';
 import 'message.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -13,17 +20,25 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ChatService _chatService = ChatService();
+
   bool _isLoading = false;
   bool _apiConnected = false;
   bool _checkingConnection = true;
 
+  late ThemeNotifier _themeNotifier;
+
   @override
   void initState() {
     super.initState();
-    _checkApiConnection();
+    _checkApiConnection();          // ← now defined below
+    _themeNotifier = context.read<ThemeNotifier>();
   }
 
-  void _checkApiConnection() async {
+  /* ------------------------------------------------------------------ */
+  /* ------------- API & debugging helpers (all used in the UI) ------- */
+  /* ------------------------------------------------------------------ */
+
+  Future<void> _checkApiConnection() async {
     final isConnected = await _chatService.checkHealth();
     setState(() {
       _apiConnected = isConnected;
@@ -32,139 +47,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!isConnected) {
       final warningMessage = Message(
-        text: '⚠️ Não foi possível conectar com a API. '
-              'Verifique se o servidor está rodando.',
+        text:
+            '⚠️ Não foi possível conectar com a API. Verifique se o servidor está rodando.',
         isUser: false,
         timestamp: DateTime.now(),
       );
-      setState(() {
-        _messages.add(warningMessage);
-      });
+      setState(() => _messages.add(warningMessage));
     }
   }
 
-  void _sendMessage() async {
-    if (!_apiConnected) {
-      _showConnectionError();
-      return;
-    }
-
-    final text = _textController.text.trim();
-    if (text.isEmpty) return;
-
-    final userMessage = Message(
-      text: text,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
-    
-    setState(() {
-      _messages.add(userMessage);
-      _textController.clear();
-      _isLoading = true;
-    });
-
-    try {
-      // Para debug: verificar resposta completa da API
-      if (text.toLowerCase().contains('debug')) {
-        final debugInfo = await _chatService.debugApiResponse(text);
-        final debugMessage = Message(
-          text: '🔧 DEBUG INFO:\n${_formatDebugInfo(debugInfo)}',
-          isUser: false,
-          timestamp: DateTime.now(),
-        );
-        
-        setState(() {
-          _messages.add(debugMessage);
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final botResponse = await _chatService.sendMessage(text);
-      
-      final botMessage = Message(
-        text: botResponse,
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      setState(() {
-        _messages.add(botMessage);
-        _isLoading = false;
-      });
-    } catch (e) {
-      final errorMessage = Message(
-        text: '❌ Erro ao comunicar com a API: $e',
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-      
-      setState(() {
-        _messages.add(errorMessage);
-        _isLoading = false;
-      });
-    }
-  }
-
-  String _formatDebugInfo(Map<String, dynamic> debugInfo) {
-    final buffer = StringBuffer();
-    
-    if (debugInfo['success'] == true) {
-      buffer.writeln('✅ Conexão bem-sucedida');
-      buffer.writeln('📊 Status Code: ${debugInfo['statusCode']}');
-      buffer.writeln('📦 Resposta Bruta:');
-      buffer.writeln(debugInfo['rawResponse'] ?? 'N/A');
-      
-      final data = debugInfo['data'] ?? {};
-      buffer.writeln('\n🔍 Dados Parseados:');
-      data.forEach((key, value) {
-        buffer.writeln('   $key: $value');
-      });
-    } else {
-      buffer.writeln('❌ Erro na conexão');
-      buffer.writeln('📊 Status Code: ${debugInfo['statusCode']}');
-      buffer.writeln('🚨 Erro: ${debugInfo['error']}');
-      if (debugInfo['rawResponse'] != null) {
-        buffer.writeln('📦 Resposta Bruta: ${debugInfo['rawResponse']}');
-      }
-    }
-    
-    return buffer.toString();
-  }
-
-  void _showConnectionError() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Erro de Conexão'),
-        content: const Text(
-          'Não foi possível conectar com a API do chatbot. '
-          'Verifique se o servidor está rodando em http://localhost:8181',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _checkApiConnection();
-            },
-            child: const Text('Tentar Novamente'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _retryConnection() async {
-    setState(() {
-      _checkingConnection = true;
-    });
-    
-    _checkApiConnection();
+  Future<void> _retryConnection() async {
+    setState(() => _checkingConnection = true);
+    await _checkApiConnection();
   }
 
   void _showDebugDialog() {
@@ -197,38 +91,38 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-  
-  void _testConnection() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+
+  Future<void> _testConnection() async {
+    setState(() => _isLoading = true);
     final results = await _chatService.testConnection();
-    
+
     final debugMessage = Message(
-      text: '🔍 RESULTADOS DO TESTE:\n\n'
-            '🏥 Health: ${results['health_status']}\n'
-            '🤔 Think: ${results['think_status']}\n' 
-            '🔄 Fusion: ${results['fusion_status']}\n'
-            '📦 Error: ${results['error'] ?? "Nenhum"}\n\n'
-            'Se Health=200, a API está acessível!',
+      text:
+          '🔍 RESULTADOS DO TESTE:\n\n🏥 Health: ${results['health_status']}\n🤔 Think: ${results['think_status']}\n🔄 Fusion: ${results['fusion_status']}\n📦 Error: ${results['error'] ?? "Nenhum"}\n\nSe Health=200, a API está acessível!',
       isUser: false,
       timestamp: DateTime.now(),
     );
-    
+
     setState(() {
       _messages.add(debugMessage);
       _isLoading = false;
     });
   }
 
+  /* ------------------------------------------------------------------ */
+  /* -------------------------- UI ------------------------------------- */
+  /* ------------------------------------------------------------------ */
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);          // current theme
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alyssa'),
-        backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
+        backgroundColor:
+            _apiConnected ? theme.colorScheme.primary : theme.colorScheme.error,
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
@@ -240,7 +134,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
             )
@@ -251,7 +146,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Colors.white,
               ),
               onPressed: _retryConnection,
-              tooltip: _apiConnected ? 'API Conectada' : 'API Desconectada',
+              tooltip:
+                  _apiConnected ? 'API Conectada' : 'API Desconectada',
             ),
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -263,7 +159,16 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: _testConnection,
             tooltip: 'Testar Conexão',
           ),
-
+          IconButton(
+            icon: Icon(
+              themeNotifier.isDark
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+              color: Colors.white,
+            ),
+            onPressed: () => themeNotifier.toggleTheme(),
+            tooltip: 'Alternar Tema',
+          ),
         ],
       ),
       body: Column(
@@ -272,7 +177,8 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              color: Colors.orange[100],
+              color:
+                  theme.colorScheme.secondaryContainer.withValues(alpha: 0.2),
               child: Row(
                 children: [
                   const Icon(Icons.warning, color: Colors.orange),
@@ -281,7 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       'API desconectada',
                       style: TextStyle(
-                        color: Colors.orange[800],
+                        color: theme.colorScheme.error,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -294,24 +200,29 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           Expanded(
+            // Main chat area
             child: _messages.isEmpty && !_checkingConnection
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          _apiConnected ? Icons.chat_bubble_outline : Icons.error_outline,
-                          size: 64,
-                          color: _apiConnected ? Colors.blue : Colors.orange,
-                        ),
+                        Icon(_apiConnected
+                            ? Icons.chat_bubble_outline
+                            : Icons.error_outline,
+                            size: 64,
+                            color: _apiConnected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.error),
                         const SizedBox(height: 16),
                         Text(
-                          _apiConnected 
+                          _apiConnected
                               ? 'Como posso ajudar você hoje?'
-                              : 'Conecte-se à API para começar',
+                              : 'Conecte‑se à API para começar',
                           style: TextStyle(
                             fontSize: 18,
-                            color: _apiConnected ? Colors.grey : Colors.orange,
+                            color: _apiConnected
+                                ? theme.textTheme.bodyLarge?.color
+                                : theme.colorScheme.error,
                           ),
                         ),
                         if (_apiConnected) ...[
@@ -331,7 +242,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     reverse: false,
-                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemCount:
+                        _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == _messages.length && _isLoading) {
                         return _buildLoadingIndicator();
@@ -340,33 +252,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
+          // Input bar
           _buildInputArea(),
         ],
       ),
     );
   }
 
-  // ... métodos _buildMessageBubble, _buildLoadingIndicator, _buildInputArea, _formatTime permanecem iguais ...
+  /* ------------------------------------------------------------------ */
+  /* ------------------------ message widgets -------------------------- */
+  /* ------------------------------------------------------------------ */
+
   Widget _buildMessageBubble(Message message) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: message.isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!message.isUser)
             Container(
               margin: const EdgeInsets.only(right: 8, top: 4),
-              child: CircleAvatar(
-                backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
-                radius: 16,
-                child: const Icon(
-                  Icons.smart_toy,
-                  color: Colors.white,
-                  size: 18,
-                ),
+              child: Image.asset(
+                'assets/icon/alyssa.png',
+                width: 60,
+                height: 60,
               ),
             ),
           Flexible(
@@ -374,29 +286,27 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: message.isUser
-                    ? Colors.blue
-                    : Colors.grey[200],
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.text,
-                    style: TextStyle(
-                      color: message.isUser
-                          ? Colors.white
-                          : Colors.black,
-                      fontSize: 16,
-                    ),
-                  ),
+                  !message.isUser
+                      ? MarkdownBody(data: message.text)
+                      : Text(
+                          message.text,
+                          style:
+                              const TextStyle(color: Colors.white),
+                        ),
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(message.timestamp),
                     style: TextStyle(
                       color: message.isUser
-                          ? Colors.white70
-                          : Colors.grey[600],
+                          ? theme.colorScheme.onPrimary.withValues(alpha: 0.7)
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
@@ -423,6 +333,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildLoadingIndicator() {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -432,7 +343,8 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             margin: const EdgeInsets.only(right: 8, top: 4),
             child: CircleAvatar(
-              backgroundColor: _apiConnected ? Colors.blue : Colors.orange,
+              backgroundColor:
+                  _apiConnected ? theme.colorScheme.primary : theme.colorScheme.error,
               radius: 16,
               child: const Icon(
                 Icons.smart_toy,
@@ -444,7 +356,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: theme.colorScheme.surface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -455,16 +367,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _apiConnected ? Colors.blue : Colors.orange,
-                    ),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Processando...',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: theme.textTheme.bodyMedium?.color,
                     fontSize: 16,
                   ),
                 ),
@@ -476,60 +387,137 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildInputArea() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withValues(alpha: 0.1),
+  Widget _buildInputArea() => ResponsiveInputBar(
+        controller: _textController,
+        isApiConnected: _apiConnected,
+        isLoading: _isLoading,
+        onSend: _sendMessage,
+      );
+
+  /* ------------------------------------------------------------------ */
+  /* --------------------- send & format helpers ---------------------- */
+  /* ------------------------------------------------------------------ */
+
+  void _sendMessage() async {
+    if (!_apiConnected) {
+      _showConnectionError();
+      return;
+    }
+
+    final rawText = _textController.text.trim();
+    if (rawText.isEmpty) return;
+
+    // Normaliza o texto do usuário
+    final formattedInput = normalizeText(mapEmoji(rawText));
+
+    final userMessage = Message(
+      text: rawText,
+      isUser: true,
+      timestamp: DateTime.now(),
+    );
+
+    setState(() {
+      _messages.add(userMessage);
+      _textController.clear();
+      _isLoading = true;
+    });
+
+    try {
+      if (rawText.toLowerCase().contains('debug')) {
+        final debugInfo =
+            await _chatService.debugApiResponse(rawText);
+        final debugMessage = Message(
+          text: '🔧 DEBUG INFO:\n${_formatDebugInfo(debugInfo)}',
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
+
+        setState(() {
+          _messages.add(debugMessage);
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final botResponse =
+          await _chatService.sendMessage(formattedInput);
+
+      final botMessage = Message(
+        text: botResponse,
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      setState(() {
+        _messages.add(botMessage);
+        _isLoading = false;
+      });
+    } catch (e) {
+      final errorMessage = Message(
+        text: '❌ Erro ao comunicar com a API: $e',
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      setState(() {
+        _messages.add(errorMessage);
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDebugInfo(Map<String, dynamic> debugInfo) {
+    final buffer = StringBuffer();
+
+    if (debugInfo['success'] == true) {
+      buffer.writeln('✅ Conexão bem‑sucedida');
+      buffer.writeln('📊 Status Code: ${debugInfo['statusCode']}');
+      buffer.writeln('📦 Resposta Bruta:');
+      buffer.writeln(debugInfo['rawResponse'] ?? 'N/A');
+
+      final data = debugInfo['data'] ?? {};
+      buffer.writeln('\n🔍 Dados Parseados:');
+      data.forEach((key, value) {
+        buffer.writeln('   $key: $value');
+      });
+    } else {
+      buffer.writeln('❌ Erro na conexão');
+      buffer.writeln('📊 Status Code: ${debugInfo['statusCode']}');
+      buffer.writeln('🚨 Erro: ${debugInfo['error']}');
+      if (debugInfo['rawResponse'] != null) {
+        buffer.writeln('📦 Resposta Bruta: ${debugInfo['rawResponse']}');
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  void _showConnectionError() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Erro de Conexão'),
+        content: const Text(
+          'Não foi possível conectar com a API do chatbot. '
+          'Verifique se o servidor está rodando em http://localhost:8181',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              enabled: _apiConnected && !_isLoading,
-              decoration: InputDecoration(
-                hintText: _apiConnected 
-                    ? 'Digite sua mensagem...'
-                    : 'Aguardando conexão com a API...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: _apiConnected ? Colors.grey[100] : Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onSubmitted: (_) => _sendMessage(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            backgroundColor: _apiConnected && !_isLoading ? Colors.blue : Colors.grey,
-            child: IconButton(
-              icon: const Icon(
-                Icons.send,
-                color: Colors.white,
-              ),
-              onPressed: _apiConnected && !_isLoading ? _sendMessage : null,
-            ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _retryConnection();
+            },
+            child: const Text('Tentar Novamente'),
           ),
         ],
       ),
     );
   }
 
-  String _formatTime(DateTime timestamp) {
-    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-  }
+  String _formatTime(DateTime timestamp) =>
+      '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 }
