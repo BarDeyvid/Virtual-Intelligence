@@ -1,3 +1,4 @@
+// WeightedFusion.cpp
 #include "WeightedFusion/WeightedFusion.hpp"
 #include <algorithm>
 #include <numeric>

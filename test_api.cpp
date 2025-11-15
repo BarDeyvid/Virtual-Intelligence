@@ -2,10 +2,13 @@
 #include "includes/json.hpp"
 #include "includes/CoreLLM.hpp"
 #include <iostream>
+#include <windows.h>
 
 using json = nlohmann::json;
 
 int main() {
+    SetConsoleOutputCP(CP_UTF8);
+    std::locale::global(std::locale("pt_BR.UTF-8"));
     httplib::Server svr;
     CoreIntegration core;
 

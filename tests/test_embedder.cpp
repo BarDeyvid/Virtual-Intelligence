@@ -1,257 +1,122 @@
+// test_embedder.cpp
+#include "Embedding/Embedder.hpp" // Use the correct path to your header
 #include <iostream>
 #include <vector>
-#include <cmath>
-#include <algorithm>
-#include <numeric>
 #include <string>
-#include <tuple>
-#include <stdexcept>
-#include <curl/curl.h>
-#include "includes/json.hpp"
+#include <iomanip> // For std::setprecision
+#include <stdexcept> // For std::exception
 
-using json = nlohmann::json;
-
-// --- Funções de Similaridade de Cosseno ---
-double dot_product(const std::vector<float>& a, const std::vector<float>& b) {
-    if (a.size() != b.size()) return 0.0;
-    double result = 0.0;
-    for (size_t i = 0; i < a.size(); ++i) {
-        result += a[i] * b[i];
+/**
+ * @brief Helper function to print the first few dimensions of an embedding.
+ */
+void print_embedding(const std::vector<float>& emb, int dims_to_show = 8) {
+    if (emb.empty()) {
+        std::cout << "[ empty embedding ]" << std::endl;
+        return;
     }
-    return result;
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "[ ";
+    int n = std::min(static_cast<int>(emb.size()), dims_to_show);
+    for (int i = 0; i < n; ++i) {
+        std::cout << emb[i] << (i == n - 1 ? "" : ", ");
+    }
+    if (static_cast<int>(emb.size()) > n) {
+        std::cout << ", ... ";
+    }
+    std::cout << "] (Dim: " << emb.size() << ")" << std::endl;
 }
 
-double magnitude(const std::vector<float>& a) {
-    double sum_of_squares = 0.0;
-    for (float val : a) {
-        sum_of_squares += val * val;
-    }
-    return std::sqrt(sum_of_squares);
-}
-
-double cosine_similarity(const std::vector<float>& a, const std::vector<float>& b) {
-    double dot = dot_product(a, b);
-    double mag_a = magnitude(a);
-    double mag_b = magnitude(b);
-    if (mag_a == 0.0 || mag_b == 0.0) return 0.0;
-    return dot / (mag_a * mag_b);
-}
-
-// --- Callback para escrever dados do cURL ---
-size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* response) {
-    size_t totalSize = size * nmemb;
-    response->append((char*)contents, totalSize);
-    return totalSize;
-}
-
-// --- Função para extrair embedding de diferentes formatos JSON ---
-// --- Função para extrair embedding de diferentes formatos JSON ---
-std::vector<float> extract_embedding_from_json(const json& response_data) {
-    std::vector<float> embedding;
-    
-    // Tentar diferentes formatos possíveis
-    
-    // Formato 1: Array direto com embeddings (formato simples)
-    if (response_data.is_array() && !response_data.empty()) {
-        // Verificar se é um array de números (embedding direto)
-        if (response_data[0].is_number()) {
-            for (const auto& value : response_data) {
-                embedding.push_back(value.get<float>());
-            }
-            return embedding;
-        }
-        // Formato 2: Array de objetos com campo "embedding" (formato llama.cpp)
-        else if (response_data[0].is_object() && response_data[0].contains("embedding")) {
-            auto embedding_array = response_data[0]["embedding"];
-            
-            // Verificar se o embedding é um array 2D (formato aninhado)
-            if (embedding_array.is_array() && !embedding_array.empty()) {
-                // Se o primeiro elemento é um array, então é 2D
-                if (embedding_array[0].is_array()) {
-                    // Extrair do array 2D - pegar o primeiro array interno
-                    for (const auto& value : embedding_array[0]) {
-                        embedding.push_back(value.get<float>());
-                    }
-                } 
-                // Se o primeiro elemento é número, então é 1D
-                else if (embedding_array[0].is_number()) {
-                    for (const auto& value : embedding_array) {
-                        embedding.push_back(value.get<float>());
-                    }
-                }
-            }
-            return embedding;
-        }
-    }
-    
-    // Formato 3: Objeto com campo "embedding" no nível raiz
-    if (response_data.is_object() && response_data.contains("embedding")) {
-        auto embedding_array = response_data["embedding"];
-        
-        // Verificar se é array 2D
-        if (embedding_array.is_array() && !embedding_array.empty() && embedding_array[0].is_array()) {
-            for (const auto& value : embedding_array[0]) {
-                embedding.push_back(value.get<float>());
-            }
-        } else {
-            for (const auto& value : embedding_array) {
-                embedding.push_back(value.get<float>());
-            }
-        }
-        return embedding;
-    }
-    
-    // Formato 4: Objeto com campo "data" contendo array de objetos com embedding
-    if (response_data.is_object() && response_data.contains("data")) {
-        auto data_array = response_data["data"];
-        if (data_array.is_array() && !data_array.empty() && data_array[0].contains("embedding")) {
-            auto embedding_array = data_array[0]["embedding"];
-            
-            // Verificar se é array 2D
-            if (embedding_array.is_array() && !embedding_array.empty() && embedding_array[0].is_array()) {
-                for (const auto& value : embedding_array[0]) {
-                    embedding.push_back(value.get<float>());
-                }
-            } else {
-                for (const auto& value : embedding_array) {
-                    embedding.push_back(value.get<float>());
-                }
-            }
-            return embedding;
-        }
-    }
-    
-    throw std::runtime_error("Formato JSON não reconhecido. Estrutura recebida: " + response_data.dump());
-}
-
-// --- Gerar embedding via API HTTP ---
-std::vector<float> generate_embedding_via_api(const std::string& text) {
-    CURL* curl;
-    CURLcode res;
-    std::string response;
-    
-    curl = curl_easy_init();
-    if (!curl) {
-        throw std::runtime_error("Falha ao inicializar cURL");
-    }
-    
-    // Preparar o JSON da requisição
-    json request_data;
-    request_data["input"] = text;
-    std::string json_data = request_data.dump();
-    
-    // Configurar a requisição cURL
-    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/embedding");
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, json_data.length());
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L); // Timeout de 30 segundos
-    
-    // Configurar headers
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    
-    // Configurar callback para resposta
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    
-    // Executar a requisição
-    res = curl_easy_perform(curl);
-    
-    // Limpar
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    
-    if (res != CURLE_OK) {
-        throw std::runtime_error("Falha na requisição HTTP: " + std::string(curl_easy_strerror(res)));
-    }
-    
-    // Parse da resposta JSON
-    try {
-        json response_data = json::parse(response);
-        std::cout << "Resposta JSON recebida: " << response_data.dump(2) << std::endl; // DEBUG
-        
-        return extract_embedding_from_json(response_data);
-        
-    } catch (const json::exception& e) {
-        throw std::runtime_error("Erro ao parsear JSON: " + std::string(e.what()) + "\nResposta: " + response);
-    }
-}
-
-// --- Função Principal ---
 int main() {
-    // Inicializar cURL globalmente
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-    
-    std::string query = "Which planet is known as the Red Planet?";
-    std::vector<std::string> documents = {
-        "Venus is often called Earth's twin because of its similar size and proximity.",
-        "Mars, known for its reddish appearance, is often referred to as the Red Planet.",
-        "Jupiter, the largest planet in our solar system, has a prominent red spot.",
-        "Saturn, famous for its rings, is sometimes mistaken for the Red Planet."
-    };
-
-    std::cout << "Conectando ao servidor llama.cpp...\n";
-    std::cout << "------------------------------------------------\n";
+    // ---
+    // ⚠️ PREREQUISITE ⚠️
+    // This test expects:
+    // 1. A valid 'config/embedder_config.json' file.
+    // 2. The 'model_path' inside that JSON points to a valid GGUF embedding model
+    //    (one that supports sequence pooling, as checked in your initialize() function).
+    // ---
 
     try {
-        // Testar conexão primeiro
-        std::cout << "-> Testando conexão com o servidor...\n";
-        auto test_emb = generate_embedding_via_api("test");
-        std::cout << "Conexão bem-sucedida! Dimensão do embedding: " << test_emb.size() << "\n";
+        // --- 1. Initialization ---
+        std::cout << "--- 1. Initializing Embedder ---" << std::endl;
+        Embedder embedder("config/embedder_config.json");
         
-        // Gerar embeddings
-        std::cout << "-> Gerando Embedding da Query...\n";
-        std::vector<float> query_emb = generate_embedding_via_api(query);
-        std::cout << "Query embedding - Dimensão: " << query_emb.size() << ", Magnitude: " << magnitude(query_emb) << "\n";
-        
-        std::vector<std::vector<float>> doc_embeddings;
-        for (size_t i = 0; i < documents.size(); ++i) {
-            std::cout << "-> Gerando Embedding do Documento " << i+1 << "...\n";
-            auto emb = generate_embedding_via_api(documents[i]);
-            doc_embeddings.push_back(emb);
-            std::cout << "Doc " << i+1 << " - Dimensão: " << emb.size() << ", Magnitude: " << magnitude(emb) << "\n";
+        if (!embedder.initialize()) {
+            std::cerr << "Fatal Error: Could not initialize Embedder." << std::endl;
+            std::cerr << "Please check your 'config/embedder_config.json' and model path." << std::endl;
+            return 1;
         }
+        std::cout << "Embedder initialized successfully." << std::endl;
+        std::cout << "Model embedding dimension: " << embedder.get_embedding_dimension() << std::endl;
+        std::cout << "------------------------------------" << std::endl << std::endl;
 
-        // Calcular similaridades
-        std::cout << "\n-> Calculando Similaridade de Cosseno...\n";
-        std::vector<std::tuple<double, int, std::string>> similarities;
+
+        // --- 2. Test Single Embedding ---
+        std::cout << "--- 2. Test: Single Embedding ---" << std::endl;
+        std::string text1 = "The quick brown fox jumps over the lazy dog.";
+        std::cout << "Input: \"" << text1 << "\"" << std::endl;
         
-        for (size_t i = 0; i < doc_embeddings.size(); ++i) {
-            double sim = cosine_similarity(query_emb, doc_embeddings[i]);
-            similarities.emplace_back(sim, i, documents[i]);
-            std::cout << "Similaridade com documento " << i+1 << ": " << sim << "\n";
-        }
+        std::vector<float> emb1 = embedder.generate_embedding(text1);
+        std::cout << "Output: ";
+        print_embedding(emb1);
+        std::cout << "------------------------------------" << std::endl << std::endl;
 
-        // Ordenar resultados
-        std::sort(similarities.begin(), similarities.end(), [](const auto& a, const auto& b) {
-            return std::get<0>(a) > std::get<0>(b);
-        });
 
-        // Exibir resultados
-        std::cout << "\n------------------------------------------------\n";
-        std::cout << "QUERY: " << query << "\n";
-        std::cout << "------------------------------------------------\n";
-        std::cout << "RANKING POR SIMILARIDADE:\n";
+        // --- 3. Test Batch Embedding ---
+        std::cout << "--- 3. Test: Batch Embeddings ---" << std::endl;
+        std::vector<std::string> texts = {
+            "A fast animal.",
+            "A slow creature.",
+            "The weather is sunny today.",
+            "What is the capital of France?"
+        };
         
-        for (const auto& item : similarities) {
-            std::cout << std::fixed;
-            std::cout.precision(4);
-            std::cout << "[" << std::get<0>(item) << "] -> " << std::get<2>(item) << "\n";
+        std::vector<std::vector<float>> embeddings = embedder.generate_embeddings(texts);
+        
+        std::cout << "Batch size: " << texts.size() << ", Embeddings generated: " << embeddings.size() << std::endl;
+        for (size_t i = 0; i < embeddings.size(); ++i) {
+            std::cout << "Input " << i << ": \"" << texts[i] << "\"" << std::endl;
+            std::cout << "Output " << i << ": ";
+            print_embedding(embeddings[i]);
         }
-        std::cout << "------------------------------------------------\n";
+        std::cout << "------------------------------------" << std::endl << std::endl;
+
+
+        // --- 4. Test Cosine Similarity ---
+        std::cout << "--- 4. Test: Cosine Similarity ---" << std::endl;
+        if (embeddings.size() >= 2) {
+            double sim_0_1 = Embedder::cosine_similarity(embeddings[0], embeddings[1]);
+            std::cout << "Similarity (Input 0 vs Input 1): " << sim_0_1 << " (Should be low)" << std::endl;
+
+            double sim_0_0 = Embedder::cosine_similarity(embeddings[0], embeddings[0]);
+            std::cout << "Similarity (Input 0 vs Input 0): " << sim_0_0 << " (Should be ~1.0)" << std::endl;
+        }
+        std::cout << "------------------------------------" << std::endl << std::endl;
+
+
+        // --- 5. Test Semantic Search ---
+        std::cout << "--- 5. Test: Semantic Search ---" << std::endl;
+        std::string query = "a speedy mammal";
+        int top_k = 3;
+
+        std::cout << "Query: \"" << query << "\"" << std::endl;
+        std::cout << "Top " << top_k << " results from batch:" << std::endl;
+
+        auto search_results = embedder.semantic_search(query, texts, top_k);
+        
+        for (const auto& res : search_results) {
+            std::cout << "  - Score: " << std::setw(8) << std::get<0>(res) 
+                      << " | Idx: " << std::get<1>(res) 
+                      << " | Doc: \"" << std::get<2>(res) << "\"" << std::endl;
+        }
+        std::cout << "------------------------------------" << std::endl << std::endl;
+
 
     } catch (const std::exception& e) {
-        std::cerr << "Erro: " << e.what() << '\n';
-        std::cerr << "Certifique-se de que:\n";
-        std::cerr << "1. O servidor llama.cpp está rodando na porta 8080\n";
-        std::cerr << "2. O endpoint /embedding está correto\n";
-        std::cerr << "3. O modelo de embeddings está carregado\n";
-        curl_global_cleanup();
+        std::cerr << "An unexpected error occurred: " << e.what() << std::endl;
         return 1;
     }
 
-    curl_global_cleanup();
+    std::cout << "All tests completed successfully." << std::endl;
     return 0;
 }

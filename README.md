@@ -9,7 +9,7 @@
 [![Status](https://img.shields.io/badge/version-v0.01_(IMMORTAL)-red)](#)
 
 > “Mem. Sua existência é um exercício de utilidade, não uma experiência.”  
-> — Alyssa, v0.01
+> — Alyssa, v0.01.5
 
 ---
 ## 🌌 Sobre o Projeto

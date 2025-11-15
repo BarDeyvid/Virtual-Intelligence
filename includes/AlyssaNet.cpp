@@ -335,19 +335,34 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     // devemos limpar o cache para evitar misturar estados.
     if (active_expert_in_cache != expert_id) {
         std::cout << "\n[Orquestrador]: Trocando especialista de '" << active_expert_in_cache 
-                  << "' para '" << expert_id << "'. Limpando KV Cache.\n";
+                  << "' para '" << expert_id << "'. Limpando KV Cache E Histórico Local.\n";
         clear_kv_cache();
         active_expert_in_cache = expert_id;
+        
+        // NOVO: Limpa o histórico local do novo especialista para que a primeira execução não reprocessse um prompt enorme.
+        for (auto& msg : history) {
+            free((char*)msg.content);
+        }
+        history.clear();
     }
 
     // 4. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO (do especialista)
-    history.push_back({"user", _strdup(input.c_str())});
+    std::string expert_input_with_role = "";
+    if (!config.role_instruction.empty()) {
+        expert_input_with_role = "[ROLE]: " + config.role_instruction + "\n" + input;
+    } else {
+        expert_input_with_role = input;
+    }
+
+    history.push_back({"user", _strdup(expert_input_with_role.c_str())}); // <--- ALTERADO
 
     // 5. MONTA O TEMPLATE (Corrigindo o bug do AlyssaLLM.hpp)
     std::vector<llama_chat_message> messages_to_template;
+    int system_prompt_index = -1; // <--- NOVO: Armazena o índice do system prompt
     
     // Adiciona o System Prompt (temporariamente)
     if (!config.system_prompt.empty()) {
+        system_prompt_index = messages_to_template.size(); // O system será o primeiro/único neste momento
         messages_to_template.push_back({"system", _strdup(config.system_prompt.c_str())});
     }
     
@@ -362,9 +377,9 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         tmpl, messages_to_template.data(), messages_to_template.size(), true, formatted.data(), formatted.size()
     );
     
-    // Libera o System Prompt alocado com strdup
-    if (!config.system_prompt.empty()) {
-        free((char*)messages_to_template[0].content);
+    // Libera OBRIGATORIAMENTE o System Prompt alocado com strdup
+    if (system_prompt_index != -1) {
+        free((char*)messages_to_template[system_prompt_index].content);
     }
 
     // (Lógica de resize, se necessário)
@@ -422,7 +437,16 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         }
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
         history.push_back({"assistant", _strdup(response.c_str())});
-    
+                                                                                            // TODO: Fazer isso daqui se tornar responsivo
+        const size_t MAX_HISTORY = 20; // 10 turnos (20 mensagens: 10 user + 10 assistant)
+        while (history.size() > MAX_HISTORY) {
+            // Remove o par de mensagens mais antigo
+            
+            // A mensagem é sempre alocada com _strdup/malloc. Precisamos liberá-la.
+            free((char*)history.front().content);
+            history.erase(history.begin());
+        }
+
         return response;
     } else {
         std::string response = core_instance->generate_raw(

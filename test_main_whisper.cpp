@@ -18,19 +18,13 @@ void log_callback(ggml_log_level level, const char * text, void * user_data) {
 int main() {
     try { // <--- Adicione o try
         SetConsoleOutputCP(CP_UTF8);
-        std::locale::global(std::locale("en_US.UTF-8"));
+        std::locale::global(std::locale("pt_BR.UTF-8"));
         
         llama_log_set(log_callback, nullptr); // Use o callback de log
         ggml_backend_load_all(); 
 
         CoreIntegration alyssa_brain;
         std::cout << "Inicializando CoreIntegration..." << std::endl;
-        
-        if (!alyssa_brain.initialize("models/gemma-3-1b-it-q4_0.gguf")) {
-            std::cerr << "Falha Crítica ao inicializar o CoreIntegration. Encerrando." << std::endl;
-            return 1;
-        }
-        std::cout << "CoreIntegration Inicializado...";
     
         // 1. Chama a Inicialização com o caminho do modelo BASE
         if (!alyssa_brain.initialize("models/gemma-3-1b-it-q4_0.gguf")) {

@@ -23,6 +23,7 @@ struct SimpleModelConfig {
     std::string id;
     std::string model_path;
     std::string system_prompt;
+    std::string role_instruction;
     bool usa_LoRA;
     std::string lora_path;
     SimpleModelParameters params;
@@ -189,7 +190,7 @@ namespace alyssa_core {
             llama_sampler_chain_add(smpl, llama_sampler_init_min_p(top_p, 1));
             float temp = (params.temperature > 0.0) ? params.temperature : 0.8f;
             llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.1f, 0.0f, 0.0f)); // penalidade por repeticao de tokens
+            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f)); // penalidade por repeticao de tokens
             llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
             
             // 3. Verifica se o contexto já tem tokens
