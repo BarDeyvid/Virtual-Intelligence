@@ -2,7 +2,7 @@
 #include "WeightedFusion/WeightedFusion.hpp"
 #include <algorithm>
 #include <numeric>
-
+#pragma warning(disable: 4244 4267 4100 4458 4966 4018 4127 4101)
 namespace alyssa_fusion {
 
 // 🔹 A. Rule-based Fusion

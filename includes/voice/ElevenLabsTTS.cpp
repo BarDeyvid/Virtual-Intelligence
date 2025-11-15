@@ -12,6 +12,7 @@
 #include <fstream>
 #include <cstdio>
 #include <functional>
+#pragma warning(disable: 4244 4267 4458 4966 4018 4127)
 
 using json = nlohmann::json;
 
