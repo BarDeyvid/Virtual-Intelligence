@@ -10,7 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <functional>
-
+#pragma warning(disable: 4244 4267 4458)
 using json = nlohmann::json;
 
 struct SimpleModelParameters {

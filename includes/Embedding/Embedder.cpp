@@ -2,6 +2,7 @@
 #include <thread>
 #include <cstring>
 #include <cmath>
+#pragma warning(disable: 4244 4267 4458)
 
 // Construtores e Destrutores
 Embedder::Embedder() {
@@ -25,7 +26,14 @@ bool Embedder::initialize() {
     return initialize(config_path);
 }
 
+
 bool Embedder::initialize(const std::string& config_path_) {
+    llama_log_set([](enum ggml_log_level level, const char * text, void * /* user_data */) {
+        if (level >= GGML_LOG_LEVEL_ERROR) {
+            fprintf(stderr, "%s", text);
+        }
+    }, nullptr);
+
     this->config_path = config_path_;
     
     // Gerenciamento de Config

@@ -39,6 +39,12 @@ void CoreIntegration::clear_kv_cache() {
 bool CoreIntegration::initialize(const std::string& base_model_path) {
     if (initialized) return true;
 
+    llama_log_set([](enum ggml_log_level level, const char * text, void * /* user_data */) { // to shut the llama.cpp bitchy ass up
+        if (level >= GGML_LOG_LEVEL_ERROR) {
+            fprintf(stderr, "%s", text);
+        }
+    }, nullptr);
+
     try {
 
         embedder = std::make_shared<Embedder>("config/embedder_config.json");

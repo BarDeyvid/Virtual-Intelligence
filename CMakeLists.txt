@@ -13,7 +13,7 @@ if(MSVC)
 endif()
 
 # --- 2. Define Source Files and Executable Target ---
-set(MAIN_SOURCE ${CMAKE_SOURCE_DIR}/test_embedder.cpp) 
+set(MAIN_SOURCE ${CMAKE_SOURCE_DIR}/test_main.cpp) 
 set(COMMON_SOURCES
     ${CMAKE_SOURCE_DIR}/includes/Embedding/Embedder.cpp 
     ${CMAKE_SOURCE_DIR}/includes/voice/ElevenLabsTTS.cpp 
