@@ -1,20 +1,26 @@
 #include "Embedding/Embedder.hpp"
+#include <thread>
+#include <cstring>
+#include <cmath>
 
 // Construtores e Destrutores
 Embedder::Embedder() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    llama_backend_init();
 }
 
 Embedder::Embedder(const std::string& config_path) : config_path(config_path) {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    llama_backend_init();
 }
 
 Embedder::~Embedder() {
-    stop_llama_server();
-    curl_global_cleanup();
+    if (initialized) {
+        llama_batch_free(batch);
+        context.reset();
+        model.reset();
+    }
+    llama_backend_free();
 }
 
-// Inicialização
 bool Embedder::initialize() {
     return initialize(config_path);
 }
@@ -22,13 +28,12 @@ bool Embedder::initialize() {
 bool Embedder::initialize(const std::string& config_path_) {
     this->config_path = config_path_;
     
-    // Criar diretório config se não existir
+    // Gerenciamento de Config
     fs::path config_dir = fs::path(config_path_).parent_path();
     if (!config_dir.empty() && !fs::exists(config_dir)) {
         fs::create_directories(config_dir);
     }
     
-    // Carregar configuração
     if (!load_config(config_path_)) {
         std::cerr << "Falha ao carregar configuração. Criando configuração padrão..." << std::endl;
         create_default_config();
@@ -37,25 +42,66 @@ bool Embedder::initialize(const std::string& config_path_) {
             return false;
         }
     }
-    
-    // Iniciar servidor se configurado
-    if (config.auto_start_server) {
-        if (!start_llama_server()) {
-            std::cerr << "Falha ao iniciar servidor llama.cpp" << std::endl;
-            return false;
-        }
-    }
-    
-    // Testar conexão
-    try {
-        std::cout << "Testando conexão com servidor de embeddings..." << std::endl;
-        auto test_embedding = generate_embedding_impl("test");
-        std::cout << "Conexão bem-sucedida! Dimensão do embedding: " << test_embedding.size() << std::endl;
-        initialized = true;
-    } catch (const std::exception& e) {
-        std::cerr << "Falha na conexão com servidor: " << e.what() << std::endl;
+
+    // 1. Configurar parâmetros do MODELO
+    llama_model_params mparams = llama_model_default_params();
+    mparams.n_gpu_layers = config.n_gpu_layers;
+    mparams.use_mlock    = config.use_mlock;
+    mparams.use_mmap     = config.use_mmap;
+
+    // 2. Carregar o MODELO
+    llama_model * model_ptr = llama_model_load_from_file(config.model_path.c_str(), mparams);
+    if (model_ptr == nullptr) {
+        std::cerr << __func__ << ": unable to load model from " << config.model_path << std::endl;
         return false;
     }
+    model.reset(model_ptr, llama_model_free);
+
+    // 3. Obter o vocabulário do modelo
+    vocab_ptr = llama_model_get_vocab(model.get());
+    if (vocab_ptr == nullptr) {
+        std::cerr << __func__ << ": failed to get model vocabulary" << std::endl;
+        return false;
+    }
+
+    // 4. Configurar parâmetros do CONTEXTO
+    llama_context_params cparams = llama_context_default_params();
+    cparams.n_ctx       = config.n_ctx;
+    cparams.n_batch     = config.n_batch;
+    cparams.n_threads   = (config.n_threads <= 0) ? std::thread::hardware_concurrency() : config.n_threads;
+    cparams.embeddings  = true;
+
+    // 5. Criar o CONTEXTO
+    llama_context * context_ptr = llama_init_from_model(model.get(), cparams);
+    if (context_ptr == nullptr) {
+        std::cerr << __func__ << ": failed to create context from model" << std::endl;
+        return false;
+    }
+    context.reset(context_ptr, llama_free);
+
+    // 6. Obter informações do modelo
+    pooling_type = llama_pooling_type(context.get());
+    
+    if (pooling_type == LLAMA_POOLING_TYPE_NONE) {
+        std::cerr << __func__ << ": Error: Model must support sequence-level pooling (e.g., CLS or MEAN pooling)." << std::endl;
+        return false;
+    }
+    
+    if (llama_model_has_encoder(model.get()) && llama_model_has_decoder(model.get())) {
+        std::cerr << __func__ << ": computing embeddings in encoder-decoder models is not supported" << std::endl;
+        return false;
+    }
+
+    n_embd = llama_model_n_embd(model.get());
+    config.embedding_dimension = n_embd;
+
+    // 7. Inicializar batch
+    int actual_n_batch = llama_n_batch(context.get());
+    batch = llama_batch_init(actual_n_batch, 0, 1);
+
+    initialized = true;
+    std::cout << "Embedder inicializado com sucesso. Dimensão: " << n_embd 
+              << ", Batch size: " << actual_n_batch << std::endl;
     
     return true;
 }
@@ -65,48 +111,148 @@ std::vector<float> Embedder::generate_embedding(const std::string& text) {
     if (!initialized) {
         throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
     }
-    return generate_embedding_impl(text);
+    std::vector<std::vector<float>> result = generate_embeddings({text});
+    return !result.empty() ? result[0] : std::vector<float>();
 }
 
 std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<std::string>& texts) {
-    std::vector<std::vector<float>> embeddings;
-    embeddings.reserve(texts.size());
-    
-    for (const auto& text : texts) {
-        embeddings.push_back(generate_embedding(text));
+    if (!initialized) {
+        throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
     }
-    
-    return embeddings;
+
+    const int n_prompts = texts.size();
+    if (n_prompts == 0) {
+        return {};
+    }
+
+    std::vector<std::vector<float>> result;
+    result.reserve(n_prompts);
+
+    // Processar cada texto individualmente
+    for (const auto& text : texts) {
+        // Tokenizar
+        auto tokens = tokenize(text, true);
+        if (tokens.empty()) {
+            std::cerr << __func__ << ": failed to tokenize text" << std::endl;
+            result.push_back(std::vector<float>(n_embd, 0.0f));
+            continue;
+        }
+
+        // Preparar batch para este texto individual
+        llama_batch_free(batch);
+        batch = llama_batch_init(static_cast<int32_t>(tokens.size()), 0, 1);
+
+        // Adicionar tokens ao batch - FIX: set logits correctly
+        for (size_t i = 0; i < tokens.size(); i++) {
+            batch.token[i] = tokens[i];
+            batch.pos[i] = static_cast<llama_pos>(i);
+            batch.n_seq_id[i] = 1;
+            batch.seq_id[i][0] = 0;
+            
+            // CRITICAL FIX: Set logits = true for at least one token to get embeddings
+            // For sequence embeddings, we typically set the last token to have logits = true
+            batch.logits[i] = (i == tokens.size() - 1); // Only last token gets logits
+        }
+        batch.n_tokens = static_cast<int32_t>(tokens.size());
+
+        // Processar
+        if (llama_decode(context.get(), batch) < 0) {
+            std::cerr << __func__ << ": llama_decode failed" << std::endl;
+            result.push_back(std::vector<float>(n_embd, 0.0f));
+            continue;
+        }
+
+        // Obter embedding - FIX: Use correct function for embeddings
+        // For encoder models with pooling, we get the sequence embedding directly
+        const float* embd = llama_get_embeddings_seq(context.get(), 0);
+        if (embd == nullptr) {
+            // Fallback: try the alternative function
+            embd = llama_get_embeddings_ith(context.get(), 0);
+            if (embd == nullptr) {
+                std::cerr << __func__ << ": failed to get embeddings" << std::endl;
+                result.push_back(std::vector<float>(n_embd, 0.0f));
+                continue;
+            }
+        }
+
+        // Aplicar normalização se necessário
+        std::vector<float> embedding(embd, embd + n_embd);
+        if (config.embd_normalize > 0) {
+            double sum = 0.0;
+            for (float val : embedding) {
+                sum += val * val;
+            }
+            const double norm = std::sqrt(sum);
+            if (norm > 1e-6) {
+                const double scale = (config.embd_normalize == 2) ? std::sqrt(n_embd) / norm : 1.0 / norm;
+                for (float& val : embedding) {
+                    val *= static_cast<float>(scale);
+                }
+            }
+        }
+
+        result.push_back(embedding);
+    }
+
+    return result;
 }
 
-// Busca semântica
+// Tokenização usando vocab_ptr
+std::vector<llama_token> Embedder::tokenize(const std::string& text, bool add_special_tokens) const {
+    if (!vocab_ptr) {
+        std::cerr << __func__ << ": vocabulary not initialized" << std::endl;
+        return {};
+    }
+
+    // Primeira passagem: obter número de tokens
+    const int n_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), nullptr, 0, add_special_tokens, true);
+    
+    if (n_tokens < 0) {
+        // Buffer muito pequeno, alocar com tamanho necessário
+        std::vector<llama_token> tokens(-n_tokens);
+        int actual_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), tokens.data(), static_cast<int32_t>(tokens.size()), add_special_tokens, true);
+        if (actual_tokens < 0) {
+            std::cerr << __func__ << ": tokenization failed" << std::endl;
+            return {};
+        }
+        tokens.resize(actual_tokens);
+        return tokens;
+    } else {
+        // Alocar com tamanho exato
+        std::vector<llama_token> tokens(n_tokens);
+        int actual_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), tokens.data(), static_cast<int32_t>(tokens.size()), add_special_tokens, true);
+        if (actual_tokens != n_tokens) {
+            std::cerr << __func__ << ": token count mismatch: " << actual_tokens << " vs " << n_tokens << std::endl;
+            tokens.resize(std::max(actual_tokens, 0));
+        }
+        return tokens;
+    }
+}
+
+
+// Semantic search e funções de similaridade permanecem inalteradas
 std::vector<std::tuple<double, int, std::string>> Embedder::semantic_search(
     const std::string& query, 
     const std::vector<std::string>& documents,
     int top_k) {
     
     if (!initialized) {
-        throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
+        throw std::runtime_error("Embedder não inicializado.");
     }
     
-    std::cout << "Gerando embedding da query..." << std::endl;
     auto query_embedding = generate_embedding(query);
-    
-    std::cout << "Gerando embeddings dos documentos..." << std::endl;
     auto doc_embeddings = generate_embeddings(documents);
     
     std::vector<std::tuple<double, int, std::string>> similarities;
     for (size_t i = 0; i < documents.size(); ++i) {
         double sim = cosine_similarity(query_embedding, doc_embeddings[i]);
-        similarities.emplace_back(sim, i, documents[i]);
+        similarities.emplace_back(sim, static_cast<int>(i), documents[i]);
     }
     
-    // Ordenar por similaridade (maior primeiro)
     std::sort(similarities.begin(), similarities.end(), [](const auto& a, const auto& b) {
         return std::get<0>(a) > std::get<0>(b);
     });
     
-    // Retornar apenas top_k resultados
     if (top_k > 0 && top_k < static_cast<int>(similarities.size())) {
         similarities.resize(top_k);
     }
@@ -114,70 +260,6 @@ std::vector<std::tuple<double, int, std::string>> Embedder::semantic_search(
     return similarities;
 }
 
-// Implementação interna de geração de embedding
-std::vector<float> Embedder::generate_embedding_impl(const std::string& text) {
-    CURL* curl;
-    CURLcode res;
-    std::string response;
-    
-    curl = curl_easy_init();
-    if (!curl) {
-        throw std::runtime_error("Falha ao inicializar cURL");
-    }
-    
-    // Preparar o JSON da requisição
-    json request_data;
-    request_data["input"] = text;
-    std::string json_data = request_data.dump();
-    
-    // Configurar a requisição cURL
-    std::string url = get_server_url();
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, json_data.length());
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, config.request_timeout);
-    
-    // Configurar headers
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    
-    // Configurar callback para resposta
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    
-    // Executar a requisição
-    res = curl_easy_perform(curl);
-    
-    long http_code = 0;
-    if (res == CURLE_OK) {
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-    }
-    
-    // Limpar
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    
-    if (res != CURLE_OK) {
-        throw std::runtime_error("Falha na requisição HTTP: " + std::string(curl_easy_strerror(res)));
-    }
-
-    // ✅ NOVA CHECAGEM
-    if (http_code != 200) {
-        throw std::runtime_error("Servidor retornou erro HTTP " + std::to_string(http_code) + "\nResposta: " + response);
-    }
-    
-    // Parse da resposta JSON
-    try {
-        json response_data = json::parse(response);
-        return extract_embedding_from_json(response_data);
-    } catch (const json::exception& e) {
-        throw std::runtime_error("Erro ao parsear JSON: " + std::string(e.what()) + "\nResposta: " + response);
-    }
-}
-
-// Funções de similaridade (estáticas)
 double Embedder::dot_product(const std::vector<float>& a, const std::vector<float>& b) {
     if (a.size() != b.size()) return 0.0;
     double result = 0.0;
@@ -203,81 +285,29 @@ double Embedder::cosine_similarity(const std::vector<float>& a, const std::vecto
     return dot / (mag_a * mag_b);
 }
 
-// Callback do cURL
-size_t Embedder::write_callback(void* contents, size_t size, size_t nmemb, std::string* response) {
-    size_t totalSize = size * nmemb;
-    response->append((char*)contents, totalSize);
-    return totalSize;
+int Embedder::get_embedding_dimension() const {
+    return initialized ? n_embd : 0;
 }
 
-// Extração de embedding do JSON
-std::vector<float> Embedder::extract_embedding_from_json(const json& response_data) {
-    std::vector<float> embedding;
-    
-    if (response_data.is_array() && !response_data.empty()) {
-        if (response_data[0].is_number()) {
-            for (const auto& value : response_data) {
-                embedding.push_back(value.get<float>());
-            }
-            return embedding;
-        }
-        else if (response_data[0].is_object() && response_data[0].contains("embedding")) {
-            auto embedding_array = response_data[0]["embedding"];
-            
-            if (embedding_array.is_array() && !embedding_array.empty()) {
-                if (embedding_array[0].is_array()) {
-                    for (const auto& value : embedding_array[0]) {
-                        embedding.push_back(value.get<float>());
-                    }
-                } 
-                else if (embedding_array[0].is_number()) {
-                    for (const auto& value : embedding_array) {
-                        embedding.push_back(value.get<float>());
-                    }
-                }
-            }
-            return embedding;
-        }
-    }
-    
-    if (response_data.is_object() && response_data.contains("embedding")) {
-        auto embedding_array = response_data["embedding"];
-        
-        if (embedding_array.is_array() && !embedding_array.empty() && embedding_array[0].is_array()) {
-            for (const auto& value : embedding_array[0]) {
-                embedding.push_back(value.get<float>());
-            }
-        } else {
-            for (const auto& value : embedding_array) {
-                embedding.push_back(value.get<float>());
-            }
-        }
-        return embedding;
-    }
-    
-    throw std::runtime_error("Formato JSON não reconhecido");
-}
-
-// Gerenciamento de configuração
 bool Embedder::load_config(const std::string& config_path) {
     try {
         std::ifstream config_file(config_path);
-        if (!config_file.is_open()) {
-            return false;
-        }
+        if (!config_file.is_open()) return false;
         
         json config_json;
         config_file >> config_json;
         
-        if (config_json.contains("host")) config.host = config_json["host"];
-        if (config_json.contains("port")) config.port = config_json["port"];
-        if (config_json.contains("endpoint")) config.endpoint = config_json["endpoint"];
         if (config_json.contains("model_path")) config.model_path = config_json["model_path"];
-        if (config_json.contains("server_executable")) config.server_executable = config_json["server_executable"];
-        if (config_json.contains("auto_start_server")) config.auto_start_server = config_json["auto_start_server"];
-        if (config_json.contains("server_timeout")) config.server_timeout = config_json["server_timeout"];
-        if (config_json.contains("request_timeout")) config.request_timeout = config_json["request_timeout"];
         if (config_json.contains("embedding_dimension")) config.embedding_dimension = config_json["embedding_dimension"];
+        if (config_json.contains("seed")) config.seed = config_json["seed"];
+        if (config_json.contains("n_ctx")) config.n_ctx = config_json["n_ctx"];
+        if (config_json.contains("n_batch")) config.n_batch = config_json["n_batch"];
+        if (config_json.contains("n_threads")) config.n_threads = config_json["n_threads"];
+        if (config_json.contains("n_gpu_layers")) config.n_gpu_layers = config_json["n_gpu_layers"];
+        if (config_json.contains("use_mlock")) config.use_mlock = config_json["use_mlock"];
+        if (config_json.contains("use_mmap")) config.use_mmap = config_json["use_mmap"];
+        if (config_json.contains("f16_kv")) config.f16_kv = config_json["f16_kv"];
+        if (config_json.contains("embd_normalize")) config.embd_normalize = config_json["embd_normalize"];
         
         return true;
     } catch (...) {
@@ -288,16 +318,18 @@ bool Embedder::load_config(const std::string& config_path) {
 bool Embedder::save_config(const std::string& config_path) {
     try {
         json config_json;
-        config_json["host"] = config.host;
-        config_json["port"] = config.port;
-        config_json["endpoint"] = config.endpoint;
         config_json["model_path"] = config.model_path;
-        config_json["server_executable"] = config.server_executable;
-        config_json["auto_start_server"] = config.auto_start_server;
-        config_json["server_timeout"] = config.server_timeout;
-        config_json["request_timeout"] = config.request_timeout;
         config_json["embedding_dimension"] = config.embedding_dimension;
-        
+        config_json["seed"] = config.seed;
+        config_json["n_ctx"] = config.n_ctx;
+        config_json["n_batch"] = config.n_batch;
+        config_json["n_threads"] = config.n_threads;
+        config_json["n_gpu_layers"] = config.n_gpu_layers;
+        config_json["use_mlock"] = config.use_mlock;
+        config_json["use_mmap"] = config.use_mmap;
+        config_json["f16_kv"] = config.f16_kv;
+        config_json["embd_normalize"] = config.embd_normalize;
+
         std::ofstream config_file(config_path);
         config_file << config_json.dump(4);
         return true;
@@ -307,97 +339,9 @@ bool Embedder::save_config(const std::string& config_path) {
 }
 
 void Embedder::create_default_config() {
-    config = Config();
+    config = Config(); 
+    if (fs::exists("models/ggml-model-q4_0.gguf")) {
+        config.model_path = "models/ggml-model-q4_0.gguf";
+    }
     save_config(config_path);
-}
-
-// Gerenciamento do servidor
-bool Embedder::start_llama_server() {
-    if (config.model_path.empty()) {
-        std::cerr << "Erro: model_path não especificado na configuração" << std::endl;
-        return false;
-    }
-    
-    if (!fs::exists(config.server_executable)) {
-        std::cerr << "Erro: Servidor não encontrado em: " << config.server_executable << std::endl;
-        return false;
-    }
-    
-    if (!fs::exists(config.model_path)) {
-        std::cerr << "Erro: Modelo não encontrado em: " << config.model_path << std::endl;
-        return false;
-    }
-    
-    std::cout << "Iniciando servidor llama.cpp..." << std::endl;
-    server_thread = std::make_unique<std::thread>(&Embedder::server_process, this);
-    
-    // Aguardar servidor ficar pronto
-    if (!wait_for_server_ready(config.server_timeout)) {
-        std::cerr << "Servidor não ficou pronto dentro do timeout" << std::endl;
-        stop_llama_server();
-        return false;
-    }
-    
-    server_started = true;
-    std::cout << "Servidor iniciado com sucesso!" << std::endl;
-    return true;
-}
-
-void Embedder::stop_llama_server() {
-    if (server_thread && server_thread->joinable()) {
-        // Em um sistema real, enviaríamos um sinal para o processo
-        server_thread->detach(); // Não é ideal, mas simples para demonstração
-    }
-    server_started = false;
-}
-
-void Embedder::server_process() {
-    std::string command = config.server_executable + 
-                         " -m " + config.model_path + 
-                         " --port " + std::to_string(config.port) + 
-                         " --embedding";
-    
-    std::cout << "Executando: " << command << std::endl;
-    int result = std::system(command.c_str());
-    
-    if (result != 0) {
-        std::cerr << "Servidor terminou com código: " << result << std::endl;
-    }
-}
-
-bool Embedder::wait_for_server_ready(int timeout_seconds) {
-    auto start = std::chrono::steady_clock::now();
-    
-    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(timeout_seconds)) {
-        try {
-            CURL* curl = curl_easy_init();
-            if (curl) {
-                std::string url = "http://" + config.host + ":" + std::to_string(config.port);
-                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2L);
-                curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD request
-                
-                CURLcode res = curl_easy_perform(curl);
-                
-                // ✅ NOVA CHECAGEM
-                if (res == CURLE_OK) {
-                    long http_code = 0;
-                    // Pega o código de status da resposta
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code); 
-                    
-                    if (http_code == 200) {
-                        curl_easy_cleanup(curl);
-                        return true; // SÓ retorna true se for 200 OK
-                    }
-                }
-                curl_easy_cleanup(curl);
-            }
-        } catch (...) {
-            // Ignorar erros e continuar tentando
-        }
-        
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    
-    return false;
 }

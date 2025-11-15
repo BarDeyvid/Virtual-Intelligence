@@ -13,9 +13,10 @@ if(MSVC)
 endif()
 
 # --- 2. Define Source Files and Executable Target ---
-set(MAIN_SOURCE ${CMAKE_SOURCE_DIR}/test_main.cpp) 
+set(MAIN_SOURCE ${CMAKE_SOURCE_DIR}/test_embedder.cpp) 
 set(COMMON_SOURCES
     ${CMAKE_SOURCE_DIR}/includes/Embedding/Embedder.cpp 
+    ${CMAKE_SOURCE_DIR}/includes/voice/ElevenLabsTTS.cpp 
     ${CMAKE_SOURCE_DIR}/includes/voice/ElevenLabsTTS.cpp 
     ${CMAKE_SOURCE_DIR}/includes/voice/VoicePipeline.cpp 
     ${CMAKE_SOURCE_DIR}/includes/WeightedFusion/WeightedFusion.cpp 
@@ -27,14 +28,13 @@ add_executable(Virtual_Intelligence_Target ${MAIN_SOURCE} ${COMMON_SOURCES})
 
 # --- 3. Define Include Directories (Headers) ---
 
-# All targets will use these project paths:
 set(PROJECT_INCLUDES
     ${CMAKE_SOURCE_DIR}/includes 
     ${CMAKE_SOURCE_DIR}/includes/internal 
     ${CMAKE_SOURCE_DIR}/curl # For curl.h 
+    #${CMAKE_SOURCE_DIR}/llama.cpp/common
 )
 
-# FIX: Corrected typo 'elease' to 'Release' 
 set(EXTERNAL_IMPLEMENTATION
     ${CMAKE_SOURCE_DIR}/llama.cpp/build/bin/Release 
     ${CMAKE_SOURCE_DIR}/whisper.cpp/build/bin/Release 
