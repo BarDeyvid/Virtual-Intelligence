@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "AlyssaUnreal",
+			"Path": "..\\Source\\AlyssaUnreal.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "AlyssaUnrealEditor",
+			"Path": "..\\Source\\AlyssaUnrealEditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}
