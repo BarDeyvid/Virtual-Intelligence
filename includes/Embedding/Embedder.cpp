@@ -68,22 +68,18 @@ bool Embedder::initialize(const std::string& config_path_) {
 
     // 3. Obter o vocabulário do modelo
     vocab_ptr = llama_model_get_vocab(model.get());
-    if (vocab_ptr == nullptr) {
-        std::cerr << __func__ << ": failed to get model vocabulary" << std::endl;
-        return false;
-    }
-
-    // 4. Configurar parâmetros do CONTEXTO
+    
+    // 4. Configurar parâmetros do CONTEXTO PARA EMBEDDING
     llama_context_params cparams = llama_context_default_params();
-    cparams.n_ctx       = config.n_ctx;
-    cparams.n_batch     = config.n_batch;
+    cparams.n_ctx       = 8192;  // Smaller context for embeddings
+    cparams.n_batch     = 8192;  // Batch size for embeddings
     cparams.n_threads   = (config.n_threads <= 0) ? std::thread::hardware_concurrency() : config.n_threads;
     cparams.embeddings  = true;
-
-    // 5. Criar o CONTEXTO
+    
+    // 5. Criar o CONTEXTO DE EMBEDDING (separado do contexto de geração)
     llama_context * context_ptr = llama_init_from_model(model.get(), cparams);
     if (context_ptr == nullptr) {
-        std::cerr << __func__ << ": failed to create context from model" << std::endl;
+        std::cerr << __func__ << ": failed to create embedding context from model" << std::endl;
         return false;
     }
     context.reset(context_ptr, llama_free);
@@ -137,8 +133,16 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
     std::vector<std::vector<float>> result;
     result.reserve(n_prompts);
 
+    // Get maximum batch size allowed from config
+    const int max_batch = config.n_batch;
+
     // Processar cada texto individualmente
     for (const auto& text : texts) {
+        // Clear previous KV cache before each embedding
+        if (context) {
+            llama_memory_seq_rm(llama_get_memory(context.get()), 0, -1, -1);
+        }
+        
         // Tokenizar
         auto tokens = tokenize(text, true);
         if (tokens.empty()) {
@@ -147,22 +151,21 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
             continue;
         }
 
-        // Preparar batch para este texto individual
-        llama_batch_free(batch);
-        batch = llama_batch_init(static_cast<int32_t>(tokens.size()), 0, 1);
+        // --- TRUNCATION ---
+        if (tokens.size() > (size_t)max_batch) {
+            tokens.resize(max_batch);
+        }
+        
+        // Reset batch
+        batch.n_tokens = static_cast<int32_t>(tokens.size());
 
-        // Adicionar tokens ao batch - FIX: set logits correctly
         for (size_t i = 0; i < tokens.size(); i++) {
             batch.token[i] = tokens[i];
             batch.pos[i] = static_cast<llama_pos>(i);
             batch.n_seq_id[i] = 1;
             batch.seq_id[i][0] = 0;
-            
-            // CRITICAL FIX: Set logits = true for at least one token to get embeddings
-            // For sequence embeddings, we typically set the last token to have logits = true
-            batch.logits[i] = (i == tokens.size() - 1); // Only last token gets logits
+            batch.logits[i] = (i == tokens.size() - 1); 
         }
-        batch.n_tokens = static_cast<int32_t>(tokens.size());
 
         // Processar
         if (llama_decode(context.get(), batch) < 0) {
@@ -171,11 +174,8 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
             continue;
         }
 
-        // Obter embedding - FIX: Use correct function for embeddings
-        // For encoder models with pooling, we get the sequence embedding directly
         const float* embd = llama_get_embeddings_seq(context.get(), 0);
         if (embd == nullptr) {
-            // Fallback: try the alternative function
             embd = llama_get_embeddings_ith(context.get(), 0);
             if (embd == nullptr) {
                 std::cerr << __func__ << ": failed to get embeddings" << std::endl;
@@ -184,26 +184,28 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
             }
         }
 
-        // Aplicar normalização se necessário
         std::vector<float> embedding(embd, embd + n_embd);
+        
+        // Normalize logic
         if (config.embd_normalize > 0) {
             double sum = 0.0;
-            for (float val : embedding) {
-                sum += val * val;
-            }
+            for (float val : embedding) sum += val * val;
             const double norm = std::sqrt(sum);
             if (norm > 1e-6) {
                 const double scale = (config.embd_normalize == 2) ? std::sqrt(n_embd) / norm : 1.0 / norm;
-                for (float& val : embedding) {
-                    val *= static_cast<float>(scale);
-                }
+                for (float& val : embedding) val *= static_cast<float>(scale);
             }
         }
-
         result.push_back(embedding);
     }
 
     return result;
+}
+
+void Embedder::clear_embedding_cache() {
+    if (context) {
+        llama_memory_seq_rm(llama_get_memory(context.get()), 0, -1, -1);
+    }
 }
 
 // Tokenização usando vocab_ptr

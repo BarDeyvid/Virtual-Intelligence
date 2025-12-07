@@ -221,11 +221,29 @@ namespace alyssa_core {
                 return generate_raw(prompt, params, lora, nullptr);
             }
 
-            // 7. Prepara um batch APENAS com os tokens NOVOS
-            llama_batch batch = llama_batch_get_one(
-                prompt_tokens.data() + n_cached, 
-                n_new_tokens                     
-            );
+            // --- FIX: BATCH PROCESSING LOOP ---
+            // Instead of processing all n_new_tokens at once, split into chunks of n_batch
+            int n_batch = llama_n_batch(ctx); // Get configured batch size from context
+
+            llama_batch batch;
+            
+            for (int i = 0; i < n_new_tokens; i += n_batch) {
+                int n_eval = n_new_tokens - i;
+                if (n_eval > n_batch) {
+                    n_eval = n_batch;
+                }
+
+                // Create a batch for this chunk
+                batch = llama_batch_get_one(
+                    prompt_tokens.data() + n_cached + i, 
+                    n_eval
+                );
+
+                // Decode this chunk
+                if (llama_decode(ctx, batch)) {
+                     throw std::runtime_error("Falha ao processar prompt (llama_decode)");
+                }
+            }
 
             // [FIM DA LÓGICA STATEFUL]
             

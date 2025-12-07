@@ -26,8 +26,8 @@ public:
         int embedding_dimension = 4096;
         
         int32_t seed = -1;
-        int32_t n_ctx = 2048;
-        int32_t n_batch = 512;
+        int32_t n_ctx = 8192;
+        int32_t n_batch = 8192;
         int32_t n_threads = 0;
         int32_t n_gpu_layers = 0;
         bool use_mlock = false;
@@ -45,6 +45,7 @@ public:
     
     std::vector<float> generate_embedding(const std::string& text);
     std::vector<std::vector<float>> generate_embeddings(const std::vector<std::string>& texts);
+    void clear_embedding_cache();
     
     static double cosine_similarity(const std::vector<float>& a, const std::vector<float>& b);
     static double dot_product(const std::vector<float>& a, const std::vector<float>& b);

@@ -7,5 +7,5 @@
     "auto_start_server": true,
     "server_timeout": 30,
     "request_timeout": 30,
-    "embedding_dimension": 4096
+    "embedding_dimension": 8192
 }
