@@ -24,7 +24,7 @@ pkg_check_modules(SWRESAMPLE REQUIRED libswresample)
 # 4. PortAudio
 find_library(PORTAUDIO_LIBRARY portaudio)
 
-# --- AI Libraries (Paths based on your log) ---
+# --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
 
 # Llama.cpp Setup
@@ -40,6 +40,7 @@ link_directories(${WHISPER_LIB_DIR})
 # --- Include Directories ---
 include_directories(
     ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/includes
     ${LLAMA_INCLUDE_DIR}
     ${WHISPER_INCLUDE_DIR}
     ${SQLITE3_INCLUDE_DIR}
@@ -49,14 +50,14 @@ include_directories(
 
 # --- Source Files ---
 set(SOURCES
-    test_main.cpp
-    AlyssaNet.cpp
-    AlyssaMemoryHandler.cpp
-    Embedding/Embedder.cpp
-    WeightedFusion/WeightedFusion.cpp
-    # Ensure these exist in the voice folder:
-    voice/ElevenLabsTTS.cpp
-    voice/VoicePipeline.cpp
+    test_main_cli.cpp
+    includes/AlyssaNet.cpp
+    includes/AlyssaMemoryHandler.cpp
+    includes/Embedding/Embedder.cpp
+    includes/WeightedFusion/WeightedFusion.cpp
+    includes/voice/ElevenLabsTTS.cpp
+    includes/voice/VoicePipeline.cpp
+    includes/log.cpp
 )
 
 # --- Executable ---
@@ -77,4 +78,16 @@ target_link_libraries(Virtual-Intelligence-Test PRIVATE
     Threads::Threads
     dl
     stdc++fs
+)
+
+# --- Post-Build Commands (Copy assets) ---
+# This copies 'models' and 'config' to the build folder automatically
+add_custom_command(TARGET Virtual-Intelligence-Test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/models
+        ${CMAKE_BINARY_DIR}/models
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/config
+        ${CMAKE_BINARY_DIR}/config
+    COMMENT "Copying models and config directories to build folder"
 )

@@ -17,7 +17,7 @@ int main() {
         ggml_backend_load_all(); 
 
         CoreIntegration alyssa_brain;
-        std::cout << "Inicializando CoreIntegration..." << std::endl;
+        std::cout << "Inicializando CoreIntegration Teste CLI..." << std::endl;
     
         // 1. Chama a Inicialização com o caminho do modelo BASE
         if (!alyssa_brain.initialize("models/gemma-3-1b-it-q4_0.gguf")) {

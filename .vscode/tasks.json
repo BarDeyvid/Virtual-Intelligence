@@ -10,8 +10,6 @@
                 "-O3",
                 "-march=native",
                 "-std=gnu++17",
-                
-                // --- ARQUIVOS DE ORIGEM (.cpp) ---
                 "${workspaceFolder}/Embedding/Embedder.cpp",
                 "${workspaceFolder}/voice/ElevenLabsTTS.cpp",
                 "${workspaceFolder}/voice/VoicePipeline.cpp",
@@ -19,32 +17,21 @@
                 "${workspaceFolder}/AlyssaMemoryHandler.cpp",
                 "${workspaceFolder}/AlyssaNet.cpp",
                 "${workspaceFolder}/test_main.cpp",
-                
-                // --- 1. Configurações de Includes (-I) ---
                 "-I${workspaceFolder}/includes",
                 "-I${workspaceFolder}/internal",
                 "-I${workspaceFolder}/llama.cpp/include",
                 "-I${workspaceFolder}/llama.cpp/ggml/include",
                 "-I${workspaceFolder}/whisper.cpp/include",
-                "-I${workspaceFolder}/whisper.cpp/ggml/include",                
-                
-                // --- 2. CAMINHOS DE BUSCA DE BIBLIOTERAS (-L) ---
+                "-I${workspaceFolder}/whisper.cpp/ggml/include",
                 "-L${workspaceFolder}/llama.cpp/build/bin",
                 "-L${workspaceFolder}/whisper.cpp/build/src",
-                
-                // --- 3. Linkagem das Bibliotecas (-l) ---
-                // Bibliotecas específicas (devem vir antes das de sistema)
                 "-lllama",
                 "-lggml",
                 "-lggml-base",
                 "-lggml-cpu",
                 "-lwhisper",
-                
-                // Define onde o executável deve procurar as libs na execução.
                 "-Wl,-rpath,${workspaceFolder}/llama.cpp/build/bin",
                 "-Wl,-rpath,${workspaceFolder}/whisper.cpp/build/src",
-                
-                // --- 4. Linkagem de Bibliotecas de Sistema (Arch Linux) ---
                 "-lcurl",
                 "-lportaudio",
                 "-lavcodec",
@@ -52,26 +39,34 @@
                 "-lavutil",
                 "-lswresample",
                 "-lsqlite3",
-                
-                // --- 5. Linkagem de Sistema Necessária ---
                 "-lstdc++",
                 "-lm",
                 "-lpthread",
                 "-ldl",
                 "-lrt",
-                
-                // --- Saída ---
                 "-o",
                 "${workspaceFolder}/Virtual-Intelligence-Test"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
+            "group": "build",
+            "detail": "Tarefa para compilar o projeto Virtual-Intelligence-Test com G++ (Linux).",
+            "problemMatcher": []
+        },
+        {
+            "type": "cmake",
+            "label": "CMake: build",
+            "command": "build",
+            "targets": [
+                "all"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Tarefa para compilar o projeto Virtual-Intelligence-Test com G++ (Linux)."
+            "problemMatcher": [],
+            "detail": "CMake template build task"
         }
     ]
 }
