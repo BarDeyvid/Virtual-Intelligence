@@ -1,8 +1,5 @@
-// CoreLLM.hpp
-#pragma once
 #include "AlyssaCore.hpp"
 #include "WeightedFusion/WeightedFusion.hpp"
-// #include "includes/voice/PiperTTS.hpp"
 #include "voice/ElevenLabsTTS.hpp"
 #include "AlyssaMemoryHandler.hpp"
 #include <memory>

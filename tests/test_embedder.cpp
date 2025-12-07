@@ -3,8 +3,10 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <iomanip> // For std::setprecision
-#include <stdexcept> // For std::exception
+#include <tuple>
+#include <stdexcept>
+#include <curl/curl.h>
+#include "json.hpp"
 
 /**
  * @brief Helper function to print the first few dimensions of an embedding.

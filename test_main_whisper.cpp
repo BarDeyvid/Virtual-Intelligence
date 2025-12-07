@@ -4,9 +4,8 @@
 #include <iostream>
 #include <string>
 // #include "voice/PiperTTS.hpp"
-#include "includes/voice/ElevenLabsTTS.hpp"
-#include "includes/voice/VoicePipeline.hpp"
-#include <windows.h>
+#include "voice/ElevenLabsTTS.hpp"
+#include "voice/VoicePipeline.hpp"
 
 void log_callback(ggml_log_level level, const char * text, void * user_data) {
     (void)level;
@@ -17,8 +16,6 @@ void log_callback(ggml_log_level level, const char * text, void * user_data) {
 
 int main() {
     try { // <--- Adicione o try
-        SetConsoleOutputCP(CP_UTF8);
-        std::locale::global(std::locale("pt_BR.UTF-8"));
         
         llama_log_set(log_callback, nullptr); // Use o callback de log
         ggml_backend_load_all(); 

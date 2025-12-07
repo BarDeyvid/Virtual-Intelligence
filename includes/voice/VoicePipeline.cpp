@@ -1,4 +1,4 @@
-#include "voice/VoicePipeline.hpp"
+#include "VoicePipeline.hpp"
 #include <iostream>
 #include <numeric> // Para std::inner_product
 #include <cmath>   // Para std::sqrt

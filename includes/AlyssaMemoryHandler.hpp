@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <memory>
 #include <ctime>
-#include <curl.h>
+#include <curl/curl.h>
 #include <thread>
 #include <chrono>
 #include <cstdlib>

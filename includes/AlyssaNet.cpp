@@ -4,6 +4,7 @@
 #include "AlyssaCore.hpp"
 #include "voice/ElevenLabsTTS.hpp"
 #include "log.hpp"
+#include <string.h>
 
 using namespace alyssa_core;
 logging::Logger logg;
@@ -359,7 +360,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         expert_input_with_role = input;
     }
 
-    history.push_back({"user", _strdup(expert_input_with_role.c_str())}); // <--- ALTERADO
+    history.push_back({"user", strdup(expert_input_with_role.c_str())}); // <--- ALTERADO
 
     // 5. MONTA O TEMPLATE (Corrigindo o bug do AlyssaLLM.hpp)
     std::vector<llama_chat_message> messages_to_template;
@@ -368,7 +369,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     // Adiciona o System Prompt (temporariamente)
     if (!config.system_prompt.empty()) {
         system_prompt_index = messages_to_template.size(); // O system será o primeiro/único neste momento
-        messages_to_template.push_back({"system", _strdup(config.system_prompt.c_str())});
+        messages_to_template.push_back({"system", strdup(config.system_prompt.c_str())});
     }
     
     // Adiciona o histórico da conversa
@@ -441,13 +442,13 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
             }
         }
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
-        history.push_back({"assistant", _strdup(response.c_str())});
+        history.push_back({"assistant", strdup(response.c_str())});
                                                                                             // TODO: Fazer isso daqui se tornar responsivo
         const size_t MAX_HISTORY = 20; // 10 turnos (20 mensagens: 10 user + 10 assistant)
         while (history.size() > MAX_HISTORY) {
             // Remove o par de mensagens mais antigo
             
-            // A mensagem é sempre alocada com _strdup/malloc. Precisamos liberá-la.
+            // A mensagem é sempre alocada com strdup/malloc. Precisamos liberá-la.
             free((char*)history.front().content);
             history.erase(history.begin());
         }
@@ -461,7 +462,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
             nullptr
         ); 
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
-        history.push_back({"assistant", _strdup(response.c_str())});
+        history.push_back({"assistant", strdup(response.c_str())});
     
         return response;
     }

@@ -75,13 +75,15 @@ private:
     enum llama_pooling_type pooling_type;
 
     // Métodos privados
-    bool load_config(const std::string& config_path);
+    bool config_load(const std::string& config_path);
     bool save_config(const std::string& config_path);
     void create_default_config();
 
     std::vector<llama_token> tokenize(const std::string& text, bool add_special_tokens) const;
     void batch_add_seq_internal(llama_batch & batch_, const std::vector<int32_t> & tokens, llama_seq_id seq_id);
     void batch_decode_internal(llama_batch & batch_, float * output, int n_embd_, int embd_norm);
+    std::vector<float> extract_embedding_from_json(const json& response_data);
+    static size_t write_callback(void* contents, size_t size, size_t nmemb, std::string* response);
 };
 
 #endif // EMBEDDER_H

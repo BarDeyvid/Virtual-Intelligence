@@ -3,7 +3,6 @@
 #include "llama.h"
 #include <iostream>
 #include <string>
-#include <windows.h>
 
 void log_callback(ggml_log_level level, const char * text, void * user_data) {
     (void)level;
@@ -13,10 +12,7 @@ void log_callback(ggml_log_level level, const char * text, void * user_data) {
 }
 
 int main() {
-    try { // <--- Adicione o try
-        SetConsoleOutputCP(CP_UTF8);
-        std::locale::global(std::locale("pt_BR.UTF-8"));
-        
+    try {      
         llama_log_set(log_callback, nullptr); // Use o callback de log
         ggml_backend_load_all(); 
 

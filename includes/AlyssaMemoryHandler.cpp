@@ -32,7 +32,6 @@
 #include <unordered_map>
 #include <numeric>
 #include "json.hpp"
-#pragma warning(disable: 4244 4267 4458 4966)
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 

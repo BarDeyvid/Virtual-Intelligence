@@ -43,10 +43,10 @@ bool Embedder::initialize(const std::string& config_path_) {
         fs::create_directories(config_dir);
     }
     
-    if (!load_config(config_path_)) {
+    if (!config_load(config_path_)) {
         std::cerr << "Falha ao carregar configuração. Criando configuração padrão..." << std::endl;
         create_default_config();
-        if (!load_config(config_path_)) {
+        if (!config_load(config_path_)) {
             std::cerr << "Erro: Não foi possível carregar ou criar configuração." << std::endl;
             return false;
         }
@@ -298,10 +298,68 @@ int Embedder::get_embedding_dimension() const {
     return initialized ? n_embd : 0;
 }
 
-bool Embedder::load_config(const std::string& config_path) {
+// Callback do cURL
+size_t Embedder::write_callback(void* contents, size_t size, size_t nmemb, std::string* response) {
+    size_t totalSize = size * nmemb;
+    response->append((char*)contents, totalSize);
+    return totalSize;
+}
+
+// Extração de embedding do JSON
+std::vector<float> Embedder::extract_embedding_from_json(const json& response_data) {
+    std::vector<float> embedding;
+    
+    if (response_data.is_array() && !response_data.empty()) {
+        if (response_data[0].is_number()) {
+            for (const auto& value : response_data) {
+                embedding.push_back(value.get<float>());
+            }
+            return embedding;
+        }
+        else if (response_data[0].is_object() && response_data[0].contains("embedding")) {
+            auto embedding_array = response_data[0]["embedding"];
+            
+            if (embedding_array.is_array() && !embedding_array.empty()) {
+                if (embedding_array[0].is_array()) {
+                    for (const auto& value : embedding_array[0]) {
+                        embedding.push_back(value.get<float>());
+                    }
+                } 
+                else if (embedding_array[0].is_number()) {
+                    for (const auto& value : embedding_array) {
+                        embedding.push_back(value.get<float>());
+                    }
+                }
+            }
+            return embedding;
+        }
+    }
+    
+    if (response_data.is_object() && response_data.contains("embedding")) {
+        auto embedding_array = response_data["embedding"];
+        
+        if (embedding_array.is_array() && !embedding_array.empty() && embedding_array[0].is_array()) {
+            for (const auto& value : embedding_array[0]) {
+                embedding.push_back(value.get<float>());
+            }
+        } else {
+            for (const auto& value : embedding_array) {
+                embedding.push_back(value.get<float>());
+            }
+        }
+        return embedding;
+    }
+    
+    throw std::runtime_error("Formato JSON não reconhecido");
+}
+
+// Gerenciamento de configuração
+bool Embedder::config_load(const std::string& config_path) {
     try {
         std::ifstream config_file(config_path);
-        if (!config_file.is_open()) return false;
+        if (!config_file.is_open()) {
+            return false;
+        }
         
         json config_json;
         config_file >> config_json;

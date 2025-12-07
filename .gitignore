@@ -10,7 +10,6 @@ logs/
 *.gguf
 overlay/
 .venv/
-.vscode/
 *.pth
 *.lock
 *.safetensors

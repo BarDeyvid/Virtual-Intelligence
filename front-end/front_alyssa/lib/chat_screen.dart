@@ -20,7 +20,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ChatService _chatService = ChatService();
-
   bool _isLoading = false;
   bool _apiConnected = false;
   bool _checkingConnection = true;
