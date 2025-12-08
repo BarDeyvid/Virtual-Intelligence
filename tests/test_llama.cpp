@@ -17,7 +17,7 @@ int main() {
         std::cerr << "❌ Erro ao carregar o modelo: " << model_path << std::endl;
         return 1;
     }
-    std::cout << "✅ Modelo carregado com sucesso!" << std::endl;
+    std::cout << " Modelo carregado com sucesso!" << std::endl;
 
     // Cria contexto
     llama_context *ctx = llama_init_from_model(model, ctx_params);
@@ -26,7 +26,7 @@ int main() {
         llama_model_free(model);
         return 1;
     }
-    std::cout << "✅ Contexto criado!" << std::endl;
+    std::cout << " Contexto criado!" << std::endl;
 
     // Teste básico: imprime o número de tokens do vocabulário
     const llama_vocab* vocab = llama_model_get_vocab(model);

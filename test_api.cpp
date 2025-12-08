@@ -5,7 +5,7 @@
 
 using json = nlohmann::json;
 
-int api_main() {
+int main() {
     httplib::Server svr;
     CoreIntegration core;
 
@@ -17,7 +17,7 @@ int api_main() {
             std::cerr << "ERRO: Falha na inicialização automática do modelo!" << std::endl;
             return -1;
         }
-        std::cout << "✅ Modelo inicializado com sucesso!" << std::endl;
+        std::cout << " Modelo inicializado com sucesso!" << std::endl;
     } else {
         std::cout << "⚠️  Modelo não encontrado em: " << model_path << std::endl;
         std::cout << "ℹ️  Use o endpoint /initialize para carregar um modelo" << std::endl;
@@ -67,7 +67,7 @@ int api_main() {
         }
     });
     
-    // 🆕 NOVO ENDPOINT: Think com fusão sem TTS
+    //  NOVO ENDPOINT: Think com fusão sem TTS
     svr.Post("/think/fusion", [&core](const httplib::Request& req, httplib::Response& res) {
         try {
             auto body = json::parse(req.body);

@@ -1,4 +1,5 @@
-// test_main.cpp
+// test_main_cli.cpp
+
 #include "CoreLLM.hpp" 
 #include "llama.h"
 #include <iostream>
@@ -19,9 +20,9 @@ int main() {
 
         CoreIntegration alyssa_brain;
         std::cout << "Inicializando CoreIntegration Teste CLI..." << std::endl;
-    
+        alyssa_brain.set_user_name("Deyvid");
         // 1. Chama a Inicialização com o caminho do modelo BASE
-        if (!alyssa_brain.initialize("models/gemma-3-1b-it-q4_0.gguf")) {
+        if (!alyssa_brain.initialize("models/gemma-3-4b-it-q4_0.gguf")) {
             std::cerr << "Falha Crítica ao inicializar o CoreIntegration. Encerrando." << std::endl;
             return 1;
         }
@@ -39,7 +40,7 @@ int main() {
             
             if (input.empty()) continue;
             
-            // 🆕 Usa Weighted Fusion
+            //  Usa Weighted Fusion
             std::string alyssa_response = alyssa_brain.think_with_fusion_ttsless(input);
             std::cout << "\n\033[36m[ALYSSA]: \033[0m" << alyssa_response << std::endl;
         }

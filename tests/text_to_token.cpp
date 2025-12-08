@@ -118,7 +118,7 @@ int main() {
     int n = llama_tokenize(vocab, input.c_str(), input.size(), tokens.data(), tokens.size(), true, true); //
     tokens.resize(n); //
 
-    std::cout << "\n✅ Tokenização concluída (" << n << " tokens):\n"; //
+    std::cout << "\n Tokenização concluída (" << n << " tokens):\n"; //
     for (auto t : tokens) { //
         char buf[64]; //
         int len = llama_token_to_piece(vocab, t, buf, sizeof(buf), 0, true); //

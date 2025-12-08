@@ -48,8 +48,8 @@ include_directories(
     ${AVCODEC_INCLUDE_DIRS}
 )
 
-# --- Source Files ---
-set(SOURCES
+# --- Source Files for each test ---
+set(TEST_MAIN_CLI_SOURCES
     test_main_cli.cpp
     includes/AlyssaNet.cpp
     includes/AlyssaMemoryHandler.cpp
@@ -60,11 +60,67 @@ set(SOURCES
     includes/log.cpp
 )
 
-# --- Executable ---
-add_executable(Virtual-Intelligence-Test ${SOURCES})
+set(TEST_MAIN_WHISPER_SOURCES
+    test_main_whisper.cpp
+    includes/AlyssaNet.cpp
+    includes/AlyssaMemoryHandler.cpp
+    includes/Embedding/Embedder.cpp
+    includes/WeightedFusion/WeightedFusion.cpp
+    includes/voice/ElevenLabsTTS.cpp
+    includes/voice/VoicePipeline.cpp
+    includes/log.cpp
+)
+
+set(TEST_API_SOURCES
+    test_api.cpp
+    includes/AlyssaNet.cpp
+    includes/AlyssaMemoryHandler.cpp
+    includes/Embedding/Embedder.cpp
+    includes/WeightedFusion/WeightedFusion.cpp
+    includes/voice/ElevenLabsTTS.cpp
+    includes/voice/VoicePipeline.cpp
+    includes/log.cpp
+)
+
+# --- Executables ---
+add_executable(test_main_cli ${TEST_MAIN_CLI_SOURCES})
+add_executable(test_main_whisper ${TEST_MAIN_WHISPER_SOURCES})
+add_executable(test_api ${TEST_API_SOURCES})
 
 # --- Linking ---
-target_link_libraries(Virtual-Intelligence-Test PRIVATE
+target_link_libraries(test_main_cli PRIVATE
+    llama
+    ggml
+    whisper
+    ${CURL_LIBRARIES}
+    ${SQLITE3_LIBRARY}
+    ${PORTAUDIO_LIBRARY}
+    ${AVCODEC_LIBRARIES}
+    ${AVFORMAT_LIBRARIES}
+    ${AVUTIL_LIBRARIES}
+    ${SWRESAMPLE_LIBRARIES}
+    Threads::Threads
+    dl
+    stdc++fs
+)
+
+target_link_libraries(test_main_whisper PRIVATE
+    llama
+    ggml
+    whisper
+    ${CURL_LIBRARIES}
+    ${SQLITE3_LIBRARY}
+    ${PORTAUDIO_LIBRARY}
+    ${AVCODEC_LIBRARIES}
+    ${AVFORMAT_LIBRARIES}
+    ${AVUTIL_LIBRARIES}
+    ${SWRESAMPLE_LIBRARIES}
+    Threads::Threads
+    dl
+    stdc++fs
+)
+
+target_link_libraries(test_api PRIVATE
     llama
     ggml
     whisper
@@ -82,12 +138,14 @@ target_link_libraries(Virtual-Intelligence-Test PRIVATE
 
 # --- Post-Build Commands (Copy assets) ---
 # This copies 'models' and 'config' to the build folder automatically
-add_custom_command(TARGET Virtual-Intelligence-Test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/models
-        ${CMAKE_BINARY_DIR}/models
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/config
-        ${CMAKE_BINARY_DIR}/config
-    COMMENT "Copying models and config directories to build folder"
-)
+foreach(TARGET test_main_cli test_main_whisper test_api)
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/models
+            ${CMAKE_BINARY_DIR}/models
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/config
+            ${CMAKE_BINARY_DIR}/config
+        COMMENT "Copying models and config directories to build folder"
+    )
+endforeach()

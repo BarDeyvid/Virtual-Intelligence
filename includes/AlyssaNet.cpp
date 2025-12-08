@@ -34,6 +34,14 @@ CoreIntegration::~CoreIntegration() {
     logg.info("CoreIntegration destroyed – freeing resources");
 }
 
+void CoreIntegration::set_user_name(const std::string& name) {
+    user_name = name;
+    std::cout << "[IDENTITY] Nome do usuário definido como: " << name << std::endl;
+    if (memory_manager) {
+        memory_manager->processIdentityFact(name, "user_name");
+    }
+}
+
 void CoreIntegration::clear_kv_cache() {
     if (core_instance) {
         llama_memory_seq_rm(llama_get_memory(core_instance->get_context()), 0, -1, -1);
@@ -113,7 +121,62 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
     }
 }
 
-// 🆕 Think com Weighted Fusion
+// Método para gerar um prompt fusionado para alyssa
+std::string CoreIntegration::generate_fused_input(
+    const std::string& original_input,
+    const std::vector<alyssa_fusion::ExpertContribution>& contributions,
+    const std::string& emotion
+) {
+    std::string fused_prompt = original_input;
+
+    // Adiciona contexto emocional
+    if (!emotion.empty()) {
+        fused_prompt += "\n[EMOÇÃO]: " + emotion;
+    }
+
+    // Adiciona contexto introspectivo (se existir)
+    for (const auto& contrib : contributions) {
+        if (contrib.expert_id == "introspectiveModel") {
+            fused_prompt += "\n[INTROSPECÇÃO] (de " + contrib.source + "): " + contrib.response;
+        }
+    }
+
+    // Adiciona contexto emocional (se existir)
+    for (const auto& contrib : contributions) {
+        if (contrib.expert_id == "emotionalModel") {
+            fused_prompt += "\n[EMOÇÃO DETECTADA] (de " + contrib.source + "): " + contrib.response;
+        }
+    }
+
+    // Adiciona contexto social (se existir)
+    for (const auto& contrib : contributions) {
+        if (contrib.expert_id == "socialModel") {
+            fused_prompt += "\n[SOBRE SOCIEDADE] (de " + contrib.source + "): " + contrib.response;
+        }
+    }
+
+    // Adiciona contexto de memória (se houver)
+    if (memory_manager) {
+        auto memories = memory_manager->getHybridMemories(original_input);
+        if (!memories.empty()) {
+            fused_prompt += "\n[CONTEXTO RELEVANTE DE LTM]\n";
+            for (const auto& mem : memories) {
+                fused_prompt += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
+            }
+            fused_prompt += "[FIM CONTEXTO LTM]\n";
+        }
+    }
+
+    if (!user_name.empty()) {
+        fused_prompt = "Você é " + user_name + ".\n\n" + fused_prompt;
+    }
+
+    return fused_prompt;
+}
+
+
+
+//  Think com Weighted Fusion
 std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
@@ -122,7 +185,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
 
     // =========================================================
-    // ⬇️ RECUPERAR MEMÓRIAS E AUMENTAR O INPUT ⬇️
+    //  RECUPERAR MEMÓRIAS E AUMENTAR O INPUT 
     // =========================================================
     std::string memory_context = "";
     std::string augmented_input = input; // Começa como o input original
@@ -148,10 +211,10 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
 
     // 1. Executa comitê de especialistas, usando o INPUT AUMENTADO
     std::vector<std::string> expert_committee = {
+        "introspectiveModel", 
         "emotionalModel", 
-        "memoryModel", 
-        "introspectiveModel",
-        "alyssa"  // especialista geral
+        "socialModel",
+        "alyssa"        
     };
     
     // Altera a chamada para usar 'augmented_input'
@@ -166,7 +229,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     tts.synthesizeAndPlay(final_response);
     
     // =========================================================
-    // ⬇️ SALVAR A INTERAÇÃO COMPLETA NA MEMÓRIA ⬇️
+    // ⬇ SALVAR A INTERAÇÃO COMPLETA NA MEMÓRIA ⬇
     // =========================================================
     if (memory_manager) {
         // Salva o input ORIGINAL do usuário e a resposta final de Alyssa
@@ -174,13 +237,13 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
             input,          
             final_response  
         );
-        std::cout << "\n✅ Interação salva na LTM." << std::endl;
+        std::cout << "\n Interação salva na LTM." << std::endl;
     }
 
     return final_response;
 }
 
-// 🆕 Think com Weighted Fusion sem TTS
+//  Think com Weighted Fusion sem TTS
 std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
@@ -189,7 +252,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     std::cout << "\n[Weighted Fusion TTS-less] Processando input: " << input << std::endl;
 
     // =========================================================
-    // ⬇️ RECUPERAR MEMÓRIAS E AUMENTAR O INPUT ⬇️
+    //  RECUPERAR MEMÓRIAS E AUMENTAR O INPUT 
     // =========================================================
     std::string memory_context = "";
     std::string augmented_input = input; // Começa como o input original
@@ -214,24 +277,29 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
 
     // 1. Executa comitê de especialistas, usando o INPUT AUMENTADO
     std::vector<std::string> expert_committee = {
+        "introspectiveModel", 
         "emotionalModel", 
-        "memoryModel", 
-        "introspectiveModel",
-        "alyssa"  // especialista geral
+        "socialModel",
+        "alyssa"        
     };
     
     // Altera a chamada para usar 'augmented_input'
     auto contributions = run_expert_committee(expert_committee, augmented_input); 
     
-    // 2. Aplica Weighted Fusion
+    // 2. Detecta emoção
     std::string emotion = fusion_engine->detect_emotion_from_input(input);
-    std::string final_response = fusion_engine->fuse_responses(input, contributions, emotion);
+    
+    // 3. Gera input fusionado para alyssa
+    std::string fused_input = generate_fused_input(input, contributions, emotion);
+    
+    // 4. Executa alyssa com o input fusionado
+    std::string final_response = run_expert("alyssa", fused_input, false, nullptr);
     
     // 3. Apenas exibe a resposta final (sem sintetizar áudio)
     printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
     
     // =========================================================
-    // ⬇️ SALVAR A INTERAÇÃO COMPLETA NA MEMÓRIA ⬇️
+    //  SALVAR A INTERAÇÃO COMPLETA NA MEMÓRIA 
     // =========================================================
     if (memory_manager) {
         // Salva o input ORIGINAL do usuário e a resposta final de Alyssa
@@ -239,13 +307,17 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
             input,          
             final_response  
         );
-        std::cout << "\n✅ Interação salva na LTM." << std::endl;
+        std::cout << "\n Interação salva na LTM." << std::endl;
     }
 
     return final_response;
 }
 
-// 🆕 Executa múltiplos especialistas e coleta contribuições
+void CoreIntegration::log_source_awareness(const std::string& source, const std::string& message) {
+    std::cout << "[SOURCE AWARENESS] " << source << " diz: " << message << std::endl;
+}
+
+//  Executa múltiplos especialistas e coleta contribuições
 std::vector<alyssa_fusion::ExpertContribution> 
 CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids,
                                      const std::string& input) {
@@ -267,6 +339,11 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
             contrib.expert_id = expert_id;
             contrib.response = response;
             
+            std::cout << "[Comitê] " << expert_id << " respondeu: " 
+                    << (response.length() > 50 ? response.substr(0, 50) + "..." : response) 
+                    << " (de " << contrib.source << ")" << std::endl;
+
+            
             // Calcula embedding da resposta
             if (embedder) {
                 try {
@@ -274,6 +351,18 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
                 } catch (const std::exception& e) {
                     std::cerr << "Erro ao calcular embedding para " << expert_id << ": " << e.what() << std::endl;
                 }
+            }
+            
+            if (expert_id == "emotionalModel") {
+                contrib.source = "subconscious";
+            } else if (expert_id == "introspectiveModel") {
+                contrib.source = "subconscious";
+            } else if (expert_id == "socialModel") {
+                contrib.source = "subconscious";
+            } else if (expert_id == "memoryModel") {
+                contrib.source = "memory";
+            } else {
+                contrib.source = "Deyvid";
             }
             
             contributions.push_back(contrib);
@@ -289,6 +378,7 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
     
     return contributions;
 }
+
 
 // =========================================================================
 // 🧠 Método Think (Orquestração)
@@ -466,8 +556,6 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     
         return response;
     }
-                
-
 }
 
 

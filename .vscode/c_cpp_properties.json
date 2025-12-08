@@ -3,17 +3,15 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/llama.cpp/include", 
-                "${workspaceFolder}/llama.cpp", 
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/llama.cpp/build/bin",
-                "${workspaceFolder}/whisper.cpp/build/bin"
+                "${workspaceFolder}/llama.cpp/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

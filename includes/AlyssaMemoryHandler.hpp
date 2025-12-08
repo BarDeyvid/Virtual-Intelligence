@@ -282,6 +282,7 @@ public:
     
     // Controle de objetivos
     void setCurrentGoal(const std::string& goal, const std::string& type = "learning");
+    void processIdentityFact(const std::string& fact_value, const std::string& fact_type);
 };
 
 // ============================================================================

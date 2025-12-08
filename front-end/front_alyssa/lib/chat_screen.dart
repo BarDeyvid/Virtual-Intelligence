@@ -469,7 +469,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final buffer = StringBuffer();
 
     if (debugInfo['success'] == true) {
-      buffer.writeln('✅ Conexão bem‑sucedida');
+      buffer.writeln(' Conexão bem‑sucedida');
       buffer.writeln('📊 Status Code: ${debugInfo['statusCode']}');
       buffer.writeln('📦 Resposta Bruta:');
       buffer.writeln(debugInfo['rawResponse'] ?? 'N/A');

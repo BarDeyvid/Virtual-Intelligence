@@ -13,7 +13,9 @@ struct ExpertContribution {
     double weight;
     std::string response;
     std::vector<float> embedding;
+    std::string source;
 };
+
 
 class WeightedFusion {
 private:

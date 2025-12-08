@@ -25,21 +25,26 @@ private:
 public:
     CoreIntegration();
     ~CoreIntegration();
+
+    void set_user_name(const std::string& name);
+    std::string user_name = "";
     
     bool initialize(const std::string& base_model_path);
     std::string think(const std::string& input, ElevenLabsTTS& tts);
     
-    // 🆕 Métodos com Weighted Fusion
+    //  Métodos com Weighted Fusion
     std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
-    std::string think_with_fusion_ttsless(const std::string& input); // 🆕 NOVO MÉTODO
-    
+    std::string think_with_fusion_ttsless(const std::string& input); 
+    std::string generate_fused_input(const std::string& original_input, const std::vector<alyssa_fusion::ExpertContribution>& contributions, const std::string& emotion);
+    void log_source_awareness(const std::string& source, const std::string& message);
+
 private:
     std::string run_expert(const std::string& expert_id, 
                           const std::string& input,
                           bool use_tts, 
                           ElevenLabsTTS* tts = nullptr);
     
-    // 🆕 Método para executar múltiplos especialistas e fundir
+    //  Método para executar múltiplos especialistas e fundir
     std::vector<alyssa_fusion::ExpertContribution> run_expert_committee(
         const std::vector<std::string>& expert_ids,
         const std::string& input);

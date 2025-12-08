@@ -128,7 +128,7 @@ int main() {
     std::vector<llama_token> tok2;
     std::vector<float> emo2, vtime2;
     if (load_memory_from_sqlite(db, 2, tok2, emo2, vtime2, header)) {
-        std::cout << "✅ Memória carregada do SQLite com sucesso.\n";
+        std::cout << " Memória carregada do SQLite com sucesso.\n";
     } else {
         std::cerr << "❌ Falha ao carregar memória do SQLite.\n";
     }

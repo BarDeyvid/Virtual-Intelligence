@@ -89,7 +89,7 @@ class ChatService {
     } catch (e) {
       print('❌ Fallback Exception: $e');
       return '🔌 Erro de conexão: $e\n\n'
-             '✅ A API está acessível pelo navegador?\n'
+             ' A API está acessível pelo navegador?\n'
              '🔗 URL: $baseUrl/health\n'
              '📱 Teste esta URL no navegador do celular';
     }
@@ -169,7 +169,7 @@ class ChatService {
     results['fusion_status'] = fusionResponse.statusCode;
     results['fusion_body'] = fusionResponse.body;
     
-    print('✅ Teste completo: $results');
+    print(' Teste completo: $results');
     
   } catch (e) {
     results['error'] = e.toString();

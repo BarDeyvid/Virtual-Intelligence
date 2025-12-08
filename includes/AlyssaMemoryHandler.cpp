@@ -373,7 +373,7 @@ double Utils::normalizeImportance(double raw_importance) {
 AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref) 
     : db(nullptr), embedder(embedder_ref) // <-- Recebe e armazena o embedder na lista de inicialização
 {
-    int rc = sqlite3_open(db_path.c_str(), &db);
+    int rc = sqlite3_open_v2(db_path.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
     }
@@ -393,7 +393,7 @@ AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, std::shar
     }
 
     emotional_analyzer = std::make_unique<EmotionalAnalyzer>();
-    std::cout << "✅ Emotional Analyzer inicializado\n"; 
+    std::cout << " Emotional Analyzer inicializado\n"; 
     std::cout << "Sistema de Memória Avançado Inicializado\n";
 }
 
@@ -1218,6 +1218,20 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
     // Mostrar análise emocional (para debug)
     if (interaction_count % 3 == 0) {
         printEmotionalAnalysis(emotional_analysis, user_input);
+    }
+}
+
+void AlyssaMemoryManager::processIdentityFact(const std::string& fact_value, const std::string& fact_type) {
+    if (memory_system) {
+        memory_system->activateIntention(
+            "Identificar " + fact_type + " como " + fact_value,
+            "identity",
+            "fact: " + fact_type,
+            0.5
+        );
+        std::cout << "[IDENTITY] Processado: " << fact_type << " = " << fact_value << std::endl;
+    } else {
+        std::cerr << "[ERROR] Memory system not initialized. Cannot process identity fact." << std::endl;
     }
 }
 

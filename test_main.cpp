@@ -39,7 +39,7 @@ int main() {
             std::cout << " [Transcrição]: " << user_input << std::endl;
             stt.pause(); 
             
-            // 🆕 Usa Weighted Fusion em vez de think simples
+            //  Usa Weighted Fusion em vez de think simples
             std::string alyssa_response = alyssa_brain.think_with_fusion(user_input, tts);
             
             stt.resume();
