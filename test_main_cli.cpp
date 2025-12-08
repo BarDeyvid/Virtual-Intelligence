@@ -3,17 +3,18 @@
 #include "llama.h"
 #include <iostream>
 #include <string>
+#include <thread>
 
 void log_callback(ggml_log_level level, const char * text, void * user_data) {
     (void)level;
     (void)user_data;
-    fputs(text, stderr); // Imprime a mensagem de log no stderr
+    fputs(text, stderr);
     fflush(stderr);
 }
 
 int main() {
     try {      
-        llama_log_set(log_callback, nullptr); // Use o callback de log
+        llama_log_set(log_callback, nullptr);
         ggml_backend_load_all(); 
 
         CoreIntegration alyssa_brain;
@@ -24,19 +25,28 @@ int main() {
             std::cerr << "Falha Crítica ao inicializar o CoreIntegration. Encerrando." << std::endl;
             return 1;
         }
-        std::cout << "CoreIntegration Inicializado...";
+        std::cout << "CoreIntegration Inicializado com sucesso!" << std::endl;
 
         while (true) {
-            printf("\033[32m> \033[0m");
-            std::cout << "\n🗨️  Digite uma frase:\n> ";
+            std::cout << "\n\033[32m> \033[0m";
             std::string input;
             std::getline(std::cin, input);
-                
-                // 🆕 Usa Weighted Fusion em vez de think simples
-                std::string alyssa_response = alyssa_brain.think_with_fusion_ttsless(input);
+            
+            if (input == "sair" || input == "exit") {
+                std::cout << "Encerrando..." << std::endl;
+                break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-       } catch (...) { // <--- Pega qualquer outra coisa
+            
+            if (input.empty()) continue;
+            
+            // 🆕 Usa Weighted Fusion
+            std::string alyssa_response = alyssa_brain.think_with_fusion_ttsless(input);
+            std::cout << "\n\033[36m[ALYSSA]: \033[0m" << alyssa_response << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "\n[ERRO FATAL] " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
         std::cerr << "\n[ERRO FATAL] Erro desconhecido não capturado." << std::endl;
         return 1;
     } 

@@ -245,6 +245,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     return final_response;
 }
 
+// 🆕 Executa múltiplos especialistas e coleta contribuições
 std::vector<alyssa_fusion::ExpertContribution> 
 CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids,
                                      const std::string& input) {
@@ -261,11 +262,6 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
             // Executa especialista sem TTS
             std::string response = run_expert(expert_id, input, false, nullptr);
             
-            // Clear embedding cache to prevent CUDA conflicts
-            if (embedder) {
-                embedder->clear_embedding_cache();
-            }
-            
             // Cria contribuição
             alyssa_fusion::ExpertContribution contrib;
             contrib.expert_id = expert_id;
@@ -277,8 +273,6 @@ CoreIntegration::run_expert_committee(const std::vector<std::string>& expert_ids
                     contrib.embedding = embedder->generate_embedding(response);
                 } catch (const std::exception& e) {
                     std::cerr << "Erro ao calcular embedding para " << expert_id << ": " << e.what() << std::endl;
-                    // Fallback: dummy embedding
-                    contrib.embedding = std::vector<float>(embedder->get_embedding_dimension(), 0.0f);
                 }
             }
             
