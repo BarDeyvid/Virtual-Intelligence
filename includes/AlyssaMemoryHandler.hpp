@@ -215,6 +215,8 @@ public:
     void setEmotionalState(const std::string& emotion, double intensity);
     EmotionalState getCurrentEmotionalState() const;
     
+    void linkMemoryToIntention(int memory_id, int intention_id);
+
     // Gerenciamento de memórias
     int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context = "");
     void applyMemoryDecay();
@@ -280,6 +282,12 @@ public:
     std::vector<AdvancedMemorySystem::SemanticMemory> getSemanticMemories(const std::string& context);
     std::vector<AdvancedMemorySystem::HybridMemoryResult> getHybridMemories(const std::string& context);
     
+    EmotionalState getCurrentEmotionalState() const;
+    std::vector<Intention> getActiveIntentions() const;
+
+    int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context);
+    void linkMemoryToIntention(int memory_id, int intention_id);
+
     // Controle de objetivos
     void setCurrentGoal(const std::string& goal, const std::string& type = "learning");
     void processIdentityFact(const std::string& fact_value, const std::string& fact_type);

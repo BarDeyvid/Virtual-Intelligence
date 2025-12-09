@@ -49,6 +49,11 @@ private:
         const std::vector<std::string>& expert_ids,
         const std::string& input);
     
+    void manage_dynamic_history(const std::string& expert_id, 
+                               std::vector<llama_chat_message>& history);
+    
+    size_t calculate_history_limit(const std::string& expert_id);
+
     void clear_kv_cache();
     void act(const std::string& command);
     void reflect();

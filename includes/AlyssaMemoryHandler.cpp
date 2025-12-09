@@ -558,6 +558,14 @@ void AdvancedMemorySystem::loadActiveIntentions() {
     }
 }
 
+EmotionalState AlyssaMemoryManager::getCurrentEmotionalState() const {
+    return memory_system->getCurrentEmotionalState();
+}
+
+std::vector<Intention> AlyssaMemoryManager::getActiveIntentions() const {
+    return memory_system->getActiveIntentions();
+}
+
 // === MÉTODOS DE EMBEDDING E BUSCA SEMÂNTICA ===
 
 bool AdvancedMemorySystem::hasEmbedder() const {
@@ -887,6 +895,12 @@ void AdvancedMemorySystem::createMemoryLink(int source_id, int target_id, double
     }
 }
 
+void AdvancedMemorySystem::linkMemoryToIntention(int memory_id, int intention_id) {
+    std::string content = "Linked explicitly to intention ID: " + std::to_string(intention_id);
+    saveReflection(memory_id, "intention_link", content);
+    std::cout << "🔗 Memória " << memory_id << " vinculada à intenção " << intention_id << "\n";
+}
+
 std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(int memory_id) {
     std::vector<MemoryLink> links;
     const char* sql = R"(
@@ -1021,6 +1035,17 @@ int AdvancedMemorySystem::storeMemoryWithEmotionalAnalysis(const std::string& co
     }
     
     return memory_id;
+}
+
+int AlyssaMemoryManager::storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context) {
+    if (!memory_system) return -1;
+    return memory_system->storeMemoryWithEmotionalAnalysis(content, context);
+}
+
+void AlyssaMemoryManager::linkMemoryToIntention(int memory_id, int intention_id) {
+    if (memory_system) {
+        memory_system->linkMemoryToIntention(memory_id, intention_id);
+    }
 }
 
 // Método para obter emotional_vector automaticamente para integração

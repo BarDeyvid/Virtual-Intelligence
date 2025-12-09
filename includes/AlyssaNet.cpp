@@ -550,15 +550,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         }
         // 8. ADICIONA A RESPOSTA (completa) AO HISTÓRICO
         history.push_back({"assistant", strdup(response.c_str())});
-                                                                                            // TODO: Fazer isso daqui se tornar responsivo
-        const size_t MAX_HISTORY = 20; // 10 turnos (20 mensagens: 10 user + 10 assistant)
-        while (history.size() > MAX_HISTORY) {
-            // Remove o par de mensagens mais antigo
-            
-            // A mensagem é sempre alocada com strdup/malloc. Precisamos liberá-la.
-            free((char*)history.front().content);
-            history.erase(history.begin());
-        }
+        manage_dynamic_history(expert_id, history);
 
         return response;
     } else {
@@ -575,6 +567,82 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     }
 }
 
+size_t CoreIntegration::calculate_history_limit(const std::string& expert_id) {
+    size_t limit = 20;
+
+    if (memory_manager) {
+        auto emotional_state = memory_manager->getCurrentEmotionalState();
+        
+        if (emotional_state.intensity > 0.7) {
+            limit += 10; 
+        }
+        else if (emotional_state.intensity < 0.2) {
+            limit -= 5;
+        }
+    }
+
+    if (expert_id == "introspectiveModel") {
+        limit += 15; 
+    } 
+    else if (expert_id == "socialModel") {
+        limit += 5;  
+    }
+    else if (expert_id == "creativeModel") {
+        limit += 10; 
+    }
+
+    if (limit > 50) limit = 50;
+    if (limit < 10) limit = 10;
+
+    return limit;
+}
+
+void CoreIntegration::manage_dynamic_history(const std::string& expert_id, 
+                                           std::vector<llama_chat_message>& history) {
+    
+    size_t dynamic_limit = calculate_history_limit(expert_id);
+    
+    if (history.size() <= dynamic_limit) return;
+
+    std::cout << "[Memory Cycle] Otimizando histórico do especialista '" << expert_id 
+              << "' (Limite atual: " << dynamic_limit << ", Tamanho: " << history.size() << ")\n";
+
+    int messages_to_archive = 4; 
+
+    std::string archived_content = "";
+    std::string accumulated_roles = "";
+
+    for (int i = 0; i < messages_to_archive && !history.empty(); ++i) {
+        auto& msg = history.front();
+        
+        std::string role = msg.role;
+        std::string content = msg.content;
+        
+        accumulated_roles += role + ", ";
+        archived_content += "[" + role + "]: " + content + "\n";
+
+        free((char*)msg.content);
+        
+        history.erase(history.begin());
+    }
+
+    if (memory_manager && !archived_content.empty()) {
+        
+        std::string context_tag = "archived_history | expert:" + expert_id;
+
+        int mem_id = memory_manager->storeMemoryWithEmotionalAnalysis(
+            archived_content, 
+            context_tag
+        );
+
+        auto intentions = memory_manager->getActiveIntentions();
+        if (!intentions.empty()) {
+            memory_manager->linkMemoryToIntention(mem_id, intentions[0].id);
+        }
+        std::cout << "[LTM] Memória comprimida e arquivada (ID: " << mem_id << ")\n";
+        std::cout << "   -> Conteúdo: " << archived_content.substr(0, 50) << "...\n";
+    }
+}
 
 // =========================================================================
 // Métodos auxiliares (act, reflect, loop)
