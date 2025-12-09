@@ -26,6 +26,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   late ThemeNotifier _themeNotifier;
 
+  // Maintain a conversation history
+  List<String> _conversationHistory = [];
+
   @override
   void initState() {
     super.initState();
@@ -421,6 +424,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _isLoading = true;
     });
 
+    // Update conversation history with the new user input
+    _conversationHistory.add("User: $formattedInput");
+
     try {
       if (rawText.toLowerCase().contains('debug')) {
         final debugInfo =
@@ -438,8 +444,12 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
+      // Send the message with the conversation history
       final botResponse =
-          await _chatService.sendMessage(formattedInput);
+          await _chatService.sendMessage(formattedInput, _conversationHistory);
+
+      // Update conversation history with the new bot response
+      _conversationHistory.add("Alyssa: $botResponse");
 
       final botMessage = Message(
         text: botResponse,

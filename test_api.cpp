@@ -9,7 +9,7 @@ int main() {
     httplib::Server svr;
     CoreIntegration core;
 
-    std::string model_path = "models/gemma-3-1b-it-q4_0.gguf"; 
+    std::string model_path = "models/gemma-3-4b-it-q4_0.gguf"; 
 
     if (fs::exists(model_path)) {
         std::cout << "Inicializando modelo automaticamente: " << model_path << std::endl;

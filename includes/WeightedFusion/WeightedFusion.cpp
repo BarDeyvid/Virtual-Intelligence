@@ -1,6 +1,7 @@
 #include "WeightedFusion/WeightedFusion.hpp"
 #include <algorithm>
 #include <numeric>
+#include <onnxruntime/onnxruntime_cxx_api.h>
 
 namespace alyssa_fusion {
 
@@ -100,38 +101,80 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
     const std::string& input,
     const std::vector<ExpertContribution>& expert_responses,
     const std::string& current_emotion) {
-    
-    // Esta é uma implementação simplificada
-    // Na prática, você teria um modelo neural leve aqui
-    
+
     std::map<std::string, double> weights;
-    
-    // Combina abordagens A e B com fatores adicionais
-    auto rule_weights = calculate_rule_based_weights(input, {});
-    auto feature_weights = calculate_feature_based_weights(input, expert_responses);
-    
-    // Fator emocional
-    double emotion_factor = 0.0;
-    if (current_emotion == "happy") emotion_factor = 0.1;
-    else if (current_emotion == "sad") emotion_factor = 0.15;
-    else if (current_emotion == "analytical") emotion_factor = 0.2;
-    
-    // Combinação ponderada
-    for (const auto& contribution : expert_responses) {
-        double rule_w = rule_weights.count(contribution.expert_id) ? 
-                       rule_weights[contribution.expert_id] : 0.1;
-        double feature_w = feature_weights.count(contribution.expert_id) ? 
-                          feature_weights[contribution.expert_id] : 0.1;
-        
-        weights[contribution.expert_id] = 
-            (rule_w * 0.4) + (feature_w * 0.4) + (emotion_factor * 0.2);
+
+    // 1. Generate Embedding
+    // Ensure this returns std::vector<float> of size 384 (matching your model)
+    std::vector<float> input_embedding = embedder.generate_embedding(input);
+
+    if (input_embedding.empty()) {
+        std::cerr << "[WeightedFusion] Error: Empty embedding generated.\n";
+        return weights; // Return empty or fallback
     }
+
+    // 2. Prepare ONNX Input
+    // Shape: [Batch_Size, Dimensions] -> [1, 768]
+    std::vector<int64_t> input_shape = {1, (int64_t)input_embedding.size()};
     
-    // Normalização final
-    double sum = 0.0;
-    for (const auto& w : weights) sum += w.second;
-    for (auto& w : weights) w.second /= sum;
+    // Memory Info for the tensor
+    auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
     
+    // Create Input Tensor
+    // Note: We pass the data pointer directly. 
+    Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+        memory_info, 
+        input_embedding.data(), 
+        input_embedding.size(), 
+        input_shape.data(), 
+        input_shape.size()
+    );
+
+    // 3. Setup Input/Output Names
+    const char* input_names[] = {"input_embedding"};
+    const char* output_names[] = {"expert_weights"};
+
+    try {
+        // 4. Run Inference
+        auto output_tensors = session.Run(
+            Ort::RunOptions{nullptr}, 
+            input_names, 
+            &input_tensor, 
+            1, // Number of inputs
+            output_names, 
+            1  // Number of outputs
+        );
+
+        float* float_weights = output_tensors[0].GetTensorMutableData<float>();
+        
+        static const std::vector<std::string> expert_order = {
+            "emotionalModel", 
+            "memoryModel", 
+            "introspectiveModel", 
+            "socialModel"
+        };
+
+        for (size_t i = 0; i < expert_order.size(); ++i) {
+            weights[expert_order[i]] = static_cast<double>(float_weights[i]);
+        }
+
+        if (current_emotion == "happy" || current_emotion == "sad") {
+            weights["emotionalModel"] *= 1.2; 
+        } else if (current_emotion == "analytical") {
+            weights["introspectiveModel"] *= 1.2;
+        }
+        
+        double sum = 0.0;
+        for (const auto& pair : weights) sum += pair.second;
+        if (sum > 0) {
+            for (auto& pair : weights) weights[pair.first] = pair.second / sum;
+        }
+
+    } catch (const Ort::Exception& e) {
+        std::cerr << "[WeightedFusion] ONNX Runtime Error: " << e.what() << "\n";
+        return calculate_rule_based_weights(input, {}); 
+    }
+
     return weights;
 }
 

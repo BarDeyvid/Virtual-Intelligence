@@ -24,6 +24,20 @@ pkg_check_modules(SWRESAMPLE REQUIRED libswresample)
 # 4. PortAudio
 find_library(PORTAUDIO_LIBRARY portaudio)
 
+# 5. ONNX Runtime
+find_library(ONNXRUNTIME_LIBRARY onnxruntime)
+if (NOT ONNXRUNTIME_LIBRARY)
+    message(FATAL_ERROR "Could not find libonnxruntime.so. Ensure the ONNX Runtime development package is installed.")
+endif()
+
+# 6. Protocol Buffers (Protobuf)
+find_library(PROTOBUF_LIBRARY protobuf)
+find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
+
+if (NOT PROTOBUF_LIBRARY AND NOT PROTOBUF_LITE_LIBRARY)
+    message(FATAL_ERROR "Could not find Protobuf libraries (libprotobuf or libprotobuf-lite). Ensure 'libprotobuf-dev' is installed.")
+endif()
+
 # --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
 
@@ -92,6 +106,9 @@ target_link_libraries(test_main_cli PRIVATE
     llama
     ggml
     whisper
+    ${ONNXRUNTIME_LIBRARY}
+    ${PROTOBUF_LIBRARY}      
+    ${PROTOBUF_LITE_LIBRARY}   
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARY}
     ${PORTAUDIO_LIBRARY}
@@ -108,6 +125,9 @@ target_link_libraries(test_main_whisper PRIVATE
     llama
     ggml
     whisper
+    ${ONNXRUNTIME_LIBRARY}
+    ${PROTOBUF_LIBRARY}      
+    ${PROTOBUF_LITE_LIBRARY}  
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARY}
     ${PORTAUDIO_LIBRARY}
@@ -124,6 +144,9 @@ target_link_libraries(test_api PRIVATE
     llama
     ggml
     whisper
+    ${ONNXRUNTIME_LIBRARY}
+    ${PROTOBUF_LIBRARY}      
+    ${PROTOBUF_LITE_LIBRARY}  
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARY}
     ${PORTAUDIO_LIBRARY}
@@ -140,12 +163,18 @@ target_link_libraries(test_api PRIVATE
 # This copies 'models' and 'config' to the build folder automatically
 foreach(TARGET test_main_cli test_main_whisper test_api)
     add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
             ${CMAKE_BINARY_DIR}/models
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/config
             ${CMAKE_BINARY_DIR}/config
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_SOURCE_DIR}/fusion_router.onnx
+            ${CMAKE_BINARY_DIR}/fusion_router.onnx
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_SOURCE_DIR}/fusion_router.onnx.data
+            ${CMAKE_BINARY_DIR}/fusion_router.onnx.data
         COMMENT "Copying models and config directories to build folder"
     )
 endforeach()

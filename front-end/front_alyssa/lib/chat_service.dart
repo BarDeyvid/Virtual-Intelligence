@@ -14,7 +14,7 @@ class ChatService {
     'ngrok-skip-browser-warning': 'true', // 🔥 IMPORTANTE para ngrok
   };
 
-  Future<String> sendMessage(String message) async {
+  Future<String> sendMessage(String message, List<String> history) async {
     try {
       print('🔄 Enviando mensagem para: $baseUrl/think/fusion');
       print('📝 Mensagem: $message');
@@ -24,6 +24,7 @@ class ChatService {
         headers: _headers,
         body: jsonEncode({
           'input': message,
+          'history': history, // Pass the conversation history
         }),
       ).timeout(const Duration(seconds: 30)); // Aumente o timeout
 
@@ -39,7 +40,11 @@ class ChatService {
           if (output.trim().isEmpty) {
             return _handleEmptyResponse(message);
           }
-          
+
+          // Update the history with the new messages
+          history.add("User: $message");
+          history.add("Alyssa: $output");
+
           return output;
         } else {
           return '❌ Erro no servidor: ${data['error'] ?? "Erro desconhecido"}';
@@ -49,12 +54,11 @@ class ChatService {
       }
     } catch (e) {
       print('❌ Exception: $e');
-      return _tryFallbackEndpoint(message);
+      return _tryFallbackEndpoint(message, history);
     }
   }
 
-
-  Future<String> _tryFallbackEndpoint(String message) async {
+  Future<String> _tryFallbackEndpoint(String message, List<String> history) async {
     try {
       print('🔄 Tentando endpoint fallback: $baseUrl/think');
       
@@ -63,6 +67,7 @@ class ChatService {
         headers: _headers,
         body: jsonEncode({
           'input': message,
+          'history': history, // Pass the conversation history
         }),
       ).timeout(const Duration(seconds: 30));
 
@@ -78,22 +83,26 @@ class ChatService {
           if (output.trim().isEmpty) {
             return _handleEmptyResponse(message);
           }
-          
+
+          // Update the history with the new messages
+          history.add("User: $message");
+          history.add("Alyssa: $output");
+
           return output;
+          } else {
+            return '❌ Erro no servidor: ${data['error'] ?? "Erro desconhecido"}';
+          }
         } else {
-          return '❌ Erro no servidor: ${data['error'] ?? "Erro desconhecido"}';
+          return '🔌 Erro de conexão: Status ${response.statusCode}';
         }
-      } else {
-        return '🔌 Erro de conexão: Status ${response.statusCode}';
+      } catch (e) {
+        print('❌ Fallback Exception: $e');
+        return '🔌 Erro de conexão: $e\n\n'
+              ' A API está acessível pelo navegador?\n'
+              '🔗 URL: $baseUrl/health\n'
+              '📱 Teste esta URL no navegador do celular';
       }
-    } catch (e) {
-      print('❌ Fallback Exception: $e');
-      return '🔌 Erro de conexão: $e\n\n'
-             ' A API está acessível pelo navegador?\n'
-             '🔗 URL: $baseUrl/health\n'
-             '📱 Teste esta URL no navegador do celular';
     }
-  }
 
 
   String _handleEmptyResponse(String originalMessage) {

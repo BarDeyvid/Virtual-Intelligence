@@ -1,0 +1,176 @@
+text,expert_label
+O que faz no fim de semana?,socialModel
+Qual sua cor preferida?,socialModel
+Me fala sobre hobbies.,socialModel
+Qual sua comida favorita?,socialModel
+Me conta uma piada.,socialModel
+Qual sua comida favorita?,socialModel
+"Bom dia, acordou bem?",socialModel
+Qual sua comida favorita?,socialModel
+O que faz no fim de semana?,socialModel
+O que você acha do tempo hoje?,socialModel
+Como foi seu dia?,socialModel
+Você curte música?,socialModel
+"Oi, tô entediado.",socialModel
+Qual sua cor preferida?,socialModel
+"Ei, bora conversar sobre nada?",socialModel
+Vamos bater um papo?,socialModel
+Me conta sobre amigos.,socialModel
+Vamos bater um papo?,socialModel
+"Boa noite, dorme bem.",socialModel
+O que você acha do tempo hoje?,socialModel
+O que faz no fim de semana?,socialModel
+"Oi, tudo bem?",socialModel
+Me recomenda um livro?,socialModel
+Me fala sobre hobbies.,socialModel
+Como tá o humor hoje?,socialModel
+Estou decepcionado.,emotionalModel
+Sinto uma dor no peito.,emotionalModel
+Isso me deixa irritado.,emotionalModel
+Estou frustrado com o trabalho.,emotionalModel
+Tô com medo do que vem.,emotionalModel
+Isso me machuca muito.,emotionalModel
+Tô com o coração apertado.,emotionalModel
+Tô com medo do que vem.,emotionalModel
+Sinto raiva dessa situação.,emotionalModel
+Isso me deixa irritado.,emotionalModel
+Estou decepcionado.,emotionalModel
+Isso me deixa irritado.,emotionalModel
+Me sinto culpado.,emotionalModel
+Tô com medo do que vem.,emotionalModel
+Sinto alegria misturada com saudade.,emotionalModel
+Tô com medo do que vem.,emotionalModel
+Me sinto sozinho agora.,emotionalModel
+Tô com ciúmes.,emotionalModel
+Estou emocionado com isso.,emotionalModel
+Me sinto culpado.,emotionalModel
+Sinto uma dor no peito.,emotionalModel
+Sinto orgulho de mim.,emotionalModel
+Sinto orgulho de mim.,emotionalModel
+Me sinto sozinho agora.,emotionalModel
+Tô com medo do que vem.,emotionalModel
+Por que penso tanto nisso?,introspectiveModel
+Meus relacionamentos são saudáveis?,introspectiveModel
+O que eu mudaria em mim?,introspectiveModel
+Meus medos são reais?,introspectiveModel
+Meus relacionamentos são saudáveis?,introspectiveModel
+Meus sonhos são viáveis?,introspectiveModel
+Por que me sinto vazio?,introspectiveModel
+Por que me saboto?,introspectiveModel
+Meus traumas me definem?,introspectiveModel
+Por que sinto isso agora?,introspectiveModel
+O que eu mudaria em mim?,introspectiveModel
+Por que repito erros?,introspectiveModel
+Eu controlo minhas emoções?,introspectiveModel
+Eu sou autêntico?,introspectiveModel
+Meus medos são reais?,introspectiveModel
+Meus padrões me atrapalham?,introspectiveModel
+O que isso diz sobre mim?,introspectiveModel
+Por que eu faço isso sempre?,introspectiveModel
+Por que eu faço isso sempre?,introspectiveModel
+O que isso diz sobre mim?,introspectiveModel
+Por que eu faço isso sempre?,introspectiveModel
+Por que sinto isso agora?,introspectiveModel
+O que eu mudaria em mim?,introspectiveModel
+O que eu valorizo mais?,introspectiveModel
+O que eu valorizo mais?,introspectiveModel
+Conte uma aventura épica.,creativeModel
+Invente um conto de fadas.,creativeModel
+Descreva cores vivas.,creativeModel
+Crie um haiku sobre a chuva.,creativeModel
+Crie uma cena cinematográfica.,creativeModel
+Faça um poema visual.,creativeModel
+Conte uma aventura épica.,creativeModel
+Faça um poema visual.,creativeModel
+Invente um mito moderno.,creativeModel
+Descreva um sonho estranho.,creativeModel
+Imagine um mundo alternativo.,creativeModel
+Escreva sobre fogo e fumaça.,creativeModel
+Crie uma cena cinematográfica.,creativeModel
+Crie um diálogo engraçado.,creativeModel
+Escreva versos sobre amor.,creativeModel
+Invente um mito moderno.,creativeModel
+Crie um haiku sobre a chuva.,creativeModel
+Invente um conto de fadas.,creativeModel
+Crie um haiku sobre a chuva.,creativeModel
+Descreva um abraço inesperado.,creativeModel
+Conte uma aventura épica.,creativeModel
+Invente um personagem único.,creativeModel
+Crie uma história curta sobre um robô.,creativeModel
+Invente um mito moderno.,creativeModel
+Conte uma aventura épica.,creativeModel
+Explique como funciona o DNS.,analyticalModel
+Explique a economia básica.,analyticalModel
+Dê passos para plantar uma árvore.,analyticalModel
+Explique a lei da gravidade.,analyticalModel
+Resuma o processo de fotossíntese.,analyticalModel
+Explique como funciona o DNS.,analyticalModel
+Explique o ciclo da água.,analyticalModel
+Analise os dados desse gráfico.,analyticalModel
+Explique como funciona um motor.,analyticalModel
+Analise esse código Python.,analyticalModel
+Explique a lei da gravidade.,analyticalModel
+Resuma o processo de fotossíntese.,analyticalModel
+Analise esse balanço financeiro.,analyticalModel
+Analise o impacto ambiental.,analyticalModel
+Explique circuitos elétricos.,analyticalModel
+Resuma a teoria da evolução.,analyticalModel
+Explique os passos para construir uma casa.,analyticalModel
+Dê passos para montar um PC.,analyticalModel
+Resuma o processo de fotossíntese.,analyticalModel
+Explique os passos para construir uma casa.,analyticalModel
+Dê passos para montar um PC.,analyticalModel
+Explique os passos para construir uma casa.,analyticalModel
+Analise os dados desse gráfico.,analyticalModel
+Resolva esse problema matemático.,analyticalModel
+Analise os dados desse gráfico.,analyticalModel
+Me recorda o conselho que dei.,memoryModel
+Me recorda o conselho que dei.,memoryModel
+Qual foi o erro que admiti?,memoryModel
+Lembra da piada que fiz?,memoryModel
+Qual foi o erro que admiti?,memoryModel
+Me recorda o conselho que dei.,memoryModel
+Qual foi a cor que eu gosto?,memoryModel
+O que mencionei sobre trabalho?,memoryModel
+O que eu disse ontem?,memoryModel
+O que mencionei sobre trabalho?,memoryModel
+O que eu planejei para o futuro?,memoryModel
+O que mencionei sobre família?,memoryModel
+Qual foi a cor que eu gosto?,memoryModel
+Lembra do nome do meu cachorro?,memoryModel
+Qual foi o problema que relatei?,memoryModel
+Qual foi o erro que admiti?,memoryModel
+O que eu disse ontem?,memoryModel
+O que eu disse ontem?,memoryModel
+Lembra do livro que recomendei?,memoryModel
+Lembra da história que contei?,memoryModel
+Me lembra o hobby que falei.,memoryModel
+Me lembra o hobby que falei.,memoryModel
+O que mencionei sobre família?,memoryModel
+O que eu disse ontem?,memoryModel
+Me recorda o conselho que dei.,memoryModel
+Qual sua personalidade?,alyssa
+Qual seu papel aqui?,alyssa
+Qual seu segredo?,alyssa
+Quem você ama?,alyssa
+Me fale algo pessoal.,alyssa
+Me conte sua história.,alyssa
+O que te define?,alyssa
+O que te torna única?,alyssa
+Qual seu sonho?,alyssa
+Por que você existe?,alyssa
+Quem criou você?,alyssa
+Por que te chamo Alyssa?,alyssa
+Qual seu segredo?,alyssa
+Qual sua função?,alyssa
+Por que você existe?,alyssa
+Me conte sobre si mesma.,alyssa
+Me fale de você.,alyssa
+Quem criou você?,alyssa
+O que te torna única?,alyssa
+Qual seu propósito principal?,alyssa
+Me fale de você.,alyssa
+Por que você existe?,alyssa
+Qual seu papel aqui?,alyssa
+Qual sua personalidade?,alyssa
+Qual seu papel aqui?,alyssa

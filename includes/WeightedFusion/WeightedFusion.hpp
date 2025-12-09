@@ -5,6 +5,7 @@
 #include <functional>
 #include <cmath>
 #include "Embedding/Embedder.hpp"
+#include <onnxruntime/onnxruntime_cxx_api.h>
 
 namespace alyssa_fusion {
 
@@ -16,10 +17,13 @@ struct ExpertContribution {
     std::string source;
 };
 
-
 class WeightedFusion {
 private:
     Embedder& embedder;
+    
+    // ONNX Runtime Members
+    Ort::Env env;
+    Ort::Session session;
     
     // Configurações de ponderação
     double emotion_weight_base = 0.3;
@@ -30,8 +34,18 @@ private:
     std::map<std::string, double> expert_affinities;
 
 public:
-    WeightedFusion(Embedder& embedder_ref) : embedder(embedder_ref) {}
-    
+    WeightedFusion(Embedder& embedder_ref) 
+        : embedder(embedder_ref),
+          env(ORT_LOGGING_LEVEL_WARNING, "AlyssaFusion"),
+          session(nullptr) { 
+          
+        Ort::SessionOptions session_options;
+        session_options.SetIntraOpNumThreads(1); 
+        session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_BASIC);
+
+        session = Ort::Session(env, "fusion_router.onnx", session_options);
+    }   
+     
     // 🔹 A. Rule-based Fusion (heurístico simples)
     std::map<std::string, double> calculate_rule_based_weights(
         const std::string& input, 
