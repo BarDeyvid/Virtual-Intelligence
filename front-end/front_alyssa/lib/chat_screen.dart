@@ -27,7 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   late ThemeNotifier _themeNotifier;
 
   // Maintain a conversation history
-  List<String> _conversationHistory = [];
+  final List<String> _conversationHistory = [];
 
   @override
   void initState() {
