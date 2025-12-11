@@ -423,7 +423,7 @@ std::string CoreIntegration::think(const std::string& input, ElevenLabsTTS& tts)
 
 
 // =========================================================================
-// 🛠️ Método run_expert (O novo centro lógico)
+// Método run_expert
 // =========================================================================
 
 std::string CoreIntegration::run_expert(const std::string& expert_id, 
@@ -458,7 +458,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         history.clear();
     }
 
-    // 4. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO (do especialista)
+    // 4. ADICIONA A NOVA MENSAGEM DO USUÁRIO AO HISTÓRICO
     std::string expert_input_with_role = "";
     if (!config.role_instruction.empty()) {
         expert_input_with_role = "[ROLE]: " + config.role_instruction + "\n" + input;
@@ -466,16 +466,24 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         expert_input_with_role = input;
     }
 
-    history.push_back({"user", strdup(expert_input_with_role.c_str())}); // <--- ALTERADO
+    history.push_back({"user", strdup(expert_input_with_role.c_str())});
 
-    // 5. MONTA O TEMPLATE (Corrigindo o bug do AlyssaLLM.hpp)
+    // 5. MONTA O TEMPLATE
     std::vector<llama_chat_message> messages_to_template;
-    int system_prompt_index = -1; // <--- NOVO: Armazena o índice do system prompt
+    int system_prompt_index = -1;
     
-    // Adiciona o System Prompt (temporariamente)
-    if (!config.system_prompt.empty()) {
-        system_prompt_index = messages_to_template.size(); // O system será o primeiro/único neste momento
-        messages_to_template.push_back({"system", strdup(config.system_prompt.c_str())});
+    std::string external = pcmetrics.get_simple_metrics_text();
+    
+    // Combinar system_prompt com métricas
+    std::string combined_system_prompt = config.system_prompt;
+    if (!external.empty()) {
+        combined_system_prompt += "\n[CONTEXTO DO SISTEMA - MÉTRICAS DO PC]:\n" + external;
+    }
+    
+    // Adiciona o System Prompt COM MÉTRICAS
+    if (!combined_system_prompt.empty()) {
+        system_prompt_index = messages_to_template.size();
+        messages_to_template.push_back({"system", strdup(combined_system_prompt.c_str())});
     }
     
     // Adiciona o histórico da conversa
@@ -509,7 +517,6 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     }
     
     std::string prompt(formatted.begin(), formatted.begin() + len);
-    std::string external = pcmetrics.get_simple_metrics_text();
 
     std::string sentence_buffer;
     if (use_tts) {
@@ -536,7 +543,6 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         // 7. CHAMA A GERAÇÃO DE BAIXO NÍVEL (com o callback)
         std::string response = core_instance->generate_raw(
             prompt,
-            external,
             config.params, 
             lora, 
             stream_callback // <--- PASSA O CALLBACK
@@ -557,7 +563,6 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     } else {
         std::string response = core_instance->generate_raw(
             prompt,
-            external, 
             config.params, 
             lora, 
             nullptr
