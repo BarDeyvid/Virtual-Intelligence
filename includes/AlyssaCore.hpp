@@ -149,12 +149,25 @@ namespace alyssa_core {
 
         // Lógica de geração movida para cá
         std::string generate_raw(
-            const std::string & prompt, 
+            const std::string & input,
+            const std::optional<std::string> & external,
             const SimpleModelParameters& params,
             llama_adapter_lora* lora, // LoRA a ser aplicado
             std::function<void(const std::string& piece)> stream_callback
         ) {
+
             std::string response;
+            std::string prompt;
+            int n_prompt_tokens_total;
+
+            if (external) {
+                prompt = input + external.value_or("");
+            } else {
+                prompt = input;
+            }
+
+            std::string prompt_limpo = prompt;
+            prompt_limpo.erase(std::remove(prompt_limpo.begin(), prompt_limpo.end(), '\0'), prompt_limpo.end());
 
             bool usa_LoRA = false;
             std::string lora_path = "";
@@ -199,12 +212,25 @@ namespace alyssa_core {
             // 4. Obtém o número de tokens que JÁ ESTÃO no KV cache.
             const int n_cached = is_first_run ? 0 : llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
 
+            // std::cout << "DEBUG: Prompt a ser tokenizado: " << prompt << std::endl;
+
             // 5. Tokeniza o prompt COMPLETO
-            const int n_prompt_tokens_total = -llama_tokenize(
-                vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first_run, true
+            n_prompt_tokens_total = llama_tokenize( 
+                vocab, prompt_limpo.c_str(), prompt_limpo.size(), NULL, 0, is_first_run, true
             );
+
+            // Inverte o sinal para obter o número total de tokens (e.g., 168)
+            if (n_prompt_tokens_total < 0) {
+                n_prompt_tokens_total = -n_prompt_tokens_total;
+            } else if (n_prompt_tokens_total == 0) {
+                // Se o prompt for vazio após a limpeza
+                return ""; 
+            }
+
+            // std::cout << "DEBUG: n_prompt_tokens_total = " << n_prompt_tokens_total << std::endl;
+
             std::vector<llama_token> prompt_tokens(n_prompt_tokens_total);
-            if (llama_tokenize(vocab, prompt.c_str(), prompt.size(),
+            if (llama_tokenize(vocab, prompt.c_str(), prompt_limpo.size(),
                             prompt_tokens.data(), prompt_tokens.size(),
                             is_first_run, true) < 0) {
                 throw std::runtime_error("Falha ao tokenizar o prompt\n");
@@ -218,7 +244,7 @@ namespace alyssa_core {
                 std::cerr << "AVISO: Detectada dessincronização do KV Cache. Limpando cache." << std::endl;
                 llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1); // Limpa tudo
                 // E tentamos novamente como se fosse a primeira vez
-                return generate_raw(prompt, params, lora, nullptr);
+                return generate_raw(prompt_limpo, external, params, lora, nullptr);
             }
 
             // 7. Prepara um batch APENAS com os tokens NOVOS

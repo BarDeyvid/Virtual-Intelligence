@@ -136,47 +136,57 @@ public:
     }
 
     /**
-     * @brief Novo método para compilar todas as métricas em um objeto JSON.
-     * @return Uma string JSON serializada com todas as métricas.
+     * @brief Novo método para compilar todas as métricas em um objeto.
+     * @return Uma string com todas as métricas.
      */
-    std::string get_all_metrics_json() {
-        json j;
-        
+    std::string get_simple_metrics_text() {
         float cpu_usage = get_cpu_usage();
-        j["cpu_usage_percent"] = (cpu_usage != 0.0f) ? std::round(cpu_usage * 10) / 10.0f : -1.0f;
+        float cpu_usage_rounded = (cpu_usage != 0.0f) ? std::round(cpu_usage * 10) / 10.0f : -1.0f;
 
         float cpu_temp = get_cpu_temp();
-        j["cpu_temp_celsius"] = std::round(cpu_temp * 10) / 10.0f;
+        float cpu_temp_rounded = std::round(cpu_temp * 10) / 10.0f;
 
         float ram_usage = get_ram_usage();
-        j["ram_usage_percent"] = std::round(ram_usage * 10) / 10.0f;
-        
+        float ram_usage_rounded = std::round(ram_usage * 10) / 10.0f;
+
         std::string sensor_data = execute_command("sensors");
         float nvme_temp = extract_temperature(sensor_data, "Composite");
-        j["nvme_temp_celsius"] = std::round(nvme_temp * 10) / 10.0f;
+        float nvme_temp_rounded = std::round(nvme_temp * 10) / 10.0f;
 
-        return j.dump(4);
-    }
+        std::stringstream ss;
+        ss << "\n[DADOS DO AMBIENTE]";
+        
+        float temp_media = (cpu_temp_rounded + nvme_temp_rounded) / 2.0f;
+        float uso_medio = (cpu_usage_rounded + ram_usage_rounded) / 2.0f;
+
+        ss << "\n- Temperatura média do hardware: " << temp_media << " °C";
+        ss << "\n- Uso médio de recursos (CPU/RAM): " << uso_medio << " %";
+        ss << "\n[FIM DADOS DO AMBIENTE]\n";
+
+        return ss.str();
+    };
 };
 
 /**
  * @brief Função principal para inicializar e coletar as métricas em JSON.
  */
-int main() {
+/** 
+ int ReaderShowOff() {
     PCMetricsReader reader;
     
     reader.get_cpu_usage(); 
     std::cout << "--- Inicialização: Coletando Primeiro Estado da CPU ---" << std::endl;
-
+    
     usleep(1000000);
     
     std::cout << "--- Coleta Finalizada ---" << std::endl;
     
     std::string json_data = reader.get_all_metrics_json();
-
+    
     std::cout << "\n--- JSON de Métricas ---" << std::endl;
     std::cout << json_data << std::endl;
     std::cout << "------------------------" << std::endl;
     
     return 0;
 }
+**/

@@ -91,6 +91,7 @@ set(TEST_API_SOURCES
     includes/AlyssaMemoryHandler.cpp
     includes/Embedding/Embedder.cpp
     includes/WeightedFusion/WeightedFusion.cpp
+    includes/pc_metrics_reader.cpp
     includes/voice/ElevenLabsTTS.cpp
     includes/voice/VoicePipeline.cpp
     includes/log.cpp
@@ -169,10 +170,10 @@ foreach(TARGET test_main_cli test_main_whisper test_api)
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/config
             ${CMAKE_BINARY_DIR}/config
-        COMMAND ${CMAKE_COMMAND} -E copy
+        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
             ${CMAKE_SOURCE_DIR}/fusion_router.onnx
             ${CMAKE_BINARY_DIR}/fusion_router.onnx
-        COMMAND ${CMAKE_COMMAND} -E copy
+        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
             ${CMAKE_SOURCE_DIR}/fusion_router.onnx.data
             ${CMAKE_BINARY_DIR}/fusion_router.onnx.data
         COMMENT "Copying models and config directories to build folder"

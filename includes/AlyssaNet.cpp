@@ -5,6 +5,7 @@
 #include "voice/ElevenLabsTTS.hpp"
 #include "log.hpp"
 #include <string.h>
+#include "pc_metrics_reader.cpp"
 
 using namespace alyssa_core;
 logging::Logger logg;
@@ -74,8 +75,9 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
         
         // 4. Passe o MESMO Embedder para o Memory Manager
-        memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", embedder);
-
+        memory_manager = std::make_unique<AlyssaMemoryManager>("../alyssa_advanced_memory.db", embedder);
+        std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
+        
         llama_model* shared_model = core_instance->get_model();
 
         // 4. Carrega TODAS as configurações dos especialistas
@@ -105,10 +107,6 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
                 lora_cache[cfg.id] = nullptr;
             }
         }
-
-        // (A inicialização da LTM foi movida para o topo)
-        // memory_manager = std::make_unique<AlyssaMemoryManager>("alyssa_advanced_memory.db", true);
-        // std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
 
         initialized = true;
         std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
@@ -437,6 +435,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     if (expert_configs.find(expert_id) == expert_configs.end()) {
         throw std::runtime_error("Especialista desconhecido: " + expert_id);
     }
+    PCMetricsReader pcmetrics;
 
     // 2. PEGA A CONFIG, HISTÓRICO E LORA
     SimpleModelConfig& config = expert_configs.at(expert_id);
@@ -510,6 +509,7 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
     }
     
     std::string prompt(formatted.begin(), formatted.begin() + len);
+    std::string external = pcmetrics.get_simple_metrics_text();
 
     std::string sentence_buffer;
     if (use_tts) {
@@ -535,7 +535,8 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         };
         // 7. CHAMA A GERAÇÃO DE BAIXO NÍVEL (com o callback)
         std::string response = core_instance->generate_raw(
-            prompt, 
+            prompt,
+            external,
             config.params, 
             lora, 
             stream_callback // <--- PASSA O CALLBACK
@@ -555,7 +556,8 @@ std::string CoreIntegration::run_expert(const std::string& expert_id,
         return response;
     } else {
         std::string response = core_instance->generate_raw(
-            prompt, 
+            prompt,
+            external, 
             config.params, 
             lora, 
             nullptr

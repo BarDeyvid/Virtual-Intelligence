@@ -24,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _apiConnected = false;
   bool _checkingConnection = true;
 
+  // ignore: unused_field
   late ThemeNotifier _themeNotifier;
 
   // Maintain a conversation history
