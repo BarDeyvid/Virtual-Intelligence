@@ -2,7 +2,6 @@
 #include <iostream>
 #include <numeric> // Para std::inner_product
 #include <cmath>   // Para std::sqrt
-#pragma warning(disable: 4244 4267 4100 4458 4966 4018 4127)
 
 // --- Construtor e Destrutor ---
 
