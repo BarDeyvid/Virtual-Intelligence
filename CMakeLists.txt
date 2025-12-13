@@ -67,6 +67,8 @@ include_directories(
 set(TEST_MAIN_CLI_SOURCES
     test_main_cli.cpp
     includes/AlyssaNet.cpp
+    includes/ExpertBase.hpp
+    includes/IExpert.hpp
     includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
     includes/Embedding/Embedder.cpp
