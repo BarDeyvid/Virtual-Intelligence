@@ -1,34 +1,6 @@
 // AlyssaMemoryHandler.cpp 
 #include <AlyssaMemoryHandler.hpp> 
-#include "Embedding/Embedder.hpp"            
-#include <filesystem>
-#include <sqlite3.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <cstring>
-#include <vector>
-#include <string>
-#include <random>
-#include <chrono>
-#include <cmath>
-#include <stdexcept>
-#include <algorithm>
-#include <map>
-#include <unordered_map>
-#include <memory>
-#include <ctime>
-#include <curl/curl.h>
-#include <thread>
-#include <chrono>
-#include <cstdlib>
-#include <filesystem>
-#include <regex>
-#include <unordered_map>
-#include <numeric>
-#include "json.hpp"
-using json = nlohmann::json;
-namespace fs = std::filesystem;
+#include "Embedding/Embedder.hpp"
 
 // ============================================================================
 // Implementações das Estruturas
