@@ -7,6 +7,17 @@
 #include <portaudio.h>
 #include <iostream>
 #include <stdexcept>
+#include <curl/curl.h>
+#include <sstream>
+#include <thread>
+#include <chrono>
+#include <cstring>
+#include "json.hpp"
+#include <iostream>
+#include <stdexcept>
+#include <fstream>
+#include <cstdio>
+#include <functional>
 
 extern "C" {
     #include <libavcodec/avcodec.h>
