@@ -1,0 +1,175 @@
+#pragma once
+#include "IExpert.hpp"
+#include "AlyssaMemoryHandler.hpp"
+#include "pc_metrics_reader.cpp"
+#include <memory>
+
+namespace alyssa_experts {
+    class ExpertBase : public IExpert {
+    protected:
+        SimpleModelConfig config;
+        std::vector<llama_chat_message> history;
+        llama_adapter_lora* lora;
+        std::string expert_id;
+        std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager;
+
+    public:
+        ExpertBase(const SimpleModelConfig& cfg) 
+            : config(cfg), lora(nullptr), expert_id(cfg.id) 
+        {
+            memory_manager = std::make_unique<alyssa_memory::AlyssaMemoryManager>(
+                "../alyssa_advanced_memory.db", nullptr);
+        }
+        
+        ~ExpertBase() override {
+            clear_history();
+            if (lora) {
+                llama_adapter_lora_free(lora);
+            }
+        }
+
+        const std::string& get_id() const override { return expert_id; }
+        const SimpleModelConfig& get_config() const override { return config; }
+        const std::vector<llama_chat_message>& get_history() const override { return history; }
+        
+        void clear_history() override {
+            for (auto& msg : history) {
+                free((char*)msg.content);
+            }
+            history.clear();
+        }
+
+        bool initialize(llama_model* shared_model) override {
+            if (config.usa_LoRA && !config.lora_path.empty()) {
+                lora = llama_adapter_lora_init(shared_model, config.lora_path.c_str());
+                if (!lora) {
+                    std::cerr << "Falha ao carregar LoRA: " << config.lora_path << std::endl;
+                    return false;
+                }
+                std::cout << "LoRA carregado para " << expert_id << ": " << config.lora_path << std::endl;
+            }
+            return true;
+        }
+
+        std::string run(
+            const std::string& input,
+            alyssa_core::AlyssaCore* core_instance,
+            llama_adapter_lora* lora_override,
+            std::vector<llama_chat_message>& current_history,
+            llama_adapter_lora** active_lora_in_context,
+            std::function<void(const std::string&)> stream_callback = nullptr
+        ) override {
+            PCMetricsReader pcmetrics;
+
+            // 1. Adiciona mensagem do usuário ao histórico
+            std::string expert_input_with_role = "";
+            if (!config.role_instruction.empty()) {
+                expert_input_with_role = "[ROLE]: " + config.role_instruction + "\n" + input;
+            } else {
+                expert_input_with_role = input;
+            }
+            
+            current_history.push_back({"user", strdup(expert_input_with_role.c_str())});
+
+            // 2. Monta template com métricas do sistema
+            std::vector<llama_chat_message> messages_to_template;
+            int system_prompt_index = -1;
+            
+            std::string external = pcmetrics.get_simple_metrics_text();
+            std::string combined_system_prompt = config.system_prompt;
+            
+            if (!external.empty()) {
+                combined_system_prompt += "\n[CONTEXTO DO SISTEMA - MÉTRICAS DO PC]:\n" + external;
+            }
+            
+            if (!combined_system_prompt.empty()) {
+                system_prompt_index = messages_to_template.size();
+                messages_to_template.push_back({"system", strdup(combined_system_prompt.c_str())});
+            }
+            
+            messages_to_template.insert(messages_to_template.end(), 
+                                      current_history.begin(), current_history.end());
+
+            // 3. Aplica template
+            std::vector<char> formatted(core_instance->get_n_ctx());
+            const char* tmpl = llama_model_chat_template(core_instance->get_model(), nullptr);
+
+            int len = llama_chat_apply_template(
+                tmpl, messages_to_template.data(), messages_to_template.size(), 
+                true, formatted.data(), formatted.size()
+            );
+
+            // Limpa alocação do system prompt
+            if (system_prompt_index != -1) {
+                free((char*)messages_to_template[system_prompt_index].content);
+            }
+
+            if (len < 0) {
+                return "Erro ao processar template de conversa.";
+            }
+            if (len > (int)formatted.size()) {
+                formatted.resize(len);
+                len = llama_chat_apply_template(
+                    tmpl, messages_to_template.data(), messages_to_template.size(),
+                    true, formatted.data(), formatted.size()
+                );
+            }
+
+            std::string prompt(formatted.begin(), formatted.begin() + len);
+
+            // 4. Executa geração
+            llama_adapter_lora* final_lora = (lora_override != nullptr) ? lora_override : lora;
+            
+            std::string response = core_instance->generate_raw(
+                prompt,
+                config.params,
+                final_lora,
+                stream_callback
+            );
+
+            // 5. Adiciona resposta ao histórico
+            current_history.push_back({"assistant", strdup(response.c_str())});
+
+            return response;
+        }
+
+        alyssa_fusion::ExpertContribution get_contribution(
+            const std::string& input,
+            alyssa_core::AlyssaCore* core_instance,
+            std::shared_ptr<Embedder> embedder,
+            llama_adapter_lora* lora_override,
+            std::vector<llama_chat_message>& current_history,
+            llama_adapter_lora** active_lora_in_context,
+            std::function<void(const std::string&)> stream_callback = nullptr
+        ) override {
+            alyssa_fusion::ExpertContribution contrib;
+            contrib.expert_id = expert_id;
+            
+            // Executa geração
+            contrib.response = run(input, core_instance, lora_override, 
+                                 current_history, active_lora_in_context, stream_callback);
+
+            // Determina fonte baseada no tipo de especialista
+            if (expert_id == "emotionalModel" || expert_id == "introspectiveModel" || 
+                expert_id == "socialModel") {
+                contrib.source = "subconscious";
+            } else if (expert_id == "memoryModel") {
+                contrib.source = "memory";
+            } else {
+                contrib.source = "Deyvid";
+            }
+
+            // Calcula embedding se disponível
+            if (embedder) {
+                try {
+                    contrib.embedding = embedder->generate_embedding(contrib.response);
+                } catch (const std::exception& e) {
+                    std::cerr << "Erro ao calcular embedding para " << expert_id 
+                              << ": " << e.what() << std::endl;
+                }
+            }
+            
+            return contrib;
+        }
+    };
+}
