@@ -1,9 +1,4 @@
-// AlyssaMemoryHandler.cpp
-#define NOMINMAX
-
-// FIX 2: Enables non-standard math constants like M_PI on MSVC (ADD THIS)
-#define _USE_MATH_DEFINES
-
+// AlyssaMemoryHandler.cpp 
 #include <AlyssaMemoryHandler.hpp> 
 #include "Embedding/Embedder.hpp"            
 #include <filesystem>
