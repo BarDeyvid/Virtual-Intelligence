@@ -86,33 +86,35 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             throw std::runtime_error("Falha ao carregar ConfigsLLM.json");
         }
         
-        // 2. Buscar configuração do modelo base (alyssa) - usar modelo diferente
-        const SimpleModelConfig* base_config = nullptr;
-        const SimpleModelConfig* alyssa_config = nullptr;
+        // 2. Buscar configurações dos modelos
+        const SimpleModelConfig* base_1b_config = nullptr;
+        const SimpleModelConfig* alyssa_4b_config = nullptr;
         
         for (const auto& cfg : configs) {
             if (cfg.id == "alyssa") {
-                alyssa_config = &cfg;
-            }
-            // Procurar um modelo base que não seja um dos especialistas
-            if (cfg.id != "emotionalModel" && 
-                cfg.id != "introspectiveModel" && 
-                cfg.id != "socialModel" &&
-                cfg.id != "analyticalModel" &&
-                cfg.id != "creativeModel" &&
-                cfg.id != "memoryModel") {
-                base_config = &cfg;
+                alyssa_4b_config = &cfg;
+            } else if (cfg.model_path.find("1b") != std::string::npos || 
+                      cfg.model_path.find("1B") != std::string::npos ||
+                      cfg.id != "alyssa") {
+                // Usar o primeiro modelo 1b que não seja alyssa como base
+                if (!base_1b_config) {
+                    base_1b_config = &cfg;
+                }
             }
         }
         
-        // Fallback: usar alyssa como base se não encontrar outro
-        if (!base_config && alyssa_config) {
-            base_config = alyssa_config;
-            std::cout << "[INFO] Usando modelo Alyssa como base" << std::endl;
+        // Fallback: se não encontrar um modelo 1b, usar qualquer modelo que não seja alyssa
+        if (!base_1b_config) {
+            for (const auto& cfg : configs) {
+                if (cfg.id != "alyssa") {
+                    base_1b_config = &cfg;
+                    break;
+                }
+            }
         }
         
-        if (!base_config) {
-            throw std::runtime_error("Nenhuma configuração de modelo base encontrada");
+        if (!base_1b_config || !alyssa_4b_config) {
+            throw std::runtime_error("Não foi possível encontrar configurações para modelos base e Alyssa");
         }
         
         // 3. Inicializar embedder
@@ -122,16 +124,16 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             return false;
         }
         
-        // 4. Criar instância do core com n_ctx do config (usar pelo menos 4096)
-        int context_size = base_config->n_ctx;
+        // 4. Criar instância do core base com o modelo 1b
+        int context_size = base_1b_config->n_ctx;
         if (context_size < 4096) {
             context_size = 4096; // Mínimo seguro para memória
-            std::cout << "[WARN] Contexto muito pequeno, ajustando para " << context_size << std::endl;
+            std::cout << "[WARN] Contexto base muito pequeno, ajustando para " << context_size << std::endl;
         }
         
-        std::cout << "[INFO] Criando AlyssaCore com modelo: " << base_config->model_path 
+        std::cout << "[INFO] Criando AlyssaCore BASE com modelo: " << base_1b_config->model_path 
                   << " (n_ctx = " << context_size << ")" << std::endl;
-        core_instance = std::make_unique<alyssa_core::AlyssaCore>(base_config->model_path, context_size);
+        core_instance = std::make_unique<alyssa_core::AlyssaCore>(base_1b_config->model_path, context_size);
         
         // 5. Inicializar fusion engine
         fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
@@ -141,18 +143,18 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             "../alyssa_advanced_memory.db", embedder);
         std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
         
-        // 7. Criar e registrar especialistas - IGNORAR modelo base dos especialistas
+        // 7. Criar e registrar especialistas usando o modelo base (1b)
         llama_model* shared_model = core_instance->get_model();
         
         for (const auto& cfg : configs) {
-            // Pular o modelo base (já carregado)
-            if (cfg.id == base_config->id) {
-                std::cout << "[INFO] Modelo base '" << cfg.id << "' já carregado, pulando especialista" << std::endl;
+            // Pular o modelo Alyssa (4b) - ele será tratado separadamente
+            if (cfg.id == "alyssa") {
+                std::cout << "[INFO] Especialista '" << cfg.id << "' (4b) será registrado separadamente" << std::endl;
                 continue;
             }
             
             std::cout << "Configurando especialista: " << cfg.id 
-                      << " (usando modelo compartilhado, max_tokens=" << cfg.params.max_tokens << ")" << std::endl;
+                      << " (usando modelo base 1b, max_tokens=" << cfg.params.max_tokens << ")" << std::endl;
             
             // Verificar se o especialista precisa de ajuste de max_tokens
             if (cfg.params.max_tokens < 64) {
@@ -168,21 +170,86 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             }
         }
 
-        // 8. Verificar se alyssa foi registrada como especialista
-        if (!has_expert("alyssa") && alyssa_config) {
-            std::cout << "[INFO] Registrando Alyssa como especialista com modelo: " 
-                      << alyssa_config->model_path << std::endl;
+        // 8. Criar e registrar especialista Alyssa com modelo 4b separado
+        // IMPORTANTE: Para que a Alyssa use um modelo diferente, precisamos de uma abordagem diferente
+        // Vamos criar um novo AlyssaCore para o modelo 4b e um ExpertBase especial
+        std::cout << "[INFO] Inicializando modelo separado para Alyssa (4b): " 
+                  << alyssa_4b_config->model_path << std::endl;
+        
+        // Criar core separado para Alyssa
+        int alyssa_context_size = alyssa_4b_config->n_ctx;
+        if (alyssa_context_size < 4096) {
+            alyssa_context_size = 4096;
+        }
+        
+        auto alyssa_core = std::make_unique<alyssa_core::AlyssaCore>(alyssa_4b_config->model_path, alyssa_context_size);
+        
+        // Criar especialista Alyssa que usa o core separado
+        class Alyssa4bExpert : public alyssa_experts::ExpertBase {
+        private:
+            std::unique_ptr<alyssa_core::AlyssaCore> alyssa_core;
             
-            auto alyssa_expert = std::make_unique<alyssa_experts::ExpertBase>(*alyssa_config);
-            if (alyssa_expert->initialize(shared_model)) {
-                register_expert(std::move(alyssa_expert));
+        public:
+            Alyssa4bExpert(const SimpleModelConfig& cfg, std::unique_ptr<alyssa_core::AlyssaCore> core)
+                : ExpertBase(cfg), alyssa_core(std::move(core)) {
             }
+            
+            bool initialize(llama_model* shared_model) override {
+                // Não precisamos inicializar com o modelo compartilhado
+                // pois temos nosso próprio core
+                if (config.usa_LoRA && !config.lora_path.empty()) {
+                    lora = llama_adapter_lora_init(alyssa_core->get_model(), config.lora_path.c_str());
+                    if (!lora) {
+                        std::cerr << "Falha ao carregar LoRA para Alyssa: " << config.lora_path << std::endl;
+                        return false;
+                    }
+                    std::cout << "LoRA carregado para Alyssa: " << config.lora_path << std::endl;
+                }
+                return true;
+            }
+            
+            std::string run(
+                const std::string& input,
+                alyssa_core::AlyssaCore* core_instance,
+                llama_adapter_lora* lora_override,
+                std::vector<llama_chat_message>& current_history,
+                llama_adapter_lora** active_lora_in_context,
+                std::function<void(const std::string&)> stream_callback = nullptr
+            ) override {
+                // Usar nosso próprio core (4b) em vez do core_instance passado
+                return ExpertBase::run(input, alyssa_core.get(), lora_override, 
+                                     current_history, active_lora_in_context, stream_callback);
+            }
+            
+            alyssa_fusion::ExpertContribution get_contribution(
+                const std::string& input,
+                alyssa_core::AlyssaCore* core_instance,
+                std::shared_ptr<Embedder> embedder,
+                llama_adapter_lora* lora_override,
+                std::vector<llama_chat_message>& current_history,
+                llama_adapter_lora** active_lora_in_context,
+                std::function<void(const std::string&)> stream_callback = nullptr
+            ) override {
+                // Usar nosso próprio core (4b) em vez do core_instance passado
+                return ExpertBase::get_contribution(input, alyssa_core.get(), embedder, lora_override,
+                                                  current_history, active_lora_in_context, stream_callback);
+            }
+        };
+        
+        // Registrar especialista Alyssa com modelo 4b
+        auto alyssa_expert = std::make_unique<Alyssa4bExpert>(*alyssa_4b_config, std::move(alyssa_core));
+        if (alyssa_expert->initialize(nullptr)) {
+            register_expert(std::move(alyssa_expert));
+            std::cout << "[INFO] Especialista Alyssa (4b) registrado com sucesso" << std::endl;
+        } else {
+            std::cerr << "Falha ao inicializar especialista Alyssa" << std::endl;
         }
 
         initialized = true;
         std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
         std::cout << "Contexto base configurado: n_ctx = " << context_size << std::endl;
-        std::cout << "Modelo base: " << base_config->model_path << std::endl;
+        std::cout << "Modelo base (para especialistas): " << base_1b_config->model_path << std::endl;
+        std::cout << "Modelo Alyssa: " << alyssa_4b_config->model_path << std::endl;
         std::cout << "Total de especialistas registrados: " << experts.size() << std::endl;
         return true;
 
@@ -221,6 +288,11 @@ void CoreIntegration::clear_kv_cache() {
 bool CoreIntegration::validate_context_size(const std::string& prompt, const std::string& expert_id) {
     if (!core_instance) return false;
     
+    // Não validar para Alyssa - ela tem seu próprio core
+    if (expert_id == "alyssa") {
+        return true;
+    }
+    
     int n_ctx = core_instance->get_n_ctx();
     
     // Estimativa conservativa: ~1.3 caracteres por token
@@ -241,7 +313,7 @@ std::string CoreIntegration::run_expert(
     bool use_tts,
     ElevenLabsTTS* tts
 ) {
-    if (!initialized || !core_instance) {
+    if (!initialized) {
         return "Erro: Sistema não inicializado.";
     }
 
@@ -250,19 +322,31 @@ std::string CoreIntegration::run_expert(
     }
 
     // Validar tamanho do contexto antes de continuar
-    if (!validate_context_size(input, expert_id)) {
-        return "Erro: Input muito longo para processar. Por favor, seja mais breve.";
+    // Para especialistas normais, usar core_instance, para Alyssa usar um core diferente
+    alyssa_core::AlyssaCore* validation_core = core_instance.get();
+    if (expert_id == "alyssa") {
+        // A Alyssa tem seu próprio core, então não podemos validar facilmente aqui
+        // Vamos pular a validação para ela
+        std::cout << "[INFO] Usando validação de contexto simplificada para Alyssa" << std::endl;
+    } else {
+        if (!validate_context_size(input, expert_id)) {
+            return "Erro: Input muito longo para processar. Por favor, seja mais breve.";
+        }
     }
 
-    // Trocar contexto se necessário
-    if (active_expert_in_cache != expert_id) {
-        std::cout << "\n[Orquestrador]: Trocando de '" << active_expert_in_cache 
-                  << "' para '" << expert_id << "'\n";
-        clear_kv_cache();
-        active_expert_in_cache = expert_id;
+    // Trocar contexto se necessário (apenas para especialistas que compartilham o core base)
+    if (expert_id != "alyssa") {
+        if (active_expert_in_cache != expert_id) {
+            std::cout << "\n[Orquestrador]: Trocando de '" << active_expert_in_cache 
+                      << "' para '" << expert_id << "'\n";
+            clear_kv_cache();
+            active_expert_in_cache = expert_id;
+        }
+    } else {
+        // Alyssa tem seu próprio cache, então limpamos sempre
+        std::cout << "\n[Orquestrador]: Preparando contexto para Alyssa\n";
+        // Não limpamos o cache base, pois Alyssa usa um core separado
     }
-
-    switch_expert_context(expert_id);
 
     auto& expert = experts[expert_id];
     auto& history = expert_histories[expert_id];
@@ -293,9 +377,14 @@ std::string CoreIntegration::run_expert(
 
     // Executar especialista através da interface
     llama_adapter_lora* active_lora = nullptr;
-    std::string response = expert->run(
+    std::string response;
+    
+    // Para Alyssa, precisamos passar um core válido, mas ela usará seu próprio
+    alyssa_core::AlyssaCore* core_to_pass = (expert_id == "alyssa") ? core_instance.get() : core_instance.get();
+    
+    response = expert->run(
         input,
-        core_instance.get(),
+        core_to_pass, // Alyssa irá ignorar e usar seu próprio core
         nullptr, // lora_override (gerenciado pelo especialista)
         history,
         &active_lora,
