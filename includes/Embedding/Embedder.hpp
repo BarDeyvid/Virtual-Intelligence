@@ -11,6 +11,8 @@
 #include <fstream>
 #include <memory>
 #include <filesystem>
+#include <thread>
+#include <cstring>
 #include "json.hpp"
 
 // Includes para llama.cpp

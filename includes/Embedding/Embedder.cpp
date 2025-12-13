@@ -1,9 +1,6 @@
 // Embedder.cpp
 #include "Embedding/Embedder.hpp"
-#include <thread>
-#include <cstring>
-#include <cmath>
-#pragma warning(disable: 4244 4267 4458)
+
 
 // Construtores e Destrutores
 Embedder::Embedder() {
