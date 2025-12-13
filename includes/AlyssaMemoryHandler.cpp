@@ -2,6 +2,8 @@
 #include <AlyssaMemoryHandler.hpp> 
 #include "Embedding/Embedder.hpp"
 
+using namespace alyssa_memory;
+
 // ============================================================================
 // Implementações das Estruturas
 // ============================================================================

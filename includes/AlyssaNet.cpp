@@ -75,7 +75,7 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
         
         // 4. Passe o MESMO Embedder para o Memory Manager
-        memory_manager = std::make_unique<AlyssaMemoryManager>("../alyssa_advanced_memory.db", embedder);
+        memory_manager = std::make_unique<alyssa_memory::AlyssaMemoryManager>("../alyssa_advanced_memory.db", embedder);
         std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
         
         llama_model* shared_model = core_instance->get_model();

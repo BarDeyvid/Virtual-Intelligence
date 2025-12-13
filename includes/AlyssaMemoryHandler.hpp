@@ -145,162 +145,164 @@ public:
     static double normalizeImportance(double raw_importance);
 };
 
-// ============================================================================
-// Classe AdvancedMemorySystem
-// ============================================================================
-
-/**
- * @brief Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional
- */
-class AdvancedMemorySystem {
-private:
-    sqlite3* db;
-    EmotionalState current_emotional_state;
-    std::vector<Intention> active_intentions;
-    std::map<std::string, double> emotion_weights;
-    std::shared_ptr<Embedder> embedder;
-    std::unique_ptr<EmotionalAnalyzer> emotional_analyzer;
+namespace alyssa_memory {
+    // ============================================================================
+    // Classe AdvancedMemorySystem
+    // ============================================================================
     
-    std::unordered_map<std::string, std::pair<std::string, std::string>> emotion_to_intention = {
-        {"tristeza", {"Refletir sobre sentimentos difíceis", "emocional"}},
-        {"alegria", {"Manter momentos positivos", "emocional"}},
-        {"raiva", {"Redirecionar frustrações", "emocional"}},
-        {"medo", {"Buscar segurança", "emocional"}},
-        {"surpresa", {"Explorar novidade", "emocional"}},
-        {"confiança", {"Apoiar outros", "emocional"}},
-        {"antecipacao", {"Planejar próximos passos", "planejamento"}}
-    };
-
-    void initializeDatabase();
-    void loadCurrentState();
-    void saveCurrentState();
-    void loadActiveIntentions();
-    void storeEmbedding(int memory_id, const std::vector<float>& embedding);
-    void checkEmotionalAutoActivation();
-    void saveReflection(int memory_id, const std::string& type, const std::string& content);
-    double calculateIntentionBoost(const std::string& content);
-    double calculateEmotionalBoost(const std::string& memory_emotion);
-    double calculateAutomaticImportance(const std::string& content, const EmotionalAnalysis& analysis);
-
-public:
-    // Estruturas para resultados de busca
-    struct ContextualMemory {
-        int id;
-        std::string content;
-        double relevance_score;
-        std::string emotion;
-    };
+    /**
+     * @brief Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional
+     */
+    class AdvancedMemorySystem {
+        private:
+        sqlite3* db;
+        EmotionalState current_emotional_state;
+        std::vector<Intention> active_intentions;
+        std::map<std::string, double> emotion_weights;
+        std::shared_ptr<Embedder> embedder;
+        std::unique_ptr<EmotionalAnalyzer> emotional_analyzer;
+        
+        std::unordered_map<std::string, std::pair<std::string, std::string>> emotion_to_intention = {
+            {"tristeza", {"Refletir sobre sentimentos difíceis", "emocional"}},
+            {"alegria", {"Manter momentos positivos", "emocional"}},
+            {"raiva", {"Redirecionar frustrações", "emocional"}},
+            {"medo", {"Buscar segurança", "emocional"}},
+            {"surpresa", {"Explorar novidade", "emocional"}},
+            {"confiança", {"Apoiar outros", "emocional"}},
+            {"antecipacao", {"Planejar próximos passos", "planejamento"}}
+        };
+        
+        void initializeDatabase();
+        void loadCurrentState();
+        void saveCurrentState();
+        void loadActiveIntentions();
+        void storeEmbedding(int memory_id, const std::vector<float>& embedding);
+        void checkEmotionalAutoActivation();
+        void saveReflection(int memory_id, const std::string& type, const std::string& content);
+        double calculateIntentionBoost(const std::string& content);
+        double calculateEmotionalBoost(const std::string& memory_emotion);
+        double calculateAutomaticImportance(const std::string& content, const EmotionalAnalysis& analysis);
+        
+        public:
+        // Estruturas para resultados de busca
+        struct ContextualMemory {
+            int id;
+            std::string content;
+            double relevance_score;
+            std::string emotion;
+        };
+        
+        struct SemanticMemory {
+            int memory_id;
+            std::string content;
+            double similarity_score;
+            std::string emotion;
+            double importance;
+        };
     
-    struct SemanticMemory {
-        int memory_id;
-        std::string content;
-        double similarity_score;
-        std::string emotion;
-        double importance;
-    };
-    
-    struct HybridMemoryResult {
-        int memory_id;
-        std::string content;
-        double text_score;
-        double semantic_score;
-        double combined_score;
-        std::string emotion;
-    };
-
-    AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);
-    ~AdvancedMemorySystem();
-
-    // Gerenciamento de estado emocional
-    void setEmotionalState(const std::string& emotion, double intensity);
-    EmotionalState getCurrentEmotionalState() const;
-    
-    void linkMemoryToIntention(int memory_id, int intention_id);
-
-    // Gerenciamento de memórias
-    int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context = "");
-    void applyMemoryDecay();
-    
-    // Sistema de intenções
-    void activateIntention(const std::string& description, const std::string& type, 
-                          const std::string& trigger = "", double motivation_boost = 0.0);
-    void deactivateIntention(int intention_id);
-    std::vector<Intention> getActiveIntentions() const;
-    
-    // Sistema de reflexões
-    void generateReflections();
-    
-    // Sistema de vínculos
-    void createMemoryLink(int source_id, int target_id, double weight = 1.0, 
-                         const std::string& link_type = "association");
-    std::vector<MemoryLink> getMemoryLinks(int memory_id);
-    
-    // Sistema de busca
-    std::vector<ContextualMemory> searchContextualMemories(const std::string& query, int top_k = 5);
-    std::vector<SemanticMemory> semanticSearch(const std::string& query, int top_k = 5);
-    std::vector<SemanticMemory> semanticSearchWithEmbedding(const std::vector<float>& query_embedding, int top_k = 5);
-    std::vector<HybridMemoryResult> hybridSearch(const std::string& query, int top_k = 5);
-    
-    // Sistema de embeddings
-    bool hasEmbedder() const;
-    bool generateAndStoreEmbedding(int memory_id, const std::string& content);
-    
-    // Análise emocional automática
-    EmotionalAnalysis analyzeEmotionalContent(const std::string& text);
-    EmotionalAnalysis analyzeConversationEmotions(const std::string& user_input, const std::string& ai_response);
-    std::vector<float> getAutoEmotionalVector(const std::string& text);
-    
-    // Monitoramento e debug
-    void printSystemStatus();
-    void demonstrateSemanticSearch(const std::string& query);
-};
-
-// ============================================================================
-// Classe AlyssaMemoryManager
-// ============================================================================
-
-/**
- * @brief Gerenciador de alto nível para integração com sistemas de IA conversacional
- */
-class AlyssaMemoryManager {
-private:
-    std::unique_ptr<AdvancedMemorySystem> memory_system;
-    
-    void printEmotionalAnalysis(const EmotionalAnalysis& analysis, const std::string& text);
-    void analyzeInputForIntentions(const std::string& input);
-
-public:
-    AlyssaMemoryManager(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);    
-    // Processamento de interações
-    void processInteraction(const std::string& user_input, const std::string& ai_response);
-    void processInteraction(const std::string& user_input, 
-                          const std::string& ai_response,
-                          const std::vector<float>& emotional_vector);
-    
-    // Sistema de recuperação
-    std::vector<AdvancedMemorySystem::ContextualMemory> getRelevantMemories(const std::string& context);
-    std::vector<AdvancedMemorySystem::SemanticMemory> getSemanticMemories(const std::string& context);
-    std::vector<AdvancedMemorySystem::HybridMemoryResult> getHybridMemories(const std::string& context);
-    
-    EmotionalState getCurrentEmotionalState() const;
-    std::vector<Intention> getActiveIntentions() const;
-
-    int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context);
-    void linkMemoryToIntention(int memory_id, int intention_id);
-
-    // Controle de objetivos
-    void setCurrentGoal(const std::string& goal, const std::string& type = "learning");
-    void processIdentityFact(const std::string& fact_value, const std::string& fact_type);
-};
-
-// ============================================================================
-// Constantes
-// ============================================================================
-
-constexpr int VTIME_DIM = 2;
-constexpr size_t MAX_TOKENS = 4096;
-constexpr double DECAY_PER_HOUR = 0.01;
-constexpr double MIN_IMPORTANCE = 0.3;
-constexpr double HARD_LOCK_IMPORTANCE = 0.9;
-
-#endif // ALYSSA_MEMORY_SYSTEM_HPP
+        struct HybridMemoryResult {
+            int memory_id;
+            std::string content;
+            double text_score;
+            double semantic_score;
+            double combined_score;
+            std::string emotion;
+        };
+        
+        AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);
+        ~AdvancedMemorySystem();
+        
+        // Gerenciamento de estado emocional
+        void setEmotionalState(const std::string& emotion, double intensity);
+        EmotionalState getCurrentEmotionalState() const;
+        
+        void linkMemoryToIntention(int memory_id, int intention_id);
+        
+        // Gerenciamento de memórias
+        int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context = "");
+        void applyMemoryDecay();
+        
+        // Sistema de intenções
+        void activateIntention(const std::string& description, const std::string& type, 
+            const std::string& trigger = "", double motivation_boost = 0.0);
+            void deactivateIntention(int intention_id);
+            std::vector<Intention> getActiveIntentions() const;
+            
+            // Sistema de reflexões
+            void generateReflections();
+            
+            // Sistema de vínculos
+            void createMemoryLink(int source_id, int target_id, double weight = 1.0, 
+                const std::string& link_type = "association");
+                std::vector<MemoryLink> getMemoryLinks(int memory_id);
+                
+                // Sistema de busca
+                std::vector<ContextualMemory> searchContextualMemories(const std::string& query, int top_k = 5);
+                std::vector<SemanticMemory> semanticSearch(const std::string& query, int top_k = 5);
+                std::vector<SemanticMemory> semanticSearchWithEmbedding(const std::vector<float>& query_embedding, int top_k = 5);
+                std::vector<HybridMemoryResult> hybridSearch(const std::string& query, int top_k = 5);
+                
+                // Sistema de embeddings
+                bool hasEmbedder() const;
+                bool generateAndStoreEmbedding(int memory_id, const std::string& content);
+                
+                // Análise emocional automática
+                EmotionalAnalysis analyzeEmotionalContent(const std::string& text);
+                EmotionalAnalysis analyzeConversationEmotions(const std::string& user_input, const std::string& ai_response);
+                std::vector<float> getAutoEmotionalVector(const std::string& text);
+                
+                // Monitoramento e debug
+                void printSystemStatus();
+                void demonstrateSemanticSearch(const std::string& query);
+            };
+            
+            // ============================================================================
+            // Classe AlyssaMemoryManager
+            // ============================================================================
+            
+            /**
+             * @brief Gerenciador de alto nível para integração com sistemas de IA conversacional
+             */
+            class AlyssaMemoryManager {
+                private:
+                std::unique_ptr<AdvancedMemorySystem> memory_system;
+                
+                void printEmotionalAnalysis(const EmotionalAnalysis& analysis, const std::string& text);
+                void analyzeInputForIntentions(const std::string& input);
+                
+                public:
+                AlyssaMemoryManager(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref);    
+                // Processamento de interações
+                void processInteraction(const std::string& user_input, const std::string& ai_response);
+                void processInteraction(const std::string& user_input, 
+                    const std::string& ai_response,
+                    const std::vector<float>& emotional_vector);
+                    
+                    // Sistema de recuperação
+                    std::vector<AdvancedMemorySystem::ContextualMemory> getRelevantMemories(const std::string& context);
+                    std::vector<AdvancedMemorySystem::SemanticMemory> getSemanticMemories(const std::string& context);
+                    std::vector<AdvancedMemorySystem::HybridMemoryResult> getHybridMemories(const std::string& context);
+                    
+                    EmotionalState getCurrentEmotionalState() const;
+                    std::vector<Intention> getActiveIntentions() const;
+                    
+                    int storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context);
+                    void linkMemoryToIntention(int memory_id, int intention_id);
+                    
+                    // Controle de objetivos
+                    void setCurrentGoal(const std::string& goal, const std::string& type = "learning");
+                    void processIdentityFact(const std::string& fact_value, const std::string& fact_type);
+                };
+                
+                // ============================================================================
+                // Constantes
+                // ============================================================================
+                
+                constexpr int VTIME_DIM = 2;
+                constexpr size_t MAX_TOKENS = 4096;
+                constexpr double DECAY_PER_HOUR = 0.01;
+                constexpr double MIN_IMPORTANCE = 0.3;
+                constexpr double HARD_LOCK_IMPORTANCE = 0.9;
+                
+                #endif // ALYSSA_MEMORY_SYSTEM_HPP
+}

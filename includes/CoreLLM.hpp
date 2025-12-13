@@ -6,13 +6,14 @@
 #include <map>
 #include <vector>
 
+
 class CoreIntegration {
 private:
     std::unique_ptr<alyssa_core::AlyssaCore> core_instance;
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;
     std::shared_ptr<Embedder> embedder;
 
-    std::unique_ptr<AlyssaMemoryManager> memory_manager;
+    std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager;
     
     // Mapas de configuração e estado
     std::map<std::string, SimpleModelConfig> expert_configs;
