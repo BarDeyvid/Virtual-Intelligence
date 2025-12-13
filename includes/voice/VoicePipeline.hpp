@@ -12,6 +12,9 @@
 #include <condition_variable>
 #include <queue>
 #include <chrono>
+#include <iostream>
+#include <numeric> // Para std::inner_product
+#include <cmath>   // Para std::sqrt
 
 // Define a 16kHz
 #define SAMPLE_RATE 16000
