@@ -89,6 +89,40 @@ struct EmotionalState {
     uint64_t timestamp;
     
     EmotionalState(const std::string& n = "neutral", double i = 0.5);
+    };
+    
+/**
+ * @brief Estrutura para ID's das memorias
+ */
+    
+struct MemoryId {
+    int value;
+    
+    explicit constexpr MemoryId(int v) : value(v) {}
+    
+    bool operator==(const MemoryId& other) const {return value == other.value;}
+    bool operator!=(const MemoryId& other) const {return value != other.value;}
+    operator int() const {return value;}
+    
+    static constexpr MemoryId invalid() {return MemoryId(-1);}
+    bool isValid() const {return value > 0;}
+};
+
+/**
+ * @brief Estrutura para ID's das intencoes
+ */
+
+struct IntentionId {
+    int value;
+    
+    explicit constexpr IntentionId(int v) : value(v) {}
+    
+    bool operator==(const IntentionId& other) const {return value == other.value;}
+    bool operator!=(const IntentionId& other) const {return value != other.value;}
+    operator int() const {return value;}
+    
+    static constexpr IntentionId invalid() {return IntentionId(-1);}
+    bool isValid() const {return value > 0;}
 };
 
 /**
@@ -110,58 +144,24 @@ struct Intention {
  * @brief Estrutura para vínculos entre memórias
  */
 struct MemoryLink {
-    int source_id;
-    int target_id;
+    MemoryId source_id;
+    MemoryId target_id;
     double weight;
     std::string type;
     
-    MemoryLink(int src, int tgt, double w = 1.0, const std::string& t = "association");
+    MemoryLink(MemoryId src, MemoryId tgt, double w = 1.0, const std::string& t = "association");
 };
-
-/**
- * @brief Estrutura para ID's das memorias
- */
-
-struct MemoryId {
-    int value;
-
-    explicit constexpr MemoryId(int v) : value(v) {}
-
-    bool operator==(const MemoryId& other) const {return value == other.value;}
-    bool operator!=(const MemoryId& other) const {return value != other.value;}
-    operator int() const {return value;}
-
-    static constexpr MemoryId invalid() {return MemoryId(-1);}
-    bool isValid() const {return value > 0;}
-}
-
-/**
- * @brief Estrutura para ID's das intencoes
- */
-
-struct IntentionId {
-    int value;
-
-    explicit constexpr IntentionId(int v) : value(v) {}
-
-    bool operator==(const IntentionId& other) const {return value == other.value;}
-    bool operator!=(const IntentionId& other) const {return value != other.value;}
-    operator int() const {return value;}
-
-    static constexpr IntentionId invalid() {return IntentionId(-1);}
-    bool isValid() const {return value > 0;}
-}
 
 /**
  * @brief Estrutura para reflexões geradas pelo sistema
  */
 struct Reflection {
-    int memory_id;
+    MemoryId memory_id;
     std::string type;
     std::string content;
     std::string created_at;
     
-    Reflection(int mem_id, const std::string& t, const std::string& c);
+    Reflection(MemoryId mem_id, const std::string& t, const std::string& c);
 };
 
 // ============================================================================
@@ -336,9 +336,9 @@ namespace alyssa_memory {
                 void generateReflections();
                 
                 // Sistema de vínculos
-                void createMemoryLink(int source_id, int target_id, double weight = 1.0, 
+                void createMemoryLink(MemoryId source_id, MemoryId target_id, double weight = 1.0, 
                     const std::string& link_type = "association");
-                    std::vector<MemoryLink> getMemoryLinks(int memory_id);
+                    std::vector<MemoryLink> getMemoryLinks(MemoryId memory_id);
                     
                     // Sistema de busca
                     std::vector<ContextualMemory> searchContextualMemories(const std::string& query, int top_k = 5);

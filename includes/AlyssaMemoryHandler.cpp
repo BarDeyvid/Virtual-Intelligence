@@ -19,10 +19,10 @@ Intention::Intention(const std::string& desc, const std::string& t, const std::s
     created_at = Utils::getCurrentISOTime();
 }
 
-MemoryLink::MemoryLink(int src, int tgt, double w, const std::string& t)
+MemoryLink::MemoryLink(MemoryId src, MemoryId tgt, double w, const std::string& t)
     : source_id(src), target_id(tgt), weight(w), type(t) {}
 
-Reflection::Reflection(int mem_id, const std::string& t, const std::string& c)
+Reflection::Reflection(MemoryId mem_id, const std::string& t, const std::string& c)
     : memory_id(mem_id), type(t), content(c) {
     created_at = Utils::getCurrentISOTime();
 }
@@ -772,7 +772,7 @@ void AdvancedMemorySystem::generateReflections() {
     }
 }
 
-void AdvancedMemorySystem::createMemoryLink(int source_id, int target_id, double weight, 
+void AdvancedMemorySystem::createMemoryLink(MemoryId source_id, MemoryId target_id, double weight, 
                      const std::string& link_type) {
     const char* sql = R"(
         INSERT INTO memory_links (source_id, target_id, weight, type)
@@ -800,7 +800,7 @@ void AdvancedMemorySystem::linkMemoryToIntention(int memory_id, int intention_id
     std::cout << "🔗 Memória " << memory_id << " vinculada à intenção " << intention_id << "\n";
 }
 
-std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(int memory_id) {
+std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(MemoryId memory_id) {
     std::vector<MemoryLink> links;
     const char* sql = R"(
         SELECT source_id, target_id, weight, type 
@@ -815,10 +815,10 @@ std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(int memory_id) {
         
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             MemoryLink link(
-                sqlite3_column_int(stmt, 0),
-                sqlite3_column_int(stmt, 1),
+                static_cast<MemoryId>(sqlite3_column_int(stmt, 0)),
+                static_cast<MemoryId>(sqlite3_column_int(stmt, 1)),
                 sqlite3_column_double(stmt, 2),
-                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
+                std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)))
             );
             links.push_back(link);
         }
