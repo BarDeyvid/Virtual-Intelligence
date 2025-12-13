@@ -146,6 +146,40 @@ public:
 };
 
 namespace alyssa_memory {
+    class SQLiteWrapper {
+        private:
+            sqlite3* db_ = nullptr;
+            
+        public:
+            explicit SQLiteWrapper(const std::string& db_path) {
+                int rc = sqlite3_open_v2(db_path.c_str(), &db_, 
+                    SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+                if (rc != SQLITE_OK) {
+                    throw std::runtime_error("Cannot open database: " + 
+                        std::string(sqlite3_errmsg(db_)));
+                }
+            }
+            
+            ~SQLiteWrapper() {
+                if (db_) {
+                    sqlite3_close(db_);
+                }
+            }
+            
+            // Delete copy operations
+            SQLiteWrapper(const SQLiteWrapper&) = delete;
+            SQLiteWrapper& operator=(const SQLiteWrapper&) = delete;
+            
+            // Allow move
+            SQLiteWrapper(SQLiteWrapper&& other) noexcept : db_(other.db_) {
+                other.db_ = nullptr;
+            }
+            
+            sqlite3* get() const { return db_; }
+            operator sqlite3*() const { return db_; }
+        };
+    }
+    
     // ============================================================================
     // Classe AdvancedMemorySystem
     // ============================================================================
