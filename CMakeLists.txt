@@ -4,6 +4,7 @@ project(VirtualIntelligence CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 # --- Dependencies ---
 
 # 1. System Packages
@@ -66,6 +67,7 @@ include_directories(
 set(TEST_MAIN_CLI_SOURCES
     test_main_cli.cpp
     includes/AlyssaNet.cpp
+    includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
     includes/Embedding/Embedder.cpp
     includes/WeightedFusion/WeightedFusion.cpp
@@ -77,6 +79,7 @@ set(TEST_MAIN_CLI_SOURCES
 set(TEST_MAIN_WHISPER_SOURCES
     test_main_whisper.cpp
     includes/AlyssaNet.cpp
+    includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
     includes/Embedding/Embedder.cpp
     includes/WeightedFusion/WeightedFusion.cpp
@@ -88,6 +91,7 @@ set(TEST_MAIN_WHISPER_SOURCES
 set(TEST_API_SOURCES
     test_api.cpp
     includes/AlyssaNet.cpp
+    includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
     includes/Embedding/Embedder.cpp
     includes/WeightedFusion/WeightedFusion.cpp

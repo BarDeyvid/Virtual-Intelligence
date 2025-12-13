@@ -46,77 +46,7 @@ EmotionalAnalyzer::EmotionalAnalyzer(const EmotionalAnalyzerConfig& config) : co
 
 // TODO: Again, Make an Neural Network for this part too
 void EmotionalAnalyzer::initializeEmotionLexicons() {
-    // Lexicon para alegria
-    emotion_lexicons["alegria"] = {
-        "feliz", "alegre", "contente", "satisfeito", "animado", "entusiasmado",
-        "grato", "orgulhoso", "esperançoso", "optimista", "radiante", "eufórico",
-        "maravilhoso", "incrível", "fantástico", "excelente", "ótimo", "bom",
-        "adoro", "amo", "gosto", "prazer", "diversão", "risada", "sorriso",
-        "sucesso", "vitória", "conquista", "comemoração", "parabéns"
-    };
-    
-    // Lexicon para tristeza
-    emotion_lexicons["tristeza"] = {
-        "triste", "deprimido", "desanimado", "desapontado", "frustrado",
-        "solitude", "solidão", "saudade", "perda", "luto", "chorar",
-        "decepcionado", "desiludido", "abatido", "desesperançado",
-        "pesar", "arrependimento", "culpa", "remorso", "mágoa",
-        "fracasso", "derrota", "perda", "adeus", "despedida"
-    };
-    
-    // Lexicon para raiva
-    emotion_lexicons["raiva"] = {
-        "raiva", "furioso", "irritado", "nervoso", "bravo", "zangado",
-        "frustração", "ódio", "aversão", "ressentimento", "indignação",
-        "revolta", "fúria", "ira", "exasperado", "impaciente",
-        "injustiça", "injusto", "inaceitável", "intolerável",
-        "pare", "basta", "chega", "odeio", "detesto"
-    };
-    
-    // Lexicon para medo
-    emotion_lexicons["medo"] = {
-        "medo", "assustado", "temeroso", "apreensivo", "ansioso",
-        "nervoso", "preocupado", "receoso", "amedrontado", "pavor",
-        "terror", "pânico", "desconfiado", "cauteloso", "hesitante",
-        "perigo", "risco", "ameaça", "incerteza", "insegurança",
-        "assustador", "aterrorizante", "horrível", "temível"
-    };
-    
-    // Lexicon para surpresa
-    emotion_lexicons["surpresa"] = {
-        "surpresa", "surpreso", "espantado", "pasmo", "maravilhado",
-        "impressionado", "admirado", "deslumbrado", "estupefato",
-        "incrível", "extraordinário", "inesperado", "repentino",
-        "improviso", "surpreendente", "espantoso", "assombroso",
-        "uau", "nossa", "caramba", "incrível", "fantástico"
-    };
-    
-    // Lexicon para confiança
-    emotion_lexicons["confiança"] = {
-        "confiança", "confiante", "seguro", "determinado", "decidido",
-        "convicção", "certeza", "confiar", "acreditar", "esperança",
-        "otimismo", "positivo", "forte", "capaz", "competente",
-        "garantia", "segurança", "estabilidade", "controle",
-        "sucesso", "vitória", "conquista", "realização"
-    };
-    
-    // Lexicon para antecipação
-    emotion_lexicons["antecipacao"] = {
-        "antecipação", "expectativa", "espera", "ansiedade", "excitação",
-        "prévia", "preparação", "planejamento", "futuro", "próximo",
-        "aguardar", "esperar", "desejar", "almejar", "almejo",
-        "sonho", "objetivo", "meta", "plano", "estratégia",
-        "amanhã", "futuro", "próximos", "vindouro"
-    };
-    
-    // Lexicon para desgosto
-    emotion_lexicons["desgosto"] = {
-        "desgosto", "nojo", "repulsa", "aversão", "desagrado",
-        "descontentamento", "insatisfação", "decepção", "frustração",
-        "horror", "pavor", "repugnância", "aborrecimento", "enfado",
-        "tedioso", "chato", "desinteressante", "desagradável",
-        "detesto", "odeio", "rejeito", "recuso", "negativo"
-    };
+    emotion_lexicons = EmotionLexiconLoader::loadDefaultPortugueseLexicon();
 }
 
 EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {

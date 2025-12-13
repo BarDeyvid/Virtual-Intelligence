@@ -1,6 +1,5 @@
 //AlyssaMemoryHandler.hpp
-#ifndef ALYSSA_MEMORY_SYSTEM_HPP
-#define ALYSSA_MEMORY_SYSTEM_HPP
+#pragma once
 
 #include <filesystem>
 #include "sqlite3.h"
@@ -28,6 +27,7 @@
 #include <unordered_map>
 #include <numeric>
 #include "json.hpp"
+#include "EmotionLexiconLoader.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -374,5 +374,4 @@ namespace alyssa_memory {
                     constexpr double MIN_IMPORTANCE = 0.3;
                     constexpr double HARD_LOCK_IMPORTANCE = 0.9;
                     
-                    #endif // ALYSSA_MEMORY_SYSTEM_HPP
                 }
