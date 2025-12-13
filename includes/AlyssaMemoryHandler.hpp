@@ -165,6 +165,30 @@ struct Reflection {
 };
 
 // ============================================================================
+// Classe IScoreCalculator
+// ============================================================================
+class IScoreCalculator {
+    public:
+        virtual ~IScoreCalculator() = default;
+        virtual void calculate(const std::string& text, std::unordered_map<std::string, double>& scores) = 0;
+};
+
+class LexiconScoreCalculator : public IScoreCalculator {
+    private:
+        const std::unordered_map<std::string, std::vector<std::string>>& lexicons_;
+        const std::unordered_map<std::string, double>& weights_;
+
+    public:
+        LexiconScoreCalculator(
+            const std::unordered_map<std::string, std::vector<std::string>>& lexicons,
+            const std::unordered_map<std::string, double>& weights)
+            : lexicons_(lexicons), weights_(weights) {}
+        
+            void calculate(const std::string& text,
+                            std::unordered_map<std::string, double>& scores) override;
+};
+
+// ============================================================================
 // Classe EmotionalAnalyzer
 // ============================================================================
 
@@ -176,9 +200,11 @@ private:
     std::unordered_map<std::string, std::vector<std::string>> emotion_lexicons;
     std::unordered_map<std::string, double> emotion_weights;
     std::vector<std::string> emotion_categories;
+    std::vector<std::unique_ptr<IScoreCalculator>> score_calculators_;
     
     EmotionalAnalyzerConfig config_;
 
+    void setupScoreCalculators();
     void initializeEmotionLexicons();
     void analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) const;
     void analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) const;
@@ -214,6 +240,8 @@ public:
     static double sigmoid(double x);
     static double normalizeImportance(double raw_importance);
 };
+
+
 
 // ============================================================================
 // Classe TextNormalizer
