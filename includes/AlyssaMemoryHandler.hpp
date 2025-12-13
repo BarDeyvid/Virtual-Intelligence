@@ -119,6 +119,40 @@ struct MemoryLink {
 };
 
 /**
+ * @brief Estrutura para ID's das memorias
+ */
+
+struct MemoryId {
+    int value;
+
+    explicit constexpr MemoryId(int v) : value(v) {}
+
+    bool operator==(const MemoryId& other) const {return value == other.value;}
+    bool operator!=(const MemoryId& other) const {return value != other.value;}
+    operator int() const {return value;}
+
+    static constexpr MemoryId invalid() {return MemoryId(-1);}
+    bool isValid() const {return value > 0;}
+}
+
+/**
+ * @brief Estrutura para ID's das intencoes
+ */
+
+struct IntentionId {
+    int value;
+
+    explicit constexpr IntentionId(int v) : value(v) {}
+
+    bool operator==(const IntentionId& other) const {return value == other.value;}
+    bool operator!=(const IntentionId& other) const {return value != other.value;}
+    operator int() const {return value;}
+
+    static constexpr IntentionId invalid() {return IntentionId(-1);}
+    bool isValid() const {return value > 0;}
+}
+
+/**
  * @brief Estrutura para reflexões geradas pelo sistema
  */
 struct Reflection {
