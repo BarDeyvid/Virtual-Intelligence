@@ -32,21 +32,18 @@ Reflection::Reflection(int mem_id, const std::string& t, const std::string& c)
 // Implementação de EmotionalAnalyzer
 // ============================================================================
 
-EmotionalAnalyzer::EmotionalAnalyzer() {
+EmotionalAnalyzer::EmotionalAnalyzer(const EmotionalAnalyzerConfig& config) : config_(config) {
     // Inicializar categorias de emoções
-    emotion_categories = {"alegria", "tristeza", "raiva", "medo", "surpresa", "confiança", "antecipacao", "desgosto"};
+    emotion_categories = config_.emotion_categories;
     
     // Inicializar pesos emocionais
-    emotion_weights = {
-        {"alegria", 1.0}, {"tristeza", 1.0}, {"raiva", 1.0}, 
-        {"medo", 1.0}, {"surpresa", 0.8}, {"confiança", 0.9},
-        {"antecipacao", 0.7}, {"desgosto", 0.9}
-    };
+    for (const auto& weight_pair : config_.default_weights) {
+        emotion_weights[weight_pair.emotion] = weight_pair.weight;
+    }
     
     initializeEmotionLexicons();
 }
 
-// TODO: Again, Make an Neural Network for this part too
 // TODO: Again, Make an Neural Network for this part too
 void EmotionalAnalyzer::initializeEmotionLexicons() {
     // Lexicon para alegria
@@ -165,8 +162,8 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user
     std::unordered_map<std::string, double> combined_scores;
     
     for (const auto& emotion : emotion_categories) {
-        combined_scores[emotion] = (user_analysis.emotion_scores[emotion] * 0.7) + 
-                                  (ai_analysis.emotion_scores[emotion] * 0.3);
+        combined_scores[emotion] = (user_analysis.emotion_scores[emotion] * config_.user_input_weight) + 
+                                  (ai_analysis.emotion_scores[emotion] * config_.ai_response_weight);
     }
     
     combined.emotion_scores = combined_scores;
@@ -179,6 +176,8 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user
 
 void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) const {
     for (const auto& [emotion, words] : emotion_lexicons) {
+        // Obter peso base da emocao
+        double emotion_weight = emotion_weights.count(emotion) ? emotion_weights.at(emotion) : 1.0;
         for (const auto& word : words) {
             // Buscar palavra no texto (como palavra completa)
             std::regex word_regex("\\b" + word + "\\b", std::regex::icase);
@@ -187,14 +186,14 @@ void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unorder
             
             int count = std::distance(words_begin, words_end);
             if (count > 0) {
-                scores[emotion] += count * emotion_weights.at(emotion) * 0.1;
+                scores[emotion] += count * config_.lexicon_word_weight * emotion_weight;
             }
         }
     }
 }
 
 // TODO: Create Categorize Neural Network model for this one
-void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) {
+void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) const{
     // Detectar intensificadores
     std::vector<std::string> intensifiers = {"muito", "extremamente", "totalmente", "completamente", 
                                             "realmente", "verdadeiramente", "absolutamente"};
@@ -209,7 +208,7 @@ void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_
             // Verificar se a palavra seguinte está em algum lexicon
             for (const auto& [emotion, words] : emotion_lexicons) {
                 if (std::find(words.begin(), words.end(), following_word) != words.end()) {
-                    scores[emotion] += 0.15; // Boost para intensificadores
+                    scores[emotion] += config_.intesifier_boost; 
                 }
             }
         }
@@ -226,7 +225,7 @@ void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_
             std::string following_word = (*it)[1];
             for (const auto& [emotion, words] : emotion_lexicons) {
                 if (std::find(words.begin(), words.end(), following_word) != words.end()) {
-                    scores[emotion] -= 0.1; // Reduzir score para negações
+                    scores[emotion] -= config_.negation_penalty; 
                 }
             }
         }
@@ -234,29 +233,27 @@ void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_
 }
 
 // TODO: Create Categorize Neural Network model for this one too
-void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) {
+void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) const {
     // Contar exclamações (aumenta intensidade emocional)
     int exclamation_count = std::count(text.begin(), text.end(), '!');
     if (exclamation_count > 0) {
         // Aumentar todas as emoções proporcionalmente
         for (auto& [emotion, score] : scores) {
-            score += exclamation_count * 0.05;
+            score += exclamation_count * config_.exclamation_boost;
         }
     }
     
     // Contar pontos de interrogação (aumenta surpresa/confusão)
     int question_count = std::count(text.begin(), text.end(), '?');
     if (question_count > 0) {
-        scores["surpresa"] += question_count * 0.08;
-        scores["antecipacao"] += question_count * 0.04;
+        scores["surpresa"] += question_count * config_.question_boost;
+        scores["antecipacao"] += question_count * (config_.question_boost / 2.0); 
     }
     
-    // Contar pontos finais em excesso (pode indicar frustração)
     int period_count = std::count(text.begin(), text.end(), '.');
-    if (period_count > 3) {
-        scores["raiva"] += 0.05;
-        // "frustracao" não está nas categorias principais, mas se estivesse:
-        // scores["frustracao"] += 0.05; 
+    if (period_count >= 3 && text.size() < 40) { // Ex: curtas frases com muitos pontos finais "Odeio!!!!"
+        scores["raiva"] += config_.period_frustation_boost;
+        scores["desgosto"] += config_.period_frustation_boost;
     }
 }
 
@@ -289,8 +286,7 @@ std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std:
         }
     }
     
-    // Só retornar se tiver confiança mínima
-    return max_score > 0.1 ? dominant : "neutral";
+    return max_score > config_.min_confidence_threshold ? dominant : "neutral";
 }
 
 double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::string, double>& scores) const {
