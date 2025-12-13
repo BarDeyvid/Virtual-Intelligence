@@ -50,6 +50,17 @@ public:
     
     void log_source_awareness(const std::string& source, const std::string& message);
 
+    void clear_all_cache() {
+        clear_kv_cache();
+        for (auto& pair : expert_histories) {
+            for (auto& msg : pair.second) {
+                free((char*)msg.content);
+            }
+            pair.second.clear();
+        }
+        std::cout << "[Orquestrador] Todos os caches limpos." << std::endl;
+    }
+
 private:
     // Execução de especialistas
     std::string run_expert(

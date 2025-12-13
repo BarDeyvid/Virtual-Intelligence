@@ -154,45 +154,26 @@ namespace alyssa_core {
             llama_adapter_lora* lora, // LoRA a ser aplicado
             std::function<void(const std::string& piece)> stream_callback
         ) {
-
             std::string response;
             int n_prompt_tokens_total;
 
-            bool usa_LoRA = false;
-            std::string lora_path = "";
-
-            // 1. APLICAR O LoRA (ou desativar um anterior)
-            // O Orquestrador nos diz qual LoRA usar (pode ser nullptr)
-            if (usa_LoRA && !lora_path.empty()) {
-                llama_adapter_lora *LoRA = llama_adapter_lora_init(model, lora_path.c_str());
-
-                if (!LoRA) {
-                    throw std::runtime_error("AlyssaLLM: Falha ao inicializar LoRA para: " + lora_path);
-                }
-
-                int err = llama_set_adapter_lora(
-                    ctx, // Aplica ao nosso contexto específico
-                    LoRA,
-                    1.0); 
-                        
+            // 1. APLICAR O LoRA (se fornecido)
+            if (lora != nullptr) {
+                int err = llama_set_adapter_lora(ctx, lora, 1.0);
                 if (err != 0) {
-                    llama_free(ctx); 
-                    throw std::runtime_error("AlyssaLLM: Falha ao aplicar LoRA" );
+                    std::cerr << "AlyssaLLM: Falha ao aplicar LoRA" << std::endl;
+                } else {
+                    std::cout << "Adaptador LoRA aplicado." << std::endl;
                 }
-                std::cout << "Adaptador LoRA aplicado: " << std::endl;
-            } else if (usa_LoRA) {
-                 std::cerr << "AVISO: usa_LoRA é true, mas lora_path está vazio. LoRA não aplicado para " << std::endl;
             }
 
-
             // 2. CRIAR O SAMPLER (com parâmetros do especialista)
-            // Temos que recriá-lo ou reconfigurá-lo a cada chamada
             llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
             float top_p = (params.top_p > 0.0) ? params.top_p : 0.05f;
             llama_sampler_chain_add(smpl, llama_sampler_init_min_p(top_p, 1));
             float temp = (params.temperature > 0.0) ? params.temperature : 0.8f;
             llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f)); // penalidade por repeticao de tokens
+            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f));
             llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
             
             // 3. Verifica se o contexto já tem tokens
@@ -201,22 +182,17 @@ namespace alyssa_core {
             // 4. Obtém o número de tokens que JÁ ESTÃO no KV cache.
             const int n_cached = is_first_run ? 0 : llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
 
-            // std::cout << "DEBUG: Prompt a ser tokenizado: " << prompt << std::endl;
-
             // 5. Tokeniza o prompt COMPLETO
             n_prompt_tokens_total = llama_tokenize( 
                 vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first_run, true
             );
 
-            // Inverte o sinal para obter o número total de tokens (e.g., 168)
+            // Inverte o sinal para obter o número total de tokens
             if (n_prompt_tokens_total < 0) {
                 n_prompt_tokens_total = -n_prompt_tokens_total;
             } else if (n_prompt_tokens_total == 0) {
-                // Se o prompt for vazio após a limpeza
                 return ""; 
             }
-
-            // std::cout << "DEBUG: n_prompt_tokens_total = " << n_prompt_tokens_total << std::endl;
 
             std::vector<llama_token> prompt_tokens(n_prompt_tokens_total);
             if (llama_tokenize(vocab, prompt.c_str(), prompt.size(),
@@ -228,12 +204,11 @@ namespace alyssa_core {
             // 6. Calcula quantos tokens são REALMENTE NOVOS
             const int n_new_tokens = prompt_tokens.size() - n_cached;
             if (n_new_tokens < 0) {
-                // Se isso acontecer, o histórico do especialista está dessincronizado
-                // com o KV Cache. Precisamos limpar o cache.
+                // Dessincronização do KV Cache
                 std::cerr << "AVISO: Detectada dessincronização do KV Cache. Limpando cache." << std::endl;
-                llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1); // Limpa tudo
-                // E tentamos novamente como se fosse a primeira vez
-                return generate_raw(prompt, params, lora, nullptr);
+                llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1);
+                // Recursivamente tenta novamente com cache limpo
+                return generate_raw(prompt, params, lora, stream_callback);
             }
 
             // 7. Prepara um batch APENAS com os tokens NOVOS
@@ -242,8 +217,6 @@ namespace alyssa_core {
                 n_new_tokens                     
             );
 
-            // [FIM DA LÓGICA STATEFUL]
-            
             llama_token new_token_id;
 
             // Loop principal de geração
@@ -253,7 +226,6 @@ namespace alyssa_core {
                 
                 if (n_ctx_used + batch.n_tokens > n_ctx_total) {
                     fprintf(stderr, "Tamanho do contexto excedido\n");
-                    // TODO: Implementar evicção de KV cache (llama_kv_cache_seq_rm)
                     throw std::runtime_error("Tamanho do contexto excedido\n");
                 }
 
@@ -273,7 +245,6 @@ namespace alyssa_core {
                 fflush(stdout);
                 response += piece;
 
-                // CHAMA O CALLBACK COM O NOVO PEDAÇO DE TEXTO
                 if (stream_callback) {
                     stream_callback(piece);
                 }
@@ -281,9 +252,7 @@ namespace alyssa_core {
                 batch = llama_batch_get_one(&new_token_id, 1);
             }
 
-            // Libera o sampler desta chamada
             llama_sampler_free(smpl);
-
             return response;
         }
     };

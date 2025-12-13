@@ -1,3 +1,4 @@
+// ExpertBase.hpp - versão corrigida
 #pragma once
 #include "IExpert.hpp"
 #include "AlyssaMemoryHandler.hpp"
@@ -11,14 +12,11 @@ namespace alyssa_experts {
         std::vector<llama_chat_message> history;
         llama_adapter_lora* lora;
         std::string expert_id;
-        std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager;
 
     public:
         ExpertBase(const SimpleModelConfig& cfg) 
             : config(cfg), lora(nullptr), expert_id(cfg.id) 
         {
-            memory_manager = std::make_unique<alyssa_memory::AlyssaMemoryManager>(
-                "../alyssa_advanced_memory.db", nullptr);
         }
         
         ~ExpertBase() override {
@@ -69,7 +67,9 @@ namespace alyssa_experts {
                 expert_input_with_role = input;
             }
             
-            current_history.push_back({"user", strdup(expert_input_with_role.c_str())});
+            // IMPORTANTE: Verificar se precisamos alocar memória para a string
+            char* user_msg = strdup(expert_input_with_role.c_str());
+            current_history.push_back({"user", user_msg});
 
             // 2. Monta template com métricas do sistema
             std::vector<llama_chat_message> messages_to_template;
@@ -84,14 +84,16 @@ namespace alyssa_experts {
             
             if (!combined_system_prompt.empty()) {
                 system_prompt_index = messages_to_template.size();
-                messages_to_template.push_back({"system", strdup(combined_system_prompt.c_str())});
+                char* sys_msg = strdup(combined_system_prompt.c_str());
+                messages_to_template.push_back({"system", sys_msg});
             }
             
+            // Adiciona histórico da conversa
             messages_to_template.insert(messages_to_template.end(), 
                                       current_history.begin(), current_history.end());
 
             // 3. Aplica template
-            std::vector<char> formatted(core_instance->get_n_ctx());
+            std::vector<char> formatted(core_instance->get_n_ctx() * 2); // Buffer maior
             const char* tmpl = llama_model_chat_template(core_instance->get_model(), nullptr);
 
             int len = llama_chat_apply_template(
@@ -99,26 +101,33 @@ namespace alyssa_experts {
                 true, formatted.data(), formatted.size()
             );
 
-            // Limpa alocação do system prompt
+            // Limpa alocação do system prompt (se existir)
             if (system_prompt_index != -1) {
                 free((char*)messages_to_template[system_prompt_index].content);
             }
 
             if (len < 0) {
-                return "Erro ao processar template de conversa.";
-            }
-            if (len > (int)formatted.size()) {
-                formatted.resize(len);
+                // Tentar com buffer maior
+                formatted.resize(-len);
                 len = llama_chat_apply_template(
                     tmpl, messages_to_template.data(), messages_to_template.size(),
                     true, formatted.data(), formatted.size()
                 );
             }
 
+            if (len < 0) {
+                return "Erro ao processar template de conversa.";
+            }
+
             std::string prompt(formatted.begin(), formatted.begin() + len);
 
             // 4. Executa geração
             llama_adapter_lora* final_lora = (lora_override != nullptr) ? lora_override : lora;
+            
+            // Atualizar o ponteiro ativo de LoRA
+            if (active_lora_in_context != nullptr) {
+                *active_lora_in_context = final_lora;
+            }
             
             std::string response = core_instance->generate_raw(
                 prompt,
@@ -128,7 +137,8 @@ namespace alyssa_experts {
             );
 
             // 5. Adiciona resposta ao histórico
-            current_history.push_back({"assistant", strdup(response.c_str())});
+            char* assistant_msg = strdup(response.c_str());
+            current_history.push_back({"assistant", assistant_msg});
 
             return response;
         }

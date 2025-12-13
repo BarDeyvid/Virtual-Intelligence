@@ -168,6 +168,13 @@ std::string CoreIntegration::run_expert(
     }
 
     // Trocar contexto se necessário
+    if (active_expert_in_cache != expert_id) {
+        std::cout << "\n[Orquestrador]: Trocando de '" << active_expert_in_cache 
+                  << "' para '" << expert_id << "'\n";
+        clear_kv_cache();
+        active_expert_in_cache = expert_id;
+    }
+
     switch_expert_context(expert_id);
 
     auto& expert = experts[expert_id];
@@ -233,6 +240,9 @@ CoreIntegration::run_expert_committee(
 ) {
     std::vector<alyssa_fusion::ExpertContribution> contributions;
     
+    // Guardar o especialista ativo anterior
+    std::string previous_expert = active_expert_in_cache;
+    
     for (const auto& expert_id : expert_ids) {
         if (!has_expert(expert_id)) {
             std::cerr << "Especialista não encontrado: " << expert_id << std::endl;
@@ -240,17 +250,21 @@ CoreIntegration::run_expert_committee(
         }
         
         try {
+            // IMPORTANTE: Trocar contexto para cada especialista
+            switch_expert_context(expert_id);
+            
             auto& expert = experts[expert_id];
             auto& history = expert_histories[expert_id];
             
             // Obter contribuição através da interface
+            llama_adapter_lora* active_lora = nullptr;
             auto contrib = expert->get_contribution(
                 input,
                 core_instance.get(),
                 embedder,
                 nullptr, // lora_override
                 history,
-                nullptr  // active_lora_in_context
+                &active_lora
             );
             
             contributions.push_back(contrib);
@@ -262,7 +276,13 @@ CoreIntegration::run_expert_committee(
                       
         } catch (const std::exception& e) {
             std::cerr << "Erro executando " << expert_id << ": " << e.what() << std::endl;
+            // Continuar com o próximo especialista
         }
+    }
+    
+    // Restaurar o especialista anterior
+    if (!previous_expert.empty()) {
+        switch_expert_context(previous_expert);
     }
     
     return contributions;
