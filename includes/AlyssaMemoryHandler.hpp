@@ -110,12 +110,12 @@ private:
     std::vector<std::string> emotion_categories;
 
     void initializeEmotionLexicons();
-    void analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores);
-    void analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores);
-    void analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores);
-    std::vector<float> normalizeScores(const std::unordered_map<std::string, double>& scores);
-    std::string findDominantEmotion(const std::unordered_map<std::string, double>& scores);
-    double calculateConfidence(const std::unordered_map<std::string, double>& scores);
+    void analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) const;
+    void analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) const;
+    void analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) const;
+    std::vector<float> normalizeScores(const std::unordered_map<std::string, double>& scores) const;
+    std::string findDominantEmotion(const std::unordered_map<std::string, double>& scores) const;
+    double calculateConfidence(const std::unordered_map<std::string, double>& scores) const;
 
 public:
     EmotionalAnalyzer();

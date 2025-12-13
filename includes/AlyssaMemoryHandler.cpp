@@ -47,6 +47,7 @@ EmotionalAnalyzer::EmotionalAnalyzer() {
 }
 
 // TODO: Again, Make an Neural Network for this part too
+// TODO: Again, Make an Neural Network for this part too
 void EmotionalAnalyzer::initializeEmotionLexicons() {
     // Lexicon para alegria
     emotion_lexicons["alegria"] = {
@@ -176,7 +177,7 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user
     return combined;
 }
 
-void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) {
+void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) const {
     for (const auto& [emotion, words] : emotion_lexicons) {
         for (const auto& word : words) {
             // Buscar palavra no texto (como palavra completa)
@@ -186,7 +187,7 @@ void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unorder
             
             int count = std::distance(words_begin, words_end);
             if (count > 0) {
-                scores[emotion] += count * emotion_weights[emotion] * 0.1;
+                scores[emotion] += count * emotion_weights.at(emotion) * 0.1;
             }
         }
     }
@@ -259,7 +260,7 @@ void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unorder
     }
 }
 
-std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<std::string, double>& scores) {
+std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<std::string, double>& scores) const {
     std::vector<float> vector;
     double max_score = 0.0;
     
@@ -277,7 +278,7 @@ std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<s
     return vector;
 }
 
-std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std::string, double>& scores) {
+std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std::string, double>& scores) const {
     std::string dominant = "neutral";
     double max_score = 0.0;
     
@@ -292,7 +293,7 @@ std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std:
     return max_score > 0.1 ? dominant : "neutral";
 }
 
-double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::string, double>& scores) {
+double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::string, double>& scores) const {
     double sum = 0.0;
     for (const auto& [emotion, score] : scores) {
         sum += score;
