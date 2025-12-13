@@ -162,6 +162,7 @@ namespace alyssa_memory {
         std::shared_ptr<Embedder> embedder;
         std::unique_ptr<EmotionalAnalyzer> emotional_analyzer;
         
+        // TODO: Make A Neural Network in ONNX for better results
         std::unordered_map<std::string, std::pair<std::string, std::string>> emotion_to_intention = {
             {"tristeza", {"Refletir sobre sentimentos difíceis", "emocional"}},
             {"alegria", {"Manter momentos positivos", "emocional"}},

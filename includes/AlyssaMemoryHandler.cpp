@@ -46,6 +46,7 @@ EmotionalAnalyzer::EmotionalAnalyzer() {
     initializeEmotionLexicons();
 }
 
+// TODO: Again, Make an Neural Network for this part too
 void EmotionalAnalyzer::initializeEmotionLexicons() {
     // Lexicon para alegria
     emotion_lexicons["alegria"] = {
@@ -191,6 +192,7 @@ void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unorder
     }
 }
 
+// TODO: Create Categorize Neural Network model for this one
 void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) {
     // Detectar intensificadores
     std::vector<std::string> intensifiers = {"muito", "extremamente", "totalmente", "completamente", 
@@ -230,6 +232,7 @@ void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_
     }
 }
 
+// TODO: Create Categorize Neural Network model for this one too
 void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) {
     // Contar exclamações (aumenta intensidade emocional)
     int exclamation_count = std::count(text.begin(), text.end(), '!');
