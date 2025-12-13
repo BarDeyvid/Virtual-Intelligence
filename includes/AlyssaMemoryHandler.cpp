@@ -27,6 +27,15 @@ Reflection::Reflection(MemoryId mem_id, const std::string& t, const std::string&
     created_at = Utils::getCurrentISOTime();
 }
 
+// ============================================================================
+// Implementação de TextNormalizer
+// ============================================================================
+std::string TextNormalizer::toLowerCase(const std::string& text) {
+    std::string result = text;
+    std::transform(result.begin(), result.end(), result.begin(),
+                    [](unsigned char c) {return std::tolower(c);});
+    return result;
+}
 
 // ============================================================================
 // Implementação de EmotionalAnalyzer
@@ -52,12 +61,9 @@ void EmotionalAnalyzer::initializeEmotionLexicons() {
 EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
     EmotionalAnalysis result;
     std::unordered_map<std::string, double> scores;
-    
-    // Converter texto para minúsculas para análise case-insensitive
-    std::string lower_text = text;
-    std::transform(lower_text.begin(), lower_text.end(), lower_text.begin(), 
-        [](unsigned char c){ return std::tolower(c); }
-    );
+
+    std::string normalized_text = TextNormalizer::toLowerCase(text);
+    // normalized_text = TextNormalizer::normalizePortugueseAccents(normalized_text); TODO: create this
     
     // Inicializar scores
     for (const auto& emotion : emotion_categories) {
@@ -65,13 +71,13 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
     }
     
     // Análise baseada em lexicon
-    analyzeWithLexicon(lower_text, scores);
+    analyzeWithLexicon(normalized_text, scores);
     
     // Análise baseada em padrões e intensificadores
-    analyzePatterns(lower_text, scores);
+    analyzePatterns(normalized_text, scores);
     
     // Análise de pontuação e exclamações
-    analyzePunctuation(text, scores);
+    analyzePunctuation(normalized_text, scores);
     
     // Normalizar scores e criar vector emocional
     result.emotion_scores = scores;

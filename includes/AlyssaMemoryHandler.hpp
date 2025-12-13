@@ -215,6 +215,23 @@ public:
     static double normalizeImportance(double raw_importance);
 };
 
+// ============================================================================
+// Classe TextNormalizer
+// ============================================================================
+
+class TextNormalizer {
+    public:
+        static std::string toLowerCase(const std::string& text);        
+        static std::string removeExtraSpaces(const std::string& text);
+        static std::string normalizePunctuation(const std::string& text);
+        static std::string normalizePortugueseAccents(const std::string& text);
+        static std::vector<std::string> extractWords(const std::string& text);
+
+    private:
+        static const std::unordered_map<char, char> accent_map;
+};
+
+
 namespace alyssa_memory {
     class SQLiteWrapper {
         private:
