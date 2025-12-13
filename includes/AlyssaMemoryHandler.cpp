@@ -425,9 +425,6 @@ std::string SQLStatementBuilder::createSemanticSearchQuery() {
 }
 
 std::string SQLStatementBuilder::createContextualSearchQuery(const std::string& pattern, int limit) {
-    // Note: 'pattern' is handled via binding in the actual usage, 
-    // but if we needed a raw string builder (risky), it would look like this.
-    // For safety, we return the parameterized version.
     return R"(
         SELECT id, conteudo, emocao, importancia 
         FROM memories 
