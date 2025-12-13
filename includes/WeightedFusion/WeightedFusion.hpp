@@ -6,6 +6,9 @@
 #include <cmath>
 #include "Embedding/Embedder.hpp"
 #include <onnxruntime/onnxruntime_cxx_api.h>
+#include <algorithm>
+#include <numeric>
+#include <onnxruntime/onnxruntime_cxx_api.h>
 
 namespace alyssa_fusion {
 

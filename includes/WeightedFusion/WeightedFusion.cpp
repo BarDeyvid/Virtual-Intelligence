@@ -1,7 +1,4 @@
 #include "WeightedFusion/WeightedFusion.hpp"
-#include <algorithm>
-#include <numeric>
-#include <onnxruntime/onnxruntime_cxx_api.h>
 
 namespace alyssa_fusion {
 
