@@ -275,6 +275,28 @@ class TextNormalizer {
         static const std::unordered_map<char, char> accent_map;
 };
 
+// ============================================================================
+// Classe SQLStatementBuilder
+// ============================================================================
+class SQLStatementBuilder {
+public:
+    static std::string createMemoryInsert(const std::string& content, 
+                                         const std::string& context,
+                                         const std::string& emotion,
+                                         double importance,
+                                         uint64_t timestamp,
+                                         const std::string& vtime);
+    
+    static std::string createEmbeddingInsert(MemoryId memory_id,
+                                            const std::vector<float>& embedding,
+                                            const std::string& created_at);
+    
+    static std::string createSemanticSearchQuery();
+    static std::string createContextualSearchQuery(const std::string& pattern, int limit);
+    
+private:
+    static std::string escapeSQLString(const std::string& input);
+};
 
 namespace alyssa_memory {
     class SQLiteWrapper {

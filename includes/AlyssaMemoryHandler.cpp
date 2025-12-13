@@ -26,17 +26,6 @@ Reflection::Reflection(MemoryId mem_id, const std::string& t, const std::string&
     : memory_id(mem_id), type(t), content(c) {
     created_at = Utils::getCurrentISOTime();
 }
-
-// ============================================================================
-// Implementação de TextNormalizer
-// ============================================================================
-std::string TextNormalizer::toLowerCase(const std::string& text) {
-    std::string result = text;
-    std::transform(result.begin(), result.end(), result.begin(),
-                    [](unsigned char c) {return std::tolower(c);});
-    return result;
-}
-
 // ============================================================================
 // Implementação de EmotionalAnalyzer
 // ============================================================================
@@ -269,6 +258,183 @@ double Utils::sigmoid(double x) {
 
 double Utils::normalizeImportance(double raw_importance) {
     return std::max(0.0, std::min(1.0, raw_importance));
+}
+
+// ============================================================================
+// Implementação de LexiconScoreCalculator
+// ============================================================================
+
+void LexiconScoreCalculator::calculate(const std::string& text,
+                                       std::unordered_map<std::string, double>& scores) {
+    std::vector<std::string> words = TextNormalizer::extractWords(text);
+    
+    for (const auto& word : words) {
+        for (const auto& [emotion, lexicon_words] : lexicons_) {
+            // Check if the word exists in this emotion's lexicon
+            if (std::find(lexicon_words.begin(), lexicon_words.end(), word) != lexicon_words.end()) {
+                double weight = weights_.count(emotion) ? weights_.at(emotion) : 1.0;
+                scores[emotion] += weight;
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Implementação de TextNormalizer
+// ============================================================================
+
+// Initialize the static map (Best effort for single-byte, but we will use a string map for UTF-8 in the function)
+const std::unordered_map<char, char> TextNormalizer::accent_map = {}; 
+
+std::string TextNormalizer::toLowerCase(const std::string& text) {
+    std::string result = text;
+    std::transform(result.begin(), result.end(), result.begin(),
+                    [](unsigned char c) {return std::tolower(c);});
+    return result;
+}
+
+
+std::string TextNormalizer::removeExtraSpaces(const std::string& text) {
+    std::string result;
+    bool space_found = false;
+    
+    for (char c : text) {
+        if (std::isspace(c)) {
+            if (!space_found) {
+                result += ' ';
+                space_found = true;
+            }
+        } else {
+            result += c;
+            space_found = false;
+        }
+    }
+    
+    // Trim leading/trailing spaces
+    size_t first = result.find_first_not_of(' ');
+    if (std::string::npos == first) return "";
+    size_t last = result.find_last_not_of(' ');
+    return result.substr(first, (last - first + 1));
+}
+
+std::string TextNormalizer::normalizePunctuation(const std::string& text) {
+    std::string result = text;
+    // Add spaces around punctuation to assist tokenization, except for common abbreviations if needed
+    // Simple regex approach: replace punctuation with " <punct> "
+    std::regex punct_re("([.,!?;:])");
+    result = std::regex_replace(result, punct_re, " $1 ");
+    return removeExtraSpaces(result);
+}
+
+std::string TextNormalizer::normalizePortugueseAccents(const std::string& text) {
+    std::string result = text;
+    
+    // Map of UTF-8 sequences to ASCII equivalents
+    // Note: C++ std::string handles these as multi-byte sequences
+    static const std::vector<std::pair<std::string, std::string>> replacements = {
+        {"á", "a"}, {"à", "a"}, {"ã", "a"}, {"â", "a"}, {"ä", "a"},
+        {"Á", "a"}, {"À", "a"}, {"Ã", "a"}, {"Â", "a"}, {"Ä", "a"},
+        {"é", "e"}, {"è", "e"}, {"ê", "e"}, {"ë", "e"},
+        {"É", "e"}, {"È", "e"}, {"Ê", "e"}, {"Ë", "e"},
+        {"í", "i"}, {"ì", "i"}, {"î", "i"}, {"ï", "i"},
+        {"Í", "i"}, {"Ì", "i"}, {"Î", "i"}, {"Ï", "i"},
+        {"ó", "o"}, {"ò", "o"}, {"õ", "o"}, {"ô", "o"}, {"ö", "o"},
+        {"Ó", "o"}, {"Ò", "o"}, {"Õ", "o"}, {"Ô", "o"}, {"Ö", "o"},
+        {"ú", "u"}, {"ù", "u"}, {"û", "u"}, {"ü", "u"},
+        {"Ú", "u"}, {"Ù", "u"}, {"Û", "u"}, {"Ü", "u"},
+        {"ç", "c"}, {"Ç", "c"}, {"ñ", "n"}, {"Ñ", "n"}
+    };
+
+    for (const auto& [accented, normalized] : replacements) {
+        size_t pos = 0;
+        while ((pos = result.find(accented, pos)) != std::string::npos) {
+            result.replace(pos, accented.length(), normalized);
+            pos += normalized.length();
+        }
+    }
+    
+    return result;
+}
+
+std::vector<std::string> TextNormalizer::extractWords(const std::string& text) {
+    std::vector<std::string> words;
+    std::string normalized = normalizePunctuation(text);
+    normalized = toLowerCase(normalized);
+    // Note: We might want to keep accents for semantic meaning, but remove them for lexicon matching
+    // depending on how the lexicon is stored. Assuming lexicon is normalized:
+    normalized = normalizePortugueseAccents(normalized); 
+    
+    std::stringstream ss(normalized);
+    std::string word;
+    while (ss >> word) {
+        // Remove residual punctuation if any remains attached
+        word.erase(std::remove_if(word.begin(), word.end(), ::ispunct), word.end());
+        if (!word.empty()) {
+            words.push_back(word);
+        }
+    }
+    return words;
+}
+
+// ============================================================================
+// Implementação de SQLStatementBuilder
+// ============================================================================
+
+std::string SQLStatementBuilder::escapeSQLString(const std::string& input) {
+    std::string output = input;
+    size_t pos = 0;
+    while ((pos = output.find("'", pos)) != std::string::npos) {
+        output.replace(pos, 1, "''");
+        pos += 2;
+    }
+    return output;
+}
+
+std::string SQLStatementBuilder::createMemoryInsert(const std::string& content, 
+                                     const std::string& context,
+                                     const std::string& emotion,
+                                     double importance,
+                                     uint64_t timestamp,
+                                     const std::string& vtime) {
+    // Returns a parameterized query string. Values are bound later.
+    return R"(
+        INSERT INTO memories (conteudo, contexto, emocao, importancia, timestamp, vtime)
+        VALUES (?, ?, ?, ?, ?, ?)
+    )";
+}
+
+std::string SQLStatementBuilder::createEmbeddingInsert(MemoryId memory_id,
+                                        const std::vector<float>& embedding,
+                                        const std::string& created_at) {
+    // This matches the binding order in AdvancedMemorySystem::storeEmbedding
+    // 1: memory_id, 2: embedding (blob), 3: size (int), 4: created_at
+    return R"(
+        INSERT INTO memory_embeddings (memory_id, embedding, embedding_dimension, created_at)
+        VALUES (?, ?, ?, ?)
+    )";
+}
+
+std::string SQLStatementBuilder::createSemanticSearchQuery() {
+    // Selects all embeddings to compute cosine similarity in C++
+    return R"(
+        SELECT m.id, m.conteudo, m.emocao, m.importancia, me.embedding
+        FROM memories m
+        JOIN memory_embeddings me ON m.id = me.memory_id
+        WHERE me.embedding IS NOT NULL
+    )";
+}
+
+std::string SQLStatementBuilder::createContextualSearchQuery(const std::string& pattern, int limit) {
+    // Note: 'pattern' is handled via binding in the actual usage, 
+    // but if we needed a raw string builder (risky), it would look like this.
+    // For safety, we return the parameterized version.
+    return R"(
+        SELECT id, conteudo, emocao, importancia 
+        FROM memories 
+        WHERE conteudo LIKE ? OR contexto LIKE ?
+        ORDER BY importancia DESC 
+        LIMIT ?
+    )";
 }
 
 // ============================================================================
@@ -621,10 +787,8 @@ std::vector<AdvancedMemorySystem::HybridMemoryResult> AdvancedMemorySystem::hybr
 }
 
 void AdvancedMemorySystem::storeEmbedding(int memory_id, const std::vector<float>& embedding) {
-    const char* sql = R"(
-        INSERT OR REPLACE INTO memory_embeddings (memory_id, embedding, embedding_dimension, created_at)
-        VALUES (?, ?, ?, ?)
-    )";
+    std::string sql_statment = SQLStatementBuilder::createEmbeddingInsert(static_cast<MemoryId>(memory_id), embedding, Utils::getCurrentISOTime());
+    const char* sql = sql_statment.c_str();
     
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
