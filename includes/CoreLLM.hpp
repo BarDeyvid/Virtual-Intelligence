@@ -40,7 +40,7 @@ public:
     void register_expert(std::unique_ptr<alyssa_experts::IExpert> expert);
     void remove_expert(const std::string& expert_id);
     bool has_expert(const std::string& expert_id) const;
-    
+    bool validate_context_size(const std::string& prompt, const std::string& expert_id);
     // Utilitários
     std::string generate_fused_input(
         const std::string& original_input,

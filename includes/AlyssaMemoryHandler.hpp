@@ -490,7 +490,7 @@ namespace alyssa_memory {
                 // ============================================================================
                 
                 constexpr int VTIME_DIM = 2;
-                constexpr size_t MAX_TOKENS = 4096;
+                constexpr size_t MAX_TOKENS = 38216;
                 constexpr double DECAY_PER_HOUR = 0.01;
                 constexpr double MIN_IMPORTANCE = 0.3;
                 constexpr double HARD_LOCK_IMPORTANCE = 0.9;

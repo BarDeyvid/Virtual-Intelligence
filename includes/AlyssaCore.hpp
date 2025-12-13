@@ -27,6 +27,7 @@ struct SimpleModelConfig {
     bool usa_LoRA;
     std::string lora_path;
     SimpleModelParameters params;
+    int n_ctx = 8192;
 };
 
 using AllModelConfigs = std::vector<SimpleModelConfig>;
@@ -34,23 +35,20 @@ using AllModelConfigs = std::vector<SimpleModelConfig>;
 inline AllModelConfigs load_config() {
     AllModelConfigs configs;
     const std::string& filepath = "config/ConfigsLLM.json";
-    // 1. Abrir o arquivo
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "ERRO: Não foi possível abrir o arquivo de configuração: " << filepath << std::endl;
-        return configs; // Retorna vazio em caso de erro
+        return configs;
     }
 
     try {
-        // 2. Fazer o parse do JSON
         json j = json::parse(file);
 
-        // 3. Iterar sobre o array "models"
         if (j.contains("models") && j["models"].is_array()) {
             for (const auto& model_json : j["models"]) {
                 SimpleModelConfig config;
 
-                // Extrair campos de nível superior
+                // Campos de nível superior
                 if (model_json.contains("id")) {
                     config.id = model_json["id"].get<std::string>();
                 }
@@ -60,11 +58,17 @@ inline AllModelConfigs load_config() {
                 if (model_json.contains("system_prompt")) {
                     config.system_prompt = model_json["system_prompt"].get<std::string>();
                 }
+                if (model_json.contains("role_instruction")) {
+                    config.role_instruction = model_json["role_instruction"].get<std::string>();
+                }
                 if (model_json.contains("usa_LoRA")) {
                     config.usa_LoRA = model_json["usa_LoRA"].get<bool>();
                 }
                 if (model_json.contains("lora_path")) {
                     config.lora_path = model_json["lora_path"].get<std::string>();
+                }
+                if (model_json.contains("n_ctx")) {
+                    config.n_ctx = model_json["n_ctx"].get<int>();
                 }
 
                 // Extrair campos aninhados "parametros"
@@ -80,8 +84,7 @@ inline AllModelConfigs load_config() {
                     if (params_json.contains("max_tokens")) {
                         config.params.max_tokens = params_json["max_tokens"].get<int>();
                     }
-                }
-
+                }                
                 configs.push_back(config);
             }
         }
@@ -104,11 +107,11 @@ namespace alyssa_core {
 
         // O CONTEXTO ÚNICO E COMPARTILHADO
         llama_context* ctx;
-        int n_ctx = 2048; // Ou carregue do config
+        int n_ctx; 
 
     public:
-        AlyssaCore(const std::string& base_model_path) 
-            : model(nullptr), vocab(nullptr), ctx(nullptr) 
+        AlyssaCore(const std::string& base_model_path, int context_size = 2048) 
+            : model(nullptr), vocab(nullptr), ctx(nullptr), n_ctx(context_size) 
         {
             mParams = llama_model_default_params();
             mParams.n_gpu_layers = -1; 
@@ -121,7 +124,7 @@ namespace alyssa_core {
             
             vocab = llama_model_get_vocab(model);
 
-            // CRIAR O CONTEXTO ÚNICO
+            // Usar o n_ctx passado como parâmetro
             llama_context_params ctx_params = llama_context_default_params();
             ctx_params.n_ctx = n_ctx;
             ctx_params.n_batch = n_ctx;
@@ -130,7 +133,7 @@ namespace alyssa_core {
             if (!ctx) {
                 throw std::runtime_error("AlyssaCore: Falha ao criar contexto ÚNICO.");
             }
-            std::cout << "Contexto ÚNICO criado." << std::endl;
+            std::cout << "Contexto ÚNICO criado com n_ctx = " << n_ctx << std::endl;
         }
 
         ~AlyssaCore() {
@@ -145,7 +148,6 @@ namespace alyssa_core {
         const llama_vocab* get_vocab() { return vocab; }
         llama_context* get_context() { return ctx; }
         int get_n_ctx() { return n_ctx; }
-
 
         // Lógica de geração movida para cá
         std::string generate_raw(

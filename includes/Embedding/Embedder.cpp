@@ -1,16 +1,26 @@
 // Embedder.cpp
 #include "Embedding/Embedder.hpp"
 
-
-// Construtores e Destrutores
+/**
+ * @brief Default constructor.
+ * Initializes llama.cpp backend.
+ */
 Embedder::Embedder() {
     llama_backend_init();
 }
 
+/**
+ * @brief Constructor with configuration file path.
+ * @param config_path Path to JSON configuration file.
+ */
 Embedder::Embedder(const std::string& config_path) : config_path(config_path) {
     llama_backend_init();
 }
 
+/**
+ * @brief Destructor.
+ * Cleans up llama.cpp resources and frees allocated memory.
+ */
 Embedder::~Embedder() {
     if (initialized) {
         llama_batch_free(batch);
@@ -20,12 +30,21 @@ Embedder::~Embedder() {
     llama_backend_free();
 }
 
+/**
+ * @brief Initialize the embedder with default config path.
+ * @return true if initialization successful, false otherwise.
+ */
 bool Embedder::initialize() {
     return initialize(config_path);
 }
 
-
+/**
+ * @brief Initialize the embedder with specified config file.
+ * @param config_path_ Path to configuration file.
+ * @return true if initialization successful, false otherwise.
+ */
 bool Embedder::initialize(const std::string& config_path_) {
+    // Set up logging callback for llama.cpp
     llama_log_set([](enum ggml_log_level level, const char * text, void * /* user_data */) {
         if (level >= GGML_LOG_LEVEL_ERROR) {
             fprintf(stderr, "%s", text);
@@ -34,12 +53,13 @@ bool Embedder::initialize(const std::string& config_path_) {
 
     this->config_path = config_path_;
     
-    // Gerenciamento de Config
+    // Create configuration directory if it doesn't exist
     fs::path config_dir = fs::path(config_path_).parent_path();
     if (!config_dir.empty() && !fs::exists(config_dir)) {
         fs::create_directories(config_dir);
     }
     
+    // Load configuration or create default
     if (!config_load(config_path_)) {
         std::cerr << "Falha ao carregar configuração. Criando configuração padrão..." << std::endl;
         create_default_config();
@@ -49,13 +69,13 @@ bool Embedder::initialize(const std::string& config_path_) {
         }
     }
 
-    // 1. Configurar parâmetros do MODELO
+    // 1. Configure model parameters
     llama_model_params mparams = llama_model_default_params();
     mparams.n_gpu_layers = config.n_gpu_layers;
     mparams.use_mlock    = config.use_mlock;
     mparams.use_mmap     = config.use_mmap;
 
-    // 2. Carregar o MODELO
+    // 2. Load the model
     llama_model * model_ptr = llama_model_load_from_file(config.model_path.c_str(), mparams);
     if (model_ptr == nullptr) {
         std::cerr << __func__ << ": unable to load model from " << config.model_path << std::endl;
@@ -63,17 +83,17 @@ bool Embedder::initialize(const std::string& config_path_) {
     }
     model.reset(model_ptr, llama_model_free);
 
-    // 3. Obter o vocabulário do modelo
+    // 3. Get model vocabulary
     vocab_ptr = llama_model_get_vocab(model.get());
     
-    // 4. Configurar parâmetros do CONTEXTO PARA EMBEDDING
+    // 4. Configure context parameters for embedding
     llama_context_params cparams = llama_context_default_params();
     cparams.n_ctx       = 8192;  // Smaller context for embeddings
     cparams.n_batch     = 8192;  // Batch size for embeddings
     cparams.n_threads   = (config.n_threads <= 0) ? std::thread::hardware_concurrency() : config.n_threads;
     cparams.embeddings  = true;
     
-    // 5. Criar o CONTEXTO DE EMBEDDING (separado do contexto de geração)
+    // 5. Create embedding context (separate from generation context)
     llama_context * context_ptr = llama_init_from_model(model.get(), cparams);
     if (context_ptr == nullptr) {
         std::cerr << __func__ << ": failed to create embedding context from model" << std::endl;
@@ -81,7 +101,7 @@ bool Embedder::initialize(const std::string& config_path_) {
     }
     context.reset(context_ptr, llama_free);
 
-    // 6. Obter informações do modelo
+    // 6. Get model information
     pooling_type = llama_pooling_type(context.get());
     
     if (pooling_type == LLAMA_POOLING_TYPE_NONE) {
@@ -97,7 +117,7 @@ bool Embedder::initialize(const std::string& config_path_) {
     n_embd = llama_model_n_embd(model.get());
     config.embedding_dimension = n_embd;
 
-    // 7. Inicializar batch
+    // 7. Initialize batch
     int actual_n_batch = llama_n_batch(context.get());
     batch = llama_batch_init(actual_n_batch, 0, 1);
 
@@ -108,7 +128,12 @@ bool Embedder::initialize(const std::string& config_path_) {
     return true;
 }
 
-// Geração de embeddings
+/**
+ * @brief Generate embedding for a single text.
+ * @param text Input text to embed.
+ * @return Vector of floats representing the embedding.
+ * @throws std::runtime_error if embedder not initialized.
+ */
 std::vector<float> Embedder::generate_embedding(const std::string& text) {
     if (!initialized) {
         throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
@@ -117,6 +142,12 @@ std::vector<float> Embedder::generate_embedding(const std::string& text) {
     return !result.empty() ? result[0] : std::vector<float>();
 }
 
+/**
+ * @brief Generate embeddings for multiple texts.
+ * @param texts Vector of input texts.
+ * @return Vector of embedding vectors.
+ * @throws std::runtime_error if embedder not initialized.
+ */
 std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<std::string>& texts) {
     if (!initialized) {
         throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
@@ -133,14 +164,14 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
     // Get maximum batch size allowed from config
     const int max_batch = config.n_batch;
 
-    // Processar cada texto individualmente
+    // Process each text individually
     for (const auto& text : texts) {
         // Clear previous KV cache before each embedding
         if (context) {
             llama_memory_seq_rm(llama_get_memory(context.get()), 0, -1, -1);
         }
         
-        // Tokenizar
+        // Tokenize
         auto tokens = tokenize(text, true);
         if (tokens.empty()) {
             std::cerr << __func__ << ": failed to tokenize text" << std::endl;
@@ -164,7 +195,7 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
             batch.logits[i] = (i == tokens.size() - 1); 
         }
 
-        // Processar
+        // Process
         if (llama_decode(context.get(), batch) < 0) {
             std::cerr << __func__ << ": llama_decode failed" << std::endl;
             result.push_back(std::vector<float>(n_embd, 0.0f));
@@ -199,24 +230,33 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
     return result;
 }
 
+/**
+ * @brief Clear the embedding cache.
+ * Useful for freeing memory between batches.
+ */
 void Embedder::clear_embedding_cache() {
     if (context) {
         llama_memory_seq_rm(llama_get_memory(context.get()), 0, -1, -1);
     }
 }
 
-// Tokenização usando vocab_ptr
+/**
+ * @brief Tokenize text using model vocabulary.
+ * @param text Input text to tokenize.
+ * @param add_special_tokens Whether to add special tokens.
+ * @return Vector of token IDs.
+ */
 std::vector<llama_token> Embedder::tokenize(const std::string& text, bool add_special_tokens) const {
     if (!vocab_ptr) {
         std::cerr << __func__ << ": vocabulary not initialized" << std::endl;
         return {};
     }
 
-    // Primeira passagem: obter número de tokens
+    // First pass: get token count
     const int n_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), nullptr, 0, add_special_tokens, true);
     
     if (n_tokens < 0) {
-        // Buffer muito pequeno, alocar com tamanho necessário
+        // Buffer too small, allocate with needed size
         std::vector<llama_token> tokens(-n_tokens);
         int actual_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), tokens.data(), static_cast<int32_t>(tokens.size()), add_special_tokens, true);
         if (actual_tokens < 0) {
@@ -226,7 +266,7 @@ std::vector<llama_token> Embedder::tokenize(const std::string& text, bool add_sp
         tokens.resize(actual_tokens);
         return tokens;
     } else {
-        // Alocar com tamanho exato
+        // Allocate with exact size
         std::vector<llama_token> tokens(n_tokens);
         int actual_tokens = llama_tokenize(vocab_ptr, text.c_str(), static_cast<int32_t>(text.length()), tokens.data(), static_cast<int32_t>(tokens.size()), add_special_tokens, true);
         if (actual_tokens != n_tokens) {
@@ -237,8 +277,14 @@ std::vector<llama_token> Embedder::tokenize(const std::string& text, bool add_sp
     }
 }
 
-
-// Semantic search e funções de similaridade permanecem inalteradas
+/**
+ * @brief Perform semantic search on documents.
+ * @param query Search query text.
+ * @param documents Vector of document texts to search through.
+ * @param top_k Number of top results to return (default: 5).
+ * @return Vector of tuples (similarity_score, document_index, document_text).
+ * @throws std::runtime_error if embedder not initialized.
+ */
 std::vector<std::tuple<double, int, std::string>> Embedder::semantic_search(
     const std::string& query, 
     const std::vector<std::string>& documents,
@@ -268,6 +314,12 @@ std::vector<std::tuple<double, int, std::string>> Embedder::semantic_search(
     return similarities;
 }
 
+/**
+ * @brief Compute dot product of two embeddings.
+ * @param a First embedding vector.
+ * @param b Second embedding vector.
+ * @return Dot product value.
+ */
 double Embedder::dot_product(const std::vector<float>& a, const std::vector<float>& b) {
     if (a.size() != b.size()) return 0.0;
     double result = 0.0;
@@ -277,6 +329,11 @@ double Embedder::dot_product(const std::vector<float>& a, const std::vector<floa
     return result;
 }
 
+/**
+ * @brief Compute magnitude (L2 norm) of an embedding.
+ * @param a Embedding vector.
+ * @return Magnitude of the vector.
+ */
 double Embedder::magnitude(const std::vector<float>& a) {
     double sum_of_squares = 0.0;
     for (float val : a) {
@@ -285,6 +342,12 @@ double Embedder::magnitude(const std::vector<float>& a) {
     return std::sqrt(sum_of_squares);
 }
 
+/**
+ * @brief Compute cosine similarity between two embeddings.
+ * @param a First embedding vector.
+ * @param b Second embedding vector.
+ * @return Cosine similarity score between -1 and 1.
+ */
 double Embedder::cosine_similarity(const std::vector<float>& a, const std::vector<float>& b) {
     double dot = dot_product(a, b);
     double mag_a = magnitude(a);
@@ -293,18 +356,34 @@ double Embedder::cosine_similarity(const std::vector<float>& a, const std::vecto
     return dot / (mag_a * mag_b);
 }
 
+/**
+ * @brief Get embedding dimension.
+ * @return Dimension of embeddings, or 0 if not initialized.
+ */
 int Embedder::get_embedding_dimension() const {
     return initialized ? n_embd : 0;
 }
 
-// Callback do cURL
+/**
+ * @brief Callback function for writing HTTP response data.
+ * @param contents Pointer to response data.
+ * @param size Size of each element.
+ * @param nmemb Number of elements.
+ * @param response String to append data to.
+ * @return Total size written.
+ */
 size_t Embedder::write_callback(void* contents, size_t size, size_t nmemb, std::string* response) {
     size_t totalSize = size * nmemb;
     response->append((char*)contents, totalSize);
     return totalSize;
 }
 
-// Extração de embedding do JSON
+/**
+ * @brief Extract embedding vector from JSON response.
+ * @param response_data JSON data containing embedding.
+ * @return Vector of floats representing embedding.
+ * @throws std::runtime_error if JSON format not recognized.
+ */
 std::vector<float> Embedder::extract_embedding_from_json(const json& response_data) {
     std::vector<float> embedding;
     
@@ -352,7 +431,11 @@ std::vector<float> Embedder::extract_embedding_from_json(const json& response_da
     throw std::runtime_error("Formato JSON não reconhecido");
 }
 
-// Gerenciamento de configuração
+/**
+ * @brief Load configuration from JSON file.
+ * @param config_path Path to configuration file.
+ * @return true if load successful, false otherwise.
+ */
 bool Embedder::config_load(const std::string& config_path) {
     try {
         std::ifstream config_file(config_path);
@@ -381,6 +464,11 @@ bool Embedder::config_load(const std::string& config_path) {
     }
 }
 
+/**
+ * @brief Save current configuration to JSON file.
+ * @param config_path Path to save configuration.
+ * @return true if save successful, false otherwise.
+ */
 bool Embedder::save_config(const std::string& config_path) {
     try {
         json config_json;
@@ -404,6 +492,10 @@ bool Embedder::save_config(const std::string& config_path) {
     }
 }
 
+/**
+ * @brief Create default configuration file.
+ * Sets default values and saves to config path.
+ */
 void Embedder::create_default_config() {
     config = Config(); 
     if (fs::exists("models/ggml-model-q4_0.gguf")) {

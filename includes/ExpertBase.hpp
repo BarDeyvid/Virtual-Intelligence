@@ -157,25 +157,32 @@ namespace alyssa_experts {
             
             // Executa geração
             contrib.response = run(input, core_instance, lora_override, 
-                                 current_history, active_lora_in_context, stream_callback);
+                                current_history, active_lora_in_context, stream_callback);
 
             // Determina fonte baseada no tipo de especialista
-            if (expert_id == "emotionalModel" || expert_id == "introspectiveModel" || 
-                expert_id == "socialModel") {
-                contrib.source = "subconscious";
+            // REMOVER: NÃO atribuir identidades do usuário aqui
+            if (expert_id == "emotionalModel") {
+                contrib.source = "emocional";
+            } else if (expert_id == "introspectiveModel") {
+                contrib.source = "introspectivo";
+            } else if (expert_id == "socialModel") {
+                contrib.source = "social";
             } else if (expert_id == "memoryModel") {
-                contrib.source = "memory";
+                contrib.source = "memória";
+            } else if (expert_id == "analyticalModel") {
+                contrib.source = "analítico";
+            } else if (expert_id == "creativeModel") {
+                contrib.source = "criativo";
             } else {
-                contrib.source = "Deyvid";
+                contrib.source = expert_id;
             }
 
-            // Calcula embedding se disponível
             if (embedder) {
                 try {
                     contrib.embedding = embedder->generate_embedding(contrib.response);
                 } catch (const std::exception& e) {
                     std::cerr << "Erro ao calcular embedding para " << expert_id 
-                              << ": " << e.what() << std::endl;
+                            << ": " << e.what() << std::endl;
                 }
             }
             
