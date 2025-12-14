@@ -3,6 +3,11 @@
 
 using json = nlohmann::json;
 
+/**
+ * @brief Load configuration from JSON file.
+ * @param path Path to configuration file.
+ * @return true if load successful, false otherwise.
+ */
 static bool loadConfig(const std::string& path, std::string& key, std::string& voice, int& rate) {
     const std::string& filepath = path;
     std::ifstream i(filepath);
@@ -26,7 +31,9 @@ static bool loadConfig(const std::string& path, std::string& key, std::string& v
     }
 }
 
-// --- Callback para escrever dados HTTP ---
+/**
+ * @brief Callback para escrever dados HTTP
+ */
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::vector<char>* buffer) {
     size_t total_size = size * nmemb;
     buffer->insert(buffer->end(), (char*)contents, (char*)contents + total_size);
@@ -34,7 +41,11 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::vect
 }
 
 // --- Construtor e Destrutor ---
-
+/**
+* @brief Default constructor.
+* @param api_key My API KEY which isn't going to git
+* @param voice_id which voice Alyssa Should have
+*/
 ElevenLabsTTS::ElevenLabsTTS(const std::string& api_key, 
                            const std::string& voice_id,
                            int sample_rate) 
@@ -59,6 +70,10 @@ ElevenLabsTTS::ElevenLabsTTS(const std::string& api_key,
         sample_rate_ = sample_rate;
     }
     }
+
+/**
+* @brief Default destructur.
+*/
 ElevenLabsTTS::~ElevenLabsTTS() {
     std::cout << "Finalizando ElevenLabsTTS..." << std::endl;
     
