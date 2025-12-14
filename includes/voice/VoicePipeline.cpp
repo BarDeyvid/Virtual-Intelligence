@@ -2,6 +2,11 @@
 
 // --- Construtor e Destrutor ---
 
+/**
+ * @brief Constructor implementation.
+ * 
+ * Loads the Whisper model and initializes PortAudio with the provided configuration options.
+ */
 VoicePipeline::VoicePipeline(const std::string& model_path, Options options)
     : m_options(options) {
         
@@ -28,6 +33,11 @@ VoicePipeline::VoicePipeline(const std::string& model_path, Options options)
     std::fill(m_audio_data.buffer.begin(), m_audio_data.buffer.end(), 0.0f);
 }
 
+/**
+ * @brief Destructor implementation.
+ * 
+ * Stops the pipeline, frees resources, and terminates PortAudio.
+ */
 VoicePipeline::~VoicePipeline() {
     stop(); // Garante que tudo parou
     
@@ -40,6 +50,11 @@ VoicePipeline::~VoicePipeline() {
 
 // --- Controles Públicos ---
 
+/**
+ * @brief Starts the VoicePipeline.
+ * 
+ * Initializes PortAudio stream, starts audio capture and processing threads.
+ */
 bool VoicePipeline::start() {
     if (m_running) {
         std::cerr << "AVISO: VoicePipeline já está em execução." << std::endl;
@@ -91,6 +106,11 @@ bool VoicePipeline::start() {
     return true;
 }
 
+/**
+ * @brief Stops the VoicePipeline.
+ * 
+ * Signals all threads to stop and waits for them to finish.
+ */
 void VoicePipeline::stop() {
     if (!m_running) {
         return;
@@ -120,12 +140,22 @@ void VoicePipeline::stop() {
     std::cout << "\n--- VoicePipeline PARADA. ---" << std::endl;
 }
 
+/**
+ * @brief Gets the last transcription result.
+ * 
+ * Attempts to retrieve the latest transcription from the output queue without blocking.
+ */
 bool VoicePipeline::get_last_result(std::string& result) {
     return m_output_queue.try_pop(result);
 }
 
 // --- Lógica Interna (Threads) ---
 
+/**
+ * @brief Whisper worker thread function.
+ * 
+ * Consumes audio segments, transcribes them using the Whisper model, and enqueues results.
+ */
 void VoicePipeline::_whisper_worker_func() {
     std::vector<float> audio_segment;
     std::cout << "🧠 Whisper worker thread iniciada." << std::endl;
@@ -144,11 +174,21 @@ void VoicePipeline::_whisper_worker_func() {
     std::cout << "🛑 Whisper worker thread encerrando." << std::endl;
 }
 
+/**
+ * @brief Pauses the VoicePipeline.
+ * 
+ * Stops processing of audio data (both VAD and callback).
+ */
 void VoicePipeline::pause() {
     std::cout << "[VAD] Pausado." << std::endl;
     m_is_paused = true;
 }
 
+/**
+ * @brief Resumes the VoicePipeline.
+ * 
+ * Continues processing after a pause, clears any buffered audio data.
+ */
 void VoicePipeline::resume() {
     std::cout << "[VAD] Retomado." << std::endl;
     // Limpa qualquer áudio capturado durante a pausa
@@ -158,6 +198,11 @@ void VoicePipeline::resume() {
     m_is_paused = false;
 }
 
+/**
+ * @brief VAD loop thread function.
+ * 
+ * Detects speech segments using VAD and enqueues them for processing.
+ */
 void VoicePipeline::_vad_loop_func() {
     size_t last_read_pos = 0;
     std::vector<float> speech_buffer;
@@ -169,7 +214,7 @@ void VoicePipeline::_vad_loop_func() {
     while (m_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Poll 10x/s
 
-        if (m_is_paused) { // <-- ADICIONE ESTA VERIFICAÇÃO
+        if (m_is_paused) { 
             continue; 
         }
 
@@ -207,6 +252,11 @@ void VoicePipeline::_vad_loop_func() {
 
 // --- Funções de Implementação ---
 
+/**
+ * @brief Processes audio buffer for transcription.
+ * 
+ * Transcribes the given audio samples using the Whisper model and returns the text result.
+ */
 std::string VoicePipeline::_process_transcription(const std::vector<float>& audio_buffer) {
     if (audio_buffer.empty()) return "";
 
@@ -237,6 +287,11 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
     return full_text;
 }
 
+/**
+ * @brief Performs simple Voice Activity Detection.
+ * 
+ * Determines if the given audio chunk contains speech based on RMS threshold.
+ */
 bool VoicePipeline::_is_speech(const std::vector<float>& audio_chunk) {
     if (audio_chunk.empty()) return false;
     double sum_sq = std::inner_product(audio_chunk.begin(), audio_chunk.end(), audio_chunk.begin(), 0.0);
@@ -244,7 +299,11 @@ bool VoicePipeline::_is_speech(const std::vector<float>& audio_chunk) {
     return rms > m_options.vad_rms_threshold;
 }
 
-
+/**
+ * @brief PortAudio callback function.
+ * 
+ * Static wrapper around the non-static `_pa_callback_impl` method.
+ */
 int VoicePipeline::_pa_callback(const void *inputBuffer, void *outputBuffer,
                                 unsigned long framesPerBuffer,
                                 const PaStreamCallbackTimeInfo* timeInfo,
@@ -256,6 +315,11 @@ int VoicePipeline::_pa_callback(const void *inputBuffer, void *outputBuffer,
     return pipeline->_pa_callback_impl(inputBuffer, framesPerBuffer);
 }
 
+/**
+ * @brief PortAudio callback implementation.
+ * 
+ * Captures audio samples from the microphone and writes them to the internal buffer.
+ */
 int VoicePipeline::_pa_callback_impl(const void* input, unsigned long frameCount) {
     const int16_t *input_i16 = (const int16_t*)input;
 
