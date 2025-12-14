@@ -718,7 +718,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
                 memory_context += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
             }
             memory_context += "[FIM CONTEXTO LTM]\n";
-            std::cout << "🧠 " << memory_context;
+            std::cout << "[Memory Context] " << memory_context;
             augmented_input = memory_context + input;
         }
     }
@@ -765,9 +765,9 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     if (memory_manager) {
         if (should_store_in_memory(input, final_response)) {
             memory_manager->processInteraction(input, final_response);
-            std::cout << "\n 💾 Interação salva na LTM." << std::endl;
+            std::cout << "\n Interação salva na LTM." << std::endl;
         } else {
-            std::cout << "\n ⚠️  Small talk/ruído não salvo na LTM." << std::endl;
+            std::cout << "\n Small talk/ruído não salvo na LTM." << std::endl;
         }
     }
 
@@ -849,7 +849,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
                 memory_context += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
             }
             memory_context += "[FIM CONTEXTO LTM]\n";
-            std::cout << "🧠 " << memory_context;
+            std::cout << "[Memory Context] " << memory_context;
             augmented_input = memory_context + input;
         }
     }
