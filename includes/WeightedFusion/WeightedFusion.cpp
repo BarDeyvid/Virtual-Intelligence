@@ -3,6 +3,15 @@
 namespace alyssa_fusion {
 
 // 🔹 A. Rule-based Fusion
+/**
+ * @brief Calculates rule-based weights for expert contributions.
+ * 
+ * Assigns initial minimum weights to all available experts and adjusts them based on specific keywords found in the input.
+ * 
+ * @param input The user's input string.
+ * @param available_experts List of available experts.
+ * @return A map from expert IDs to their corresponding weights.
+ */
 std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
     const std::string& input, 
     const std::vector<std::string>& available_experts) {
@@ -59,6 +68,15 @@ std::map<std::string, double> WeightedFusion::calculate_rule_based_weights(
 }
 
 // 🔹 B. Feature-based Fusion
+/**
+ * @brief Calculates feature-based weights for expert contributions.
+ * 
+ * Computes the similarity between the input and each expert's response embedding, then applies softmax normalization to these similarities.
+ * 
+ * @param input The user's input string.
+ * @param expert_responses Vector of ExpertContribution objects containing responses from various experts.
+ * @return A map from expert IDs to their corresponding weights.
+ */
 std::map<std::string, double> WeightedFusion::calculate_feature_based_weights(
     const std::string& input,
     const std::vector<ExpertContribution>& expert_responses) {
@@ -94,6 +112,16 @@ std::map<std::string, double> WeightedFusion::calculate_feature_based_weights(
 }
 
 // 🔹 C. Neural Fusion (implementação simplificada)
+/**
+ * @brief Calculates neural-based weights for expert contributions using an ONNX model.
+ * 
+ * Generates embeddings for the input and each expert's response, runs inference through an ONNX model to determine weights, and applies emotion adjustments if specified.
+ * 
+ * @param input The user's input string.
+ * @param expert_responses Vector of ExpertContribution objects containing responses from various experts.
+ * @param current_emotion Current emotional context (e.g., "happy", "sad").
+ * @return A map from expert IDs to their corresponding weights.
+ */
 std::map<std::string, double> WeightedFusion::calculate_neural_weights(
     const std::string& input,
     const std::vector<ExpertContribution>& expert_responses,
@@ -176,6 +204,16 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
 }
 
 // 🧠 Método principal de fusão
+/**
+ * @brief Fuses multiple expert responses into a single output.
+ * 
+ * Uses neural-based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
+ * 
+ * @param input The user's input string.
+ * @param contributions Vector of ExpertContribution objects containing responses from various experts.
+ * @param current_emotion Current emotional context (optional).
+ * @return The fused response as a single string.
+ */
 std::string WeightedFusion::fuse_responses(
     const std::string& input,
     const std::vector<ExpertContribution>& contributions,
@@ -218,6 +256,15 @@ std::string WeightedFusion::fuse_responses(
 }
 
 // Utilitários
+/**
+ * @brief Calculates the semantic similarity between two embeddings.
+ * 
+ * Computes the cosine similarity between two vector embeddings.
+ * 
+ * @param emb1 The first embedding as a vector of floats.
+ * @param emb2 The second embedding as a vector of floats.
+ * @return The similarity score (0 to 1).
+ */
 double WeightedFusion::calculate_semantic_similarity(
     const std::vector<float>& emb1, 
     const std::vector<float>& emb2) {
@@ -235,6 +282,14 @@ double WeightedFusion::calculate_semantic_similarity(
     return dot_product / (sqrt(norm1) * sqrt(norm2));
 }
 
+/**
+ * @brief Detects the emotion from the user's input.
+ * 
+ * Analyzes the input string for specific keywords related to emotions and returns the detected emotion.
+ * 
+ * @param input The user's input string.
+ * @return Detected emotion as a string (e.g., "happy", "sad").
+ */
 std::string WeightedFusion::detect_emotion_from_input(const std::string& input) {
     std::string lower_input = input;
     std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
@@ -254,6 +309,14 @@ std::string WeightedFusion::detect_emotion_from_input(const std::string& input) 
     return "neutral";
 }
 
+/**
+ * @brief Extracts keywords from the given text.
+ * 
+ * Placeholder function for extracting keywords. In practice, this should implement a more sophisticated keyword extraction algorithm.
+ * 
+ * @param text The input string to extract keywords from.
+ * @return The extracted keywords as a string (placeholder).
+ */
 std::string WeightedFusion::extract_keywords(const std::string& text) {
     // Implementação simplificada de extração de keywords
     // Na prática, usaríamos um algoritmo mais sofisticado
