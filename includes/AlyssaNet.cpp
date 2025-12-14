@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <sstream>
 #include <map>
+#include <set>
+#include <regex>
+#include <cctype>
 
 using namespace alyssa_core;
 logging::Logger logg;
@@ -261,6 +264,134 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 }
 
 // =========================================================================
+// Funções Auxiliares
+// =========================================================================
+
+bool CoreIntegration::are_signals_compatible(const std::string& signal1, const std::string& signal2) {
+    // Lógica simples de compatibilidade
+    // Se ambos os sinais contêm "ERRO", são incompatíveis
+    if (signal1.find("[ERRO]") != std::string::npos && 
+        signal2.find("[ERRO]") != std::string::npos) {
+        return false;
+    }
+    
+    // Sinais com alta confiança (>0.7) são considerados compatíveis se não forem opostos
+    // Extrair confiança dos sinais
+    auto extract_confidence = [](const std::string& signal) -> float {
+        std::regex conf_pattern(R"(\[CONFIANÇA\]\s*(\d+\.?\d*))");
+        std::smatch matches;
+        if (std::regex_search(signal, matches, conf_pattern) && matches.size() >= 2) {
+            try {
+                return std::stof(matches[1]);
+            } catch (...) {
+                return 0.0f;
+            }
+        }
+        return 0.0f;
+    };
+    
+    float conf1 = extract_confidence(signal1);
+    float conf2 = extract_confidence(signal2);
+    
+    // Se ambos têm confiança alta (>0.7), considerar compatíveis
+    if (conf1 > 0.7f && conf2 > 0.7f) {
+        return true;
+    }
+    
+    // Por padrão, considerar compatíveis
+    return true;
+};
+
+float CoreIntegration::calculate_string_similarity(const std::string& str1, const std::string& str2) {
+    // Similaridade de Jaccard simplificada
+    if (str1.empty() && str2.empty()) return 1.0f;
+    if (str1.empty() || str2.empty()) return 0.0f;
+    
+    std::string lower1 = str1;
+    std::string lower2 = str2;
+    std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
+    std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
+    
+    // Contar palavras comuns
+    std::set<std::string> words1, words2;
+    
+    auto tokenize = [](const std::string& text) -> std::set<std::string> {
+        std::set<std::string> tokens;
+        std::string token;
+        for (char c : text) {
+            if (std::isalnum(c) || c == '\'') {
+                token += c;
+            } else if (!token.empty()) {
+                tokens.insert(token);
+                token.clear();
+            }
+        }
+        if (!token.empty()) tokens.insert(token);
+        return tokens;
+    };
+    
+    words1 = tokenize(lower1);
+    words2 = tokenize(lower2);
+    
+    if (words1.empty() && words2.empty()) return 1.0f;
+    if (words1.empty() || words2.empty()) return 0.0f;
+    
+    int intersection = 0;
+    for (const auto& word : words1) {
+        if (words2.find(word) != words2.end()) {
+            intersection++;
+        }
+    }
+    
+    int union_size = words1.size() + words2.size() - intersection;
+    
+    return union_size > 0 ? (float)intersection / union_size : 0.0f;
+};
+
+bool CoreIntegration::is_small_talk(const std::string& input) {
+    // Lista de padrões de small talk
+    static const std::vector<std::string> small_talk_patterns = {
+        "oi", "olá", "e aí", "eai", "tudo bem", "como vai",
+        "bom dia", "boa tarde", "boa noite", "oi, tudo bem?",
+        "olá, como você está?", "hey", "hello", "hi"
+    };
+    
+    std::string lower_input = input;
+    std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+    
+    // Remover pontuação
+    lower_input.erase(std::remove_if(lower_input.begin(), lower_input.end(), 
+                     [](char c) { return std::ispunct(c); }), lower_input.end());
+    
+    // Verificar se é apenas small talk
+    for (const auto& pattern : small_talk_patterns) {
+        if (lower_input.find(pattern) != std::string::npos) {
+            // Se o input for muito curto (<= 15 chars) ou for exatamente um padrão
+            if (lower_input.length() <= 15 || lower_input == pattern) {
+                return true;
+            }
+        }
+    }
+    
+    // Verificar se tem conteúdo semântico
+    std::vector<std::string> content_indicators = {
+        "?", "porque", "como", "quando", "onde", "por que",
+        "explica", "ajuda", "preciso", "problema", "questão"
+    };
+    
+    bool has_content = false;
+    for (const auto& indicator : content_indicators) {
+        if (lower_input.find(indicator) != std::string::npos) {
+            has_content = true;
+            break;
+        }
+    }
+    
+    return !has_content && lower_input.length() < 30;
+};
+
+
+// =========================================================================
 // Controle de Contexto e Cache
 // =========================================================================
 
@@ -464,6 +595,42 @@ CoreIntegration::run_expert_committee(
     return contributions;
 }
 
+std::string CoreIntegration::detect_emotion_with_heuristics(const std::string& input) {
+    // 1. Verificar small talk
+    if (CoreIntegration::is_small_talk(input)) {
+        return "neutralidade";
+    }
+    
+    // 2. Usar o detector do fusion_engine com fallback
+    std::string detected = fusion_engine->detect_emotion_from_input(input);
+    
+    // 3. Heurística: se confiança baixa (< 0.3) ou emoção "surpresa" em input curto
+    if (detected == "surpresa" && input.length() < 50) {
+        // Verificar se há realmente algo surpreendente
+        std::vector<std::string> surprise_indicators = {
+            "incrível", "incrivel", "uau", "nossa", "caramba",
+            "surpresa", "inesperado", "não acredito", "sério"
+        };
+        
+        std::string lower_input = input;
+        std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
+        
+        bool has_surprise_word = false;
+        for (const auto& word : surprise_indicators) {
+            if (lower_input.find(word) != std::string::npos) {
+                has_surprise_word = true;
+                break;
+            }
+        }
+        
+        if (!has_surprise_word) {
+            return "curiosidade"; // Fallback mais provável para perguntas
+        }
+    }
+    
+    return detected;
+}
+
 // =========================================================================
 // Weighted Fusion
 // =========================================================================
@@ -564,10 +731,27 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
         "alyssa"        
     };
 
+    // 1. Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
-
-    // 2. Aplica Weighted Fusion
-    std::string emotion = fusion_engine->detect_emotion_from_input(input);
+    
+    // 2. CALCULAR COERÊNCIA DO COMITÊ
+    float committee_coherence = calculate_committee_coherence(contributions);
+    
+    // 3. Se coerência muito baixa, regenerar sem comitê
+    if (committee_coherence < 0.3) {
+        std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
+                  << "). Gerando resposta direta." << std::endl;
+        
+        // Limpar contribuições incoerentes
+        contributions.clear();
+        
+        // Gerar resposta direta com a Alyssa
+        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
+        return run_expert("alyssa", direct_prompt, false, nullptr);
+    }
+    
+    // 4. Continuar com fusão normal se coerência aceitável
+    std::string emotion = detect_emotion_with_heuristics(input);
     std::string fused_input = generate_fused_input(input, contributions, emotion);
     
     // 3. Executa alyssa com o input fusionado (com TTS)
@@ -579,12 +763,73 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
 
     // Salvar interação na memória
     if (memory_manager) {
-        memory_manager->processInteraction(input, final_response);
-        std::cout << "\n Interação salva na LTM." << std::endl;
+        if (should_store_in_memory(input, final_response)) {
+            memory_manager->processInteraction(input, final_response);
+            std::cout << "\n 💾 Interação salva na LTM." << std::endl;
+        } else {
+            std::cout << "\n ⚠️  Small talk/ruído não salvo na LTM." << std::endl;
+        }
     }
 
     return final_response;
 }
+
+float CoreIntegration::calculate_committee_coherence(
+    const std::vector<alyssa_fusion::ExpertContribution>& contributions
+) {
+    if (contributions.size() <= 1) return 1.0f;
+    
+    // Simples métrica de similaridade textual
+    int agreeing_signals = 0;
+    int total_pairs = 0;
+    
+    for (size_t i = 0; i < contributions.size(); ++i) {
+        for (size_t j = i + 1; j < contributions.size(); ++j) {
+            // Verificar se os sinais são compatíveis
+            if (are_signals_compatible(contributions[i].response, contributions[j].response)) {
+                agreeing_signals++;
+            }
+            total_pairs++;
+        }
+    }
+    
+    return total_pairs > 0 ? (float)agreeing_signals / total_pairs : 0.0f;
+};
+
+bool CoreIntegration::should_store_in_memory(const std::string& input, const std::string& response) {
+    // Critério 1: Não armazenar small talk
+    if (CoreIntegration::is_small_talk(input)) return false;
+    
+    // Critério 2: Mínimo de novidade semântica
+    if (input.length() < 20 && response.length() < 30) return false;
+    
+    // Critério 3: Verificar repetição (similaridade com últimas N interações)
+    static std::vector<std::string> recent_interactions;
+    static const int MAX_RECENT = 10;
+    
+    if (recent_interactions.size() >= MAX_RECENT) {
+        recent_interactions.erase(recent_interactions.begin());
+    }
+    
+    // Calcular similaridade com interações recentes
+    for (const auto& recent : recent_interactions) {
+        float similarity = calculate_string_similarity(input, recent);
+        if (similarity > 0.8) {
+            return false; // Muito similar a algo recente
+        }
+    }
+    
+    recent_interactions.push_back(input);
+    
+    // Critério 4: Presença de elementos memoráveis
+    bool has_memorable_elements = 
+        input.find("?") != std::string::npos || // Pergunta
+        response.find("!") != std::string::npos || // Ênfase
+        input.length() > 100 || // Conteúdo substancial
+        response.length() > 150;
+    
+    return has_memorable_elements;
+};
 
 std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input) {
     if (!initialized || !core_instance || !fusion_engine) {
@@ -619,13 +864,29 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
         "memoryModel"
     };
 
+    // 1. Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
-
-    // 2. Detecta emoção
-    std::string emotion = fusion_engine->detect_emotion_from_input(input);
-
-    // 3. Gera input fusionado para alyssa
+    
+    // 2. CALCULAR COERÊNCIA DO COMITÊ
+    float committee_coherence = calculate_committee_coherence(contributions);
+    
+    // 3. Se coerência muito baixa, regenerar sem comitê
+    if (committee_coherence < 0.3) {
+        std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
+                  << "). Gerando resposta direta." << std::endl;
+        
+        // Limpar contribuições incoerentes
+        contributions.clear();
+        
+        // Gerar resposta direta com a Alyssa
+        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
+        return run_expert("alyssa", direct_prompt, false, nullptr);
+    }
+    
+    // 4. Continuar com fusão normal se coerência aceitável
+    std::string emotion = detect_emotion_with_heuristics(input);
     std::string fused_input = generate_fused_input(input, contributions, emotion);
+
 
     // 4. Executa alyssa com o input fusionado (sem TTS)
     // Agora a Alyssa recebe apenas os pensamentos dos especialistas

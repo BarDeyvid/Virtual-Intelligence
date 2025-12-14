@@ -4,6 +4,7 @@
 #include "AlyssaMemoryHandler.hpp"
 #include "pc_metrics_reader.cpp"
 #include <memory>
+#include <regex>
 
 namespace alyssa_experts {
     class ExpertBase : public IExpert {
@@ -12,6 +13,35 @@ namespace alyssa_experts {
         std::vector<llama_chat_message> history;
         llama_adapter_lora* lora;
         std::string expert_id;
+
+        std::string parse_expert_signal(const std::string& raw_response, const std::string& expert_id) {
+        std::string signal;
+        
+        // Padrões de parsing para cada especialista
+        std::regex pattern;
+        
+        if (expert_id == "emotionalModel") {
+            pattern = std::regex(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[JUSTIFICATIVA\]\s*(.+))");
+        } else if (expert_id == "analyticalModel") {
+            pattern = std::regex(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[PADRÃO\]\s*(.+))");
+        } else if (expert_id == "memoryModel") {
+            pattern = std::regex(R"(\[FATO\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[CONTEXTO\]\s*(.+))");
+        } else {
+            // Fallback para outros especialistas
+            pattern = std::regex(R"(\[SINAL\].+)");
+        }
+        
+        std::smatch matches;
+        if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+            signal = matches[0];
+        } else {
+            // Se não seguir o formato, retorna sinal de erro
+            signal = "[ERRO] Formato inválido. Use: [SINAL] tipo [CONFIANÇA] 0.00-1.00 [CONTEXTO] info";
+        }
+        
+        return signal;
+    }
+
 
     public:
         ExpertBase(const SimpleModelConfig& cfg) 
@@ -144,49 +174,37 @@ namespace alyssa_experts {
         }
 
         alyssa_fusion::ExpertContribution get_contribution(
-            const std::string& input,
-            alyssa_core::AlyssaCore* core_instance,
-            std::shared_ptr<Embedder> embedder,
-            llama_adapter_lora* lora_override,
-            std::vector<llama_chat_message>& current_history,
-            llama_adapter_lora** active_lora_in_context,
-            std::function<void(const std::string&)> stream_callback = nullptr
-        ) override {
-            alyssa_fusion::ExpertContribution contrib;
-            contrib.expert_id = expert_id;
-            
-            // Executa geração
-            contrib.response = run(input, core_instance, lora_override, 
-                                current_history, active_lora_in_context, stream_callback);
-
-            // Determina fonte baseada no tipo de especialista
-            // REMOVER: NÃO atribuir identidades do usuário aqui
-            if (expert_id == "emotionalModel") {
-                contrib.source = "emocional";
-            } else if (expert_id == "introspectiveModel") {
-                contrib.source = "introspectivo";
-            } else if (expert_id == "socialModel") {
-                contrib.source = "social";
-            } else if (expert_id == "memoryModel") {
-                contrib.source = "memória";
-            } else if (expert_id == "analyticalModel") {
-                contrib.source = "analítico";
-            } else if (expert_id == "creativeModel") {
-                contrib.source = "criativo";
-            } else {
-                contrib.source = expert_id;
+        const std::string& input,
+        alyssa_core::AlyssaCore* core_instance,
+        std::shared_ptr<Embedder> embedder,
+        llama_adapter_lora* lora_override,
+        std::vector<llama_chat_message>& current_history,
+        llama_adapter_lora** active_lora_in_context,
+        std::function<void(const std::string&)> stream_callback = nullptr
+    ) override {
+        alyssa_fusion::ExpertContribution contrib;
+        contrib.expert_id = expert_id;
+        
+        // Executa geração
+        std::string raw_response = run(input, core_instance, lora_override, 
+                                    current_history, active_lora_in_context, stream_callback);
+        
+        // PARSE DA RESPOSTA EM SINAL ESTRUTURADO
+        contrib.response = parse_expert_signal(raw_response, expert_id);
+        
+        // Remover atribuição de identidades do usuário
+        contrib.source = expert_id; // Usar apenas o ID, sem interpretação
+        
+        if (embedder) {
+            try {
+                contrib.embedding = embedder->generate_embedding(contrib.response);
+            } catch (const std::exception& e) {
+                std::cerr << "Erro ao calcular embedding para " << expert_id 
+                        << ": " << e.what() << std::endl;
             }
-
-            if (embedder) {
-                try {
-                    contrib.embedding = embedder->generate_embedding(contrib.response);
-                } catch (const std::exception& e) {
-                    std::cerr << "Erro ao calcular embedding para " << expert_id 
-                            << ": " << e.what() << std::endl;
-                }
-            }
-            
-            return contrib;
         }
+        
+        return contrib;
+    }
     };
 }

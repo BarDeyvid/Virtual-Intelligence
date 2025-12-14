@@ -41,6 +41,11 @@ public:
     void remove_expert(const std::string& expert_id);
     bool has_expert(const std::string& expert_id) const;
     bool validate_context_size(const std::string& prompt, const std::string& expert_id);
+    std::string detect_emotion_with_heuristics(const std::string& input);
+
+    float calculate_committee_coherence(const std::vector<alyssa_fusion::ExpertContribution>& contributions);
+    bool should_store_in_memory(const std::string& input, const std::string& response);
+
     // Utilitários
     std::string generate_fused_input(
         const std::string& original_input,
@@ -69,6 +74,10 @@ private:
         bool use_tts = false,
         ElevenLabsTTS* tts = nullptr
     );
+
+    bool are_signals_compatible(const std::string& signal1, const std::string& signal2);
+    float calculate_string_similarity(const std::string& str1, const std::string& str2);
+    bool is_small_talk(const std::string& input);
     
     // Comitê de especialistas para fusão
     std::vector<alyssa_fusion::ExpertContribution> run_expert_committee(
