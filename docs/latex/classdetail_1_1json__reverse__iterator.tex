@@ -1,0 +1,97 @@
+\doxysection{detail\+::json\+\_\+reverse\+\_\+iterator\texorpdfstring{$<$}{<} Base \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classdetail_1_1json__reverse__iterator}{}\label{classdetail_1_1json__reverse__iterator}\index{detail::json\_reverse\_iterator$<$ Base $>$@{detail::json\_reverse\_iterator$<$ Base $>$}}
+
+
+a template for a reverse iterator class  
+
+
+
+
+{\ttfamily \#include $<$json.\+hpp$>$}
+
+Inheritance diagram for detail\+::json\+\_\+reverse\+\_\+iterator\texorpdfstring{$<$}{<} Base \texorpdfstring{$>$}{>}\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classdetail_1_1json__reverse__iterator}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a474e450284b0bb060b248d20f2b03f93}\label{classdetail_1_1json__reverse__iterator_a474e450284b0bb060b248d20f2b03f93} 
+using {\bfseries difference\+\_\+type} = std\+::ptrdiff\+\_\+t
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_ab306723c375c396a5ccd90e2d31ad651}\label{classdetail_1_1json__reverse__iterator_ab306723c375c396a5ccd90e2d31ad651} 
+using {\bfseries base\+\_\+iterator} = std\+::reverse\+\_\+iterator$<$Base$>$
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a81a4d0a61246d4ece37fd14eacfadda0}\label{classdetail_1_1json__reverse__iterator_a81a4d0a61246d4ece37fd14eacfadda0} 
+using {\bfseries reference} = typename Base\+::reference
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_ad7aad7bacf2eed376d6a67198bdb5d11}\label{classdetail_1_1json__reverse__iterator_ad7aad7bacf2eed376d6a67198bdb5d11} 
+\texorpdfstring{$\ast$}{*}create reverse iterator from iterator {\bfseries json\+\_\+reverse\+\_\+iterator} (const typename base\+\_\+iterator\+::iterator\+\_\+type \&it) noexcept
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_af4ee6cf3ec3270bf42094c5778e5c6d2}\label{classdetail_1_1json__reverse__iterator_af4ee6cf3ec3270bf42094c5778e5c6d2} 
+\texorpdfstring{$\ast$}{*}create reverse iterator from base class explicit {\bfseries json\+\_\+reverse\+\_\+iterator} (const base\+\_\+iterator \&it) noexcept
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a322e6c04503397fbac577fba0eeb47de}\label{classdetail_1_1json__reverse__iterator_a322e6c04503397fbac577fba0eeb47de} 
+\texorpdfstring{$\ast$}{*}post {\bfseries increment} (it++) json\+\_\+reverse\+\_\+iterator operator++(int) \&
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a7136f7450b404fb34f1ff3a12bde8b94}\label{classdetail_1_1json__reverse__iterator_a7136f7450b404fb34f1ff3a12bde8b94} 
+\texorpdfstring{$\ast$}{*}pre {\bfseries increment} (++it) json\+\_\+reverse\+\_\+iterator \&operator++()
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_aa8715573feaa0b88b7dfce45571229e0}\label{classdetail_1_1json__reverse__iterator_aa8715573feaa0b88b7dfce45571229e0} 
+\texorpdfstring{$\ast$}{*}post {\bfseries decrement} (it-\/-\/) json\+\_\+reverse\+\_\+iterator operator-\/-\/(int) \&
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a3b72cf56048f2954a9f5a854f1f1ee44}\label{classdetail_1_1json__reverse__iterator_a3b72cf56048f2954a9f5a854f1f1ee44} 
+\texorpdfstring{$\ast$}{*}pre {\bfseries decrement} (-\/-\/it) json\+\_\+reverse\+\_\+iterator \&operator-\/-\/()
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_acd31823607c60cd84213393c6e0937c6}\label{classdetail_1_1json__reverse__iterator_acd31823607c60cd84213393c6e0937c6} 
+\texorpdfstring{$\ast$}{*}add to iterator json\+\_\+reverse\+\_\+iterator \& {\bfseries operator+=} (difference\+\_\+type i)
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a29ab799626d5de481fd56b08d7464c6b}\label{classdetail_1_1json__reverse__iterator_a29ab799626d5de481fd56b08d7464c6b} 
+\texorpdfstring{$\ast$}{*}add to iterator json\+\_\+reverse\+\_\+iterator {\bfseries operator+} (difference\+\_\+type i) const
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a890c21001d1d4ae8abda1329909931ae}\label{classdetail_1_1json__reverse__iterator_a890c21001d1d4ae8abda1329909931ae} 
+\texorpdfstring{$\ast$}{*}subtract from iterator json\+\_\+reverse\+\_\+iterator {\bfseries operator-\/} (difference\+\_\+type i) const
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_aace682f2c9ef97ec4eed313b3675ffb0}\label{classdetail_1_1json__reverse__iterator_aace682f2c9ef97ec4eed313b3675ffb0} 
+\texorpdfstring{$\ast$}{*}return difference difference\+\_\+type {\bfseries operator-\/} (const json\+\_\+reverse\+\_\+iterator \&other) const
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a3bc6db447a1687e5083648df98d54d15}\label{classdetail_1_1json__reverse__iterator_a3bc6db447a1687e5083648df98d54d15} 
+\texorpdfstring{$\ast$}{*}access to successor reference {\bfseries operator\mbox{[}$\,$\mbox{]}} (difference\+\_\+type n) const
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a738246701ed74a73fdd7ce9a4396181e}\label{classdetail_1_1json__reverse__iterator_a738246701ed74a73fdd7ce9a4396181e} 
+\texorpdfstring{$\ast$}{*}return the key of an object iterator auto {\bfseries key} () const -\/$>$ decltype(std\+::declval$<$ Base $>$().key())
+\item 
+\Hypertarget{classdetail_1_1json__reverse__iterator_a6380d9379146b4f2e409d511ffa280cd}\label{classdetail_1_1json__reverse__iterator_a6380d9379146b4f2e409d511ffa280cd} 
+\texorpdfstring{$\ast$}{*}return the value of an iterator reference {\bfseries value} () const
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename Base$>$\newline
+class detail\+::json\+\_\+reverse\+\_\+iterator$<$ Base $>$}
+a template for a reverse iterator class 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em Base} & the base iterator type to reverse. Valid types are iterator (to create reverse\+\_\+iterator) and const\+\_\+iterator (to create const\+\_\+reverse\+\_\+iterator).\\
+\hline
+\end{DoxyTemplParams}
+@requirement The class satisfies the following concept requirements\+:
+\begin{DoxyItemize}
+\item \href{https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator}{\texttt{Bidirectional\+Iterator}}\+: The iterator that can be moved can be moved in both directions (i.\+e. incremented and decremented).
+\item \href{https://en.cppreference.com/w/cpp/named_req/OutputIterator}{\texttt{Output\+Iterator}}\+: It is possible to write to the pointed-\/to element (only if {\itshape Base} is iterator).
+\end{DoxyItemize}
+
+\begin{DoxySince}{Since}
+version 1.\+0.\+0 
+\end{DoxySince}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/json.\+hpp\end{DoxyCompactItemize}

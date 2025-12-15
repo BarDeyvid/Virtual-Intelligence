@@ -1,0 +1,112 @@
+\doxysection{Embedder.\+hpp}
+\hypertarget{Embedder_8hpp_source}{}\label{Embedder_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/Embedding/Embedder.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/Embedding/Embedder.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ EMBEDDER\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ EMBEDDER\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}json.hpp"{}}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{comment}{//\ Includes\ para\ llama.cpp}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}llama.h"{}}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{using\ }json\ =\ nlohmann::json;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }fs\ =\ std::filesystem;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classEmbedder_ae2f155486f8b98367db84698dda4e80d}{Embedder}}\ \{}
+\DoxyCodeLine{00033\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structEmbedder_1_1Config}{Config}}\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ std::string\ \mbox{\hyperlink{structEmbedder_1_1Config_a38b911e006a1ca23855d1c881683b445}{model\_path}}\ =\ \textcolor{stringliteral}{"{}models/ggml-\/model.gguf"{}};\ \ }
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{structEmbedder_1_1Config_aee5b07ffc824e5f8852637fa9d3f586d}{embedding\_dimension}}\ =\ 4096;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ int32\_t\ \mbox{\hyperlink{structEmbedder_1_1Config_a25a3178bbb4030780ec838106f697895}{seed}}\ =\ -\/1;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ int32\_t\ \mbox{\hyperlink{structEmbedder_1_1Config_a3ea8e0e65c9a1d3676974c405ddc7a87}{n\_ctx}}\ =\ 8192;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ int32\_t\ \mbox{\hyperlink{structEmbedder_1_1Config_ae4f9e1c4b96807fc9d7c4c9ef8309c22}{n\_batch}}\ =\ 8192;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ int32\_t\ \mbox{\hyperlink{structEmbedder_1_1Config_a82e0143b658f67fa1e40ceff07530f42}{n\_threads}}\ =\ 0;\ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ int32\_t\ \mbox{\hyperlink{structEmbedder_1_1Config_ab0714459eb03b9157a462953fde6d2b0}{n\_gpu\_layers}}\ =\ 0;\ \ \ \ \ \ \ }
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{structEmbedder_1_1Config_a46049e8dfc52bdf62c07e5d6280c9c20}{use\_mlock}}\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{structEmbedder_1_1Config_ab64531f8dc08b90b1f812f740e39bba2}{use\_mmap}}\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{structEmbedder_1_1Config_a891f282cae4eeaaf67d1d6e9f7fcbd38}{f16\_kv}}\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{structEmbedder_1_1Config_a6d822622c340a220417968a36f9f3bbc}{embd\_normalize}}\ =\ 2;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00051\ \ \ \ \ \};}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00057\ \ \ \ \ \mbox{\hyperlink{classEmbedder_ae2f155486f8b98367db84698dda4e80d}{Embedder}}();}
+\DoxyCodeLine{00058\ \ \ \ \ }
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{classEmbedder_ae2f155486f8b98367db84698dda4e80d}{Embedder}}(\textcolor{keyword}{const}\ std::string\&\ config\_path);}
+\DoxyCodeLine{00064\ \ \ \ \ }
+\DoxyCodeLine{00069\ \ \ \ \ \mbox{\hyperlink{classEmbedder_af0343e8c22ab3543aeaac3f322ce2717}{\string~Embedder}}();}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classEmbedder_a9355b85355160ade1798ffc72fe991b8}{initialize}}();}
+\DoxyCodeLine{00076\ \ \ \ \ }
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classEmbedder_a9355b85355160ade1798ffc72fe991b8}{initialize}}(\textcolor{keyword}{const}\ std::string\&\ config\_path);}
+\DoxyCodeLine{00083\ \ \ \ \ }
+\DoxyCodeLine{00090\ \ \ \ \ std::vector<float>\ \mbox{\hyperlink{classEmbedder_a13bfe32221a3b83278e3c8b9decb6aaf}{generate\_embedding}}(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00091\ \ \ \ \ }
+\DoxyCodeLine{00098\ \ \ \ \ std::vector<std::vector<float>>\ \mbox{\hyperlink{classEmbedder_ac11e873758613723519fd2b43696cede}{generate\_embeddings}}(\textcolor{keyword}{const}\ std::vector<std::string>\&\ texts);}
+\DoxyCodeLine{00099\ \ \ \ \ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classEmbedder_a2baaa0db730b77236b0e8e414c0a344c}{clear\_embedding\_cache}}();}
+\DoxyCodeLine{00105\ \ \ \ \ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classEmbedder_af6afade55aff593379dff4a24b635789}{cosine\_similarity}}(\textcolor{keyword}{const}\ std::vector<float>\&\ a,\ \textcolor{keyword}{const}\ std::vector<float>\&\ b);}
+\DoxyCodeLine{00113\ \ \ \ \ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classEmbedder_add790d28eeec3788d203e84389037093}{dot\_product}}(\textcolor{keyword}{const}\ std::vector<float>\&\ a,\ \textcolor{keyword}{const}\ std::vector<float>\&\ b);}
+\DoxyCodeLine{00121\ \ \ \ \ }
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classEmbedder_a761ab47a90c27c3be17cbdf99b5d4622}{magnitude}}(\textcolor{keyword}{const}\ std::vector<float>\&\ a);}
+\DoxyCodeLine{00128\ \ \ \ \ }
+\DoxyCodeLine{00137\ \ \ \ \ std::vector<std::tuple<double,\ int,\ std::string>>\ \mbox{\hyperlink{classEmbedder_a97d2136ba3eb2287dfbbcf555d0de5f3}{semantic\_search}}(}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ query,\ }
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<std::string>\&\ documents,}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ top\_k\ =\ 5}
+\DoxyCodeLine{00141\ \ \ \ \ );}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classEmbedder_a5386885e08040f9b4425915d49037a0f}{is\_initialized}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ initialized;\ \}}
+\DoxyCodeLine{00148\ \ \ \ \ }
+\DoxyCodeLine{00153\ \ \ \ \ \mbox{\hyperlink{structEmbedder_1_1Config}{Config}}\ \mbox{\hyperlink{classEmbedder_a42cdf0133bc6f20143249e008c431dbe}{get\_config}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ config;\ \}}
+\DoxyCodeLine{00154\ \ \ \ \ }
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classEmbedder_a3f034dd7cd7ea17373f37c6cc035cbf1}{get\_embedding\_dimension}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00162\ \ \ \ \ Config\ config;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keywordtype}{bool}\ initialized\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00164\ \ \ \ \ std::string\ config\_path\ =\ \textcolor{stringliteral}{"{}config/embedder\_config.json"{}};\ \ }
+\DoxyCodeLine{00165\ \ \ \ \ }
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{comment}{//\ Llama.cpp\ members}}
+\DoxyCodeLine{00167\ \ \ \ \ std::shared\_ptr<llama\_model>\ model;\ }
+\DoxyCodeLine{00168\ \ \ \ \ std::shared\_ptr<llama\_context>\ context;\ \ }
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keyword}{const}\ llama\_vocab*\ vocab\_ptr\ =\ \textcolor{keyword}{nullptr};\ \ }
+\DoxyCodeLine{00170\ \ \ \ \ llama\_batch\ batch;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00171\ \ \ \ \ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_embd\ =\ 0;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keyword}{enum}\ llama\_pooling\_type\ pooling\_type;\ \ }
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{bool}\ config\_load(\textcolor{keyword}{const}\ std::string\&\ config\_path);}
+\DoxyCodeLine{00181\ \ \ \ \ }
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keywordtype}{bool}\ save\_config(\textcolor{keyword}{const}\ std::string\&\ config\_path);}
+\DoxyCodeLine{00188\ \ \ \ \ }
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordtype}{void}\ create\_default\_config();}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00200\ \ \ \ \ std::vector<llama\_token>\ tokenize(\textcolor{keyword}{const}\ std::string\&\ text,\ \textcolor{keywordtype}{bool}\ add\_special\_tokens)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00201\ \ \ \ \ }
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordtype}{void}\ batch\_add\_seq\_internal(llama\_batch\ \&\ batch\_,\ \textcolor{keyword}{const}\ std::vector<int32\_t>\ \&\ tokens,\ llama\_seq\_id\ seq\_id);}
+\DoxyCodeLine{00209\ \ \ \ \ }
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keywordtype}{void}\ batch\_decode\_internal(llama\_batch\ \&\ batch\_,\ \textcolor{keywordtype}{float}\ *\ output,\ \textcolor{keywordtype}{int}\ n\_embd\_,\ \textcolor{keywordtype}{int}\ embd\_norm);}
+\DoxyCodeLine{00218\ \ \ \ \ }
+\DoxyCodeLine{00225\ \ \ \ \ std::vector<float>\ extract\_embedding\_from\_json(\textcolor{keyword}{const}\ json\&\ response\_data);}
+\DoxyCodeLine{00226\ \ \ \ \ }
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ write\_callback(\textcolor{keywordtype}{void}*\ contents,\ \textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ nmemb,\ std::string*\ response);}
+\DoxyCodeLine{00236\ \};}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00238\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ EMBEDDER\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,129 @@
+\doxysection{alyssa\+\_\+experts\+::Expert\+Base Class Reference}
+\hypertarget{classalyssa__experts_1_1ExpertBase}{}\label{classalyssa__experts_1_1ExpertBase}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+Inheritance diagram for alyssa\+\_\+experts\+::Expert\+Base\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classalyssa__experts_1_1ExpertBase}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_afa3b2dd57bf8c03e36999c06a667b6b7}\label{classalyssa__experts_1_1ExpertBase_afa3b2dd57bf8c03e36999c06a667b6b7} 
+{\bfseries Expert\+Base} (const \mbox{\hyperlink{structSimpleModelConfig}{Simple\+Model\+Config}} \&cfg)
+\item 
+const std\+::string \& \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_a79371842a2781ad44ad2b8c2711f476f}{get\+\_\+id}} () const override
+\item 
+const \mbox{\hyperlink{structSimpleModelConfig}{Simple\+Model\+Config}} \& \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_a0ca7090c634b27cede7a0995d15e1f42}{get\+\_\+config}} () const override
+\item 
+const std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \& \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_acbc150279f51089349072dc2c710592f}{get\+\_\+history}} () const override
+\item 
+void \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_af38ecc722ffd3e83f1fb15044f9227b5}{clear\+\_\+history}} () override
+\item 
+bool \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_ad33a0da8130b342a7c1bc1b2aee1c010}{initialize}} (llama\+\_\+model \texorpdfstring{$\ast$}{*}shared\+\_\+model) override
+\item 
+std\+::string \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_ad88f49ea5d33112b3f97938e4ae4f06d}{run}} (const std\+::string \&input, \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\+\_\+core\+::\+Alyssa\+Core}} \texorpdfstring{$\ast$}{*}core\+\_\+instance, llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}lora\+\_\+override, std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \&current\+\_\+history, llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}active\+\_\+lora\+\_\+in\+\_\+context, std\+::function$<$ void(const std\+::string \&)$>$ stream\+\_\+callback=nullptr) override
+\item 
+\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} \mbox{\hyperlink{classalyssa__experts_1_1ExpertBase_afbe896179f799eee20b385998929105f}{get\+\_\+contribution}} (const std\+::string \&input, \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\+\_\+core\+::\+Alyssa\+Core}} \texorpdfstring{$\ast$}{*}core\+\_\+instance, std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$ embedder, llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}lora\+\_\+override, std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \&current\+\_\+history, llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}active\+\_\+lora\+\_\+in\+\_\+context, std\+::function$<$ void(const std\+::string \&)$>$ stream\+\_\+callback=nullptr) override
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_a71abafb8a21880bced2f519d4c6af3b2}\label{classalyssa__experts_1_1ExpertBase_a71abafb8a21880bced2f519d4c6af3b2} 
+std\+::string {\bfseries parse\+\_\+expert\+\_\+signal} (const std\+::string \&raw\+\_\+response, const std\+::string \&expert\+\_\+id)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_a074364657a0ba9ad6c6d5df8508d50c8}\label{classalyssa__experts_1_1ExpertBase_a074364657a0ba9ad6c6d5df8508d50c8} 
+\mbox{\hyperlink{structSimpleModelConfig}{Simple\+Model\+Config}} {\bfseries config}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_afc885357e46a84739545126e110c8e8a}\label{classalyssa__experts_1_1ExpertBase_afc885357e46a84739545126e110c8e8a} 
+std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ {\bfseries history}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_a7f27823a4269f7a5130f60d8994eb94c}\label{classalyssa__experts_1_1ExpertBase_a7f27823a4269f7a5130f60d8994eb94c} 
+llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*} {\bfseries lora}
+\item 
+\Hypertarget{classalyssa__experts_1_1ExpertBase_ac842d85a689b03dd723208fecc73d3ce}\label{classalyssa__experts_1_1ExpertBase_ac842d85a689b03dd723208fecc73d3ce} 
+std\+::string {\bfseries expert\+\_\+id}
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\Hypertarget{classalyssa__experts_1_1ExpertBase_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classalyssa__experts_1_1ExpertBase_af38ecc722ffd3e83f1fb15044f9227b5}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!clear\_history@{clear\_history}}
+\index{clear\_history@{clear\_history}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{clear\_history()}{clear\_history()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_af38ecc722ffd3e83f1fb15044f9227b5} 
+void alyssa\+\_\+experts\+::\+Expert\+Base\+::clear\+\_\+history (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_a0ca7090c634b27cede7a0995d15e1f42}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!get\_config@{get\_config}}
+\index{get\_config@{get\_config}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{get\_config()}{get\_config()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_a0ca7090c634b27cede7a0995d15e1f42} 
+const \mbox{\hyperlink{structSimpleModelConfig}{Simple\+Model\+Config}} \& alyssa\+\_\+experts\+::\+Expert\+Base\+::get\+\_\+config (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_afbe896179f799eee20b385998929105f}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!get\_contribution@{get\_contribution}}
+\index{get\_contribution@{get\_contribution}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{get\_contribution()}{get\_contribution()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_afbe896179f799eee20b385998929105f} 
+\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} alyssa\+\_\+experts\+::\+Expert\+Base\+::get\+\_\+contribution (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\+\_\+core\+::\+Alyssa\+Core}} \texorpdfstring{$\ast$}{*}}]{core\+\_\+instance}{, }\item[{std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$}]{embedder}{, }\item[{llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}}]{lora\+\_\+override}{, }\item[{std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \&}]{current\+\_\+history}{, }\item[{llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{active\+\_\+lora\+\_\+in\+\_\+context}{, }\item[{std\+::function$<$ void(const std\+::string \&)$>$}]{stream\+\_\+callback}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_acbc150279f51089349072dc2c710592f}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!get\_history@{get\_history}}
+\index{get\_history@{get\_history}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{get\_history()}{get\_history()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_acbc150279f51089349072dc2c710592f} 
+const std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \& alyssa\+\_\+experts\+::\+Expert\+Base\+::get\+\_\+history (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_a79371842a2781ad44ad2b8c2711f476f}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!get\_id@{get\_id}}
+\index{get\_id@{get\_id}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{get\_id()}{get\_id()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_a79371842a2781ad44ad2b8c2711f476f} 
+const std\+::string \& alyssa\+\_\+experts\+::\+Expert\+Base\+::get\+\_\+id (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_ad33a0da8130b342a7c1bc1b2aee1c010}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!initialize@{initialize}}
+\index{initialize@{initialize}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_ad33a0da8130b342a7c1bc1b2aee1c010} 
+bool alyssa\+\_\+experts\+::\+Expert\+Base\+::initialize (\begin{DoxyParamCaption}\item[{llama\+\_\+model \texorpdfstring{$\ast$}{*}}]{shared\+\_\+model}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+\Hypertarget{classalyssa__experts_1_1ExpertBase_ad88f49ea5d33112b3f97938e4ae4f06d}\index{alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}!run@{run}}
+\index{run@{run}!alyssa\_experts::ExpertBase@{alyssa\_experts::ExpertBase}}
+\doxysubsubsection{\texorpdfstring{run()}{run()}}
+{\footnotesize\ttfamily \label{classalyssa__experts_1_1ExpertBase_ad88f49ea5d33112b3f97938e4ae4f06d} 
+std\+::string alyssa\+\_\+experts\+::\+Expert\+Base\+::run (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\+\_\+core\+::\+Alyssa\+Core}} \texorpdfstring{$\ast$}{*}}]{core\+\_\+instance}{, }\item[{llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}}]{lora\+\_\+override}{, }\item[{std\+::vector$<$ llama\+\_\+chat\+\_\+message $>$ \&}]{current\+\_\+history}{, }\item[{llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}}]{active\+\_\+lora\+\_\+in\+\_\+context}{, }\item[{std\+::function$<$ void(const std\+::string \&)$>$}]{stream\+\_\+callback}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/Expert\+Base.\+hpp\end{DoxyCompactItemize}

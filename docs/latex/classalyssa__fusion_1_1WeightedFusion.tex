@@ -1,0 +1,220 @@
+\doxysection{alyssa\+\_\+fusion\+::Weighted\+Fusion Class Reference}
+\hypertarget{classalyssa__fusion_1_1WeightedFusion}{}\label{classalyssa__fusion_1_1WeightedFusion}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+
+
+A class that performs weighted fusion of expert responses based on various criteria.  
+
+
+
+
+{\ttfamily \#include $<$Weighted\+Fusion.\+hpp$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_a75501d1774b75b52a6a897179f932b5d}{Weighted\+Fusion}} (\mbox{\hyperlink{classEmbedder}{Embedder}} \&embedder\+\_\+ref)
+\begin{DoxyCompactList}\small\item\em Constructor for the \doxylink{classalyssa__fusion_1_1WeightedFusion}{Weighted\+Fusion} class. \end{DoxyCompactList}\item 
+std\+::map$<$ std\+::string, double $>$ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_af6f444c44486a0b8001ba75ba30428b4}{calculate\+\_\+rule\+\_\+based\+\_\+weights}} (const std\+::string \&input, const std\+::vector$<$ std\+::string $>$ \&available\+\_\+experts)
+\begin{DoxyCompactList}\small\item\em Calculates rule-\/based weights for expert contributions. \end{DoxyCompactList}\item 
+std\+::map$<$ std\+::string, double $>$ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_ac0e4cf05792e298de145de37926b7909}{calculate\+\_\+feature\+\_\+based\+\_\+weights}} (const std\+::string \&input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&expert\+\_\+responses)
+\begin{DoxyCompactList}\small\item\em Calculates feature-\/based weights for expert contributions. \end{DoxyCompactList}\item 
+std\+::map$<$ std\+::string, double $>$ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_ae6e0726904d4ddd2a148ae785f2720b6}{calculate\+\_\+neural\+\_\+weights}} (const std\+::string \&input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&expert\+\_\+responses, const std\+::string \&current\+\_\+emotion)
+\begin{DoxyCompactList}\small\item\em Calculates neural-\/based weights for expert contributions using an ONNX model. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_acffd0c9a47f906c5ffcf221d47884ae5}{fuse\+\_\+responses}} (const std\+::string \&input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&contributions, const std\+::string \&current\+\_\+emotion="{}"{})
+\begin{DoxyCompactList}\small\item\em Fuses multiple expert responses into a single output. \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_acaae4b9ac014b49a7443fa983a2a37f7}{calculate\+\_\+semantic\+\_\+similarity}} (const std\+::vector$<$ float $>$ \&emb1, const std\+::vector$<$ float $>$ \&emb2)
+\begin{DoxyCompactList}\small\item\em Calculates the semantic similarity between two embeddings. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_a3beab22c3c4e6f20399e3c4e109be43a}{detect\+\_\+emotion\+\_\+from\+\_\+input}} (const std\+::string \&input)
+\begin{DoxyCompactList}\small\item\em Detects the emotion from the user\textquotesingle{}s input. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_abcb7a569a7a15dbc986397ef38a3164b}{extract\+\_\+keywords}} (const std\+::string \&text)
+\begin{DoxyCompactList}\small\item\em Extracts keywords from the given text. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A class that performs weighted fusion of expert responses based on various criteria. 
+
+\label{doc-constructors}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_a75501d1774b75b52a6a897179f932b5d}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!WeightedFusion@{WeightedFusion}}
+\index{WeightedFusion@{WeightedFusion}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{WeightedFusion()}{WeightedFusion()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_a75501d1774b75b52a6a897179f932b5d} 
+alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::\+Weighted\+Fusion (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classEmbedder}{Embedder}} \&}]{embedder\+\_\+ref}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Constructor for the \doxylink{classalyssa__fusion_1_1WeightedFusion}{Weighted\+Fusion} class. 
+
+Initializes the embedder and ONNX session.
+
+
+\begin{DoxyParams}{Parameters}
+{\em embedder\+\_\+ref} & Reference to the \doxylink{classEmbedder}{Embedder} instance used for generating embeddings. \\
+\hline
+\end{DoxyParams}
+
+
+\label{doc-func-members}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_ac0e4cf05792e298de145de37926b7909}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!calculate\_feature\_based\_weights@{calculate\_feature\_based\_weights}}
+\index{calculate\_feature\_based\_weights@{calculate\_feature\_based\_weights}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{calculate\_feature\_based\_weights()}{calculate\_feature\_based\_weights()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_ac0e4cf05792e298de145de37926b7909} 
+std\+::map$<$ std\+::string, double $>$ alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::calculate\+\_\+feature\+\_\+based\+\_\+weights (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&}]{expert\+\_\+responses}{}\end{DoxyParamCaption})}
+
+
+
+Calculates feature-\/based weights for expert contributions. 
+
+Computes the similarity between the input and each expert\textquotesingle{}s response embedding, then applies softmax normalization to these similarities.
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & The user\textquotesingle{}s input string. \\
+\hline
+{\em expert\+\_\+responses} & Vector of \doxylink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution} objects containing responses from various experts. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A map from expert IDs to their corresponding weights. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_ae6e0726904d4ddd2a148ae785f2720b6}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!calculate\_neural\_weights@{calculate\_neural\_weights}}
+\index{calculate\_neural\_weights@{calculate\_neural\_weights}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{calculate\_neural\_weights()}{calculate\_neural\_weights()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_ae6e0726904d4ddd2a148ae785f2720b6} 
+std\+::map$<$ std\+::string, double $>$ alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::calculate\+\_\+neural\+\_\+weights (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&}]{expert\+\_\+responses}{, }\item[{const std\+::string \&}]{current\+\_\+emotion}{}\end{DoxyParamCaption})}
+
+
+
+Calculates neural-\/based weights for expert contributions using an ONNX model. 
+
+Generates embeddings for the input and each expert\textquotesingle{}s response, runs inference through an ONNX model to determine weights, and applies emotion adjustments if specified.
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & The user\textquotesingle{}s input string. \\
+\hline
+{\em expert\+\_\+responses} & Vector of \doxylink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution} objects containing responses from various experts. \\
+\hline
+{\em current\+\_\+emotion} & Current emotional context (e.\+g., "{}happy"{}, "{}sad"{}). \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A map from expert IDs to their corresponding weights. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_af6f444c44486a0b8001ba75ba30428b4}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!calculate\_rule\_based\_weights@{calculate\_rule\_based\_weights}}
+\index{calculate\_rule\_based\_weights@{calculate\_rule\_based\_weights}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{calculate\_rule\_based\_weights()}{calculate\_rule\_based\_weights()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_af6f444c44486a0b8001ba75ba30428b4} 
+std\+::map$<$ std\+::string, double $>$ alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::calculate\+\_\+rule\+\_\+based\+\_\+weights (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{const std\+::vector$<$ std\+::string $>$ \&}]{available\+\_\+experts}{}\end{DoxyParamCaption})}
+
+
+
+Calculates rule-\/based weights for expert contributions. 
+
+Assigns initial minimum weights to all available experts and adjusts them based on specific keywords found in the input.
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & The user\textquotesingle{}s input string. \\
+\hline
+{\em available\+\_\+experts} & List of available experts. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A map from expert IDs to their corresponding weights. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_acaae4b9ac014b49a7443fa983a2a37f7}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!calculate\_semantic\_similarity@{calculate\_semantic\_similarity}}
+\index{calculate\_semantic\_similarity@{calculate\_semantic\_similarity}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{calculate\_semantic\_similarity()}{calculate\_semantic\_similarity()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_acaae4b9ac014b49a7443fa983a2a37f7} 
+double alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::calculate\+\_\+semantic\+\_\+similarity (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ float $>$ \&}]{emb1}{, }\item[{const std\+::vector$<$ float $>$ \&}]{emb2}{}\end{DoxyParamCaption})}
+
+
+
+Calculates the semantic similarity between two embeddings. 
+
+Computes the cosine similarity between two vector embeddings.
+
+
+\begin{DoxyParams}{Parameters}
+{\em emb1} & The first embedding as a vector of floats. \\
+\hline
+{\em emb2} & The second embedding as a vector of floats. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The similarity score (0 to 1). 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_a3beab22c3c4e6f20399e3c4e109be43a}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!detect\_emotion\_from\_input@{detect\_emotion\_from\_input}}
+\index{detect\_emotion\_from\_input@{detect\_emotion\_from\_input}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{detect\_emotion\_from\_input()}{detect\_emotion\_from\_input()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_a3beab22c3c4e6f20399e3c4e109be43a} 
+std\+::string alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::detect\+\_\+emotion\+\_\+from\+\_\+input (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{}\end{DoxyParamCaption})}
+
+
+
+Detects the emotion from the user\textquotesingle{}s input. 
+
+Analyzes the input string for specific keywords related to emotions and returns the detected emotion.
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & The user\textquotesingle{}s input string. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Detected emotion as a string (e.\+g., "{}happy"{}, "{}sad"{}). 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_abcb7a569a7a15dbc986397ef38a3164b}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!extract\_keywords@{extract\_keywords}}
+\index{extract\_keywords@{extract\_keywords}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{extract\_keywords()}{extract\_keywords()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_abcb7a569a7a15dbc986397ef38a3164b} 
+std\+::string alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::extract\+\_\+keywords (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{text}{}\end{DoxyParamCaption})}
+
+
+
+Extracts keywords from the given text. 
+
+Placeholder function for extracting keywords. In practice, this should implement a more sophisticated keyword extraction algorithm.
+
+
+\begin{DoxyParams}{Parameters}
+{\em text} & The input string to extract keywords from. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The extracted keywords as a string (placeholder). 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__fusion_1_1WeightedFusion_acffd0c9a47f906c5ffcf221d47884ae5}\index{alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}!fuse\_responses@{fuse\_responses}}
+\index{fuse\_responses@{fuse\_responses}!alyssa\_fusion::WeightedFusion@{alyssa\_fusion::WeightedFusion}}
+\doxysubsubsection{\texorpdfstring{fuse\_responses()}{fuse\_responses()}}
+{\footnotesize\ttfamily \label{classalyssa__fusion_1_1WeightedFusion_acffd0c9a47f906c5ffcf221d47884ae5} 
+std\+::string alyssa\+\_\+fusion\+::\+Weighted\+Fusion\+::fuse\+\_\+responses (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution}} $>$ \&}]{contributions}{, }\item[{const std\+::string \&}]{current\+\_\+emotion}{ = {\ttfamily "{}"{}}}\end{DoxyParamCaption})}
+
+
+
+Fuses multiple expert responses into a single output. 
+
+Uses neural-\/based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & The user\textquotesingle{}s input string. \\
+\hline
+{\em contributions} & Vector of \doxylink{structalyssa__fusion_1_1ExpertContribution}{Expert\+Contribution} objects containing responses from various experts. \\
+\hline
+{\em current\+\_\+emotion} & Current emotional context (optional). \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The fused response as a single string. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/\+Weighted\+Fusion/Weighted\+Fusion.\+hpp\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/\+Weighted\+Fusion/Weighted\+Fusion.\+cpp\end{DoxyCompactItemize}

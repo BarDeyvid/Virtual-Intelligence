@@ -1,0 +1,110 @@
+\doxysection{Core\+LLM.\+hpp}
+\hypertarget{CoreLLM_8hpp_source}{}\label{CoreLLM_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/CoreLLM.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/CoreLLM.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{AlyssaCore_8hpp}{AlyssaCore.hpp}}"{}}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}WeightedFusion/WeightedFusion.hpp"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}voice/ElevenLabsTTS.hpp"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}AlyssaMemoryHandler.hpp"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}IExpert.hpp"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{class\ }CoreIntegration\ \{}
+\DoxyCodeLine{00012\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00013\ \ \ \ \ std::unique\_ptr<alyssa\_core::AlyssaCore>\ core\_instance;}
+\DoxyCodeLine{00014\ \ \ \ \ std::unique\_ptr<alyssa\_fusion::WeightedFusion>\ fusion\_engine;}
+\DoxyCodeLine{00015\ \ \ \ \ std::shared\_ptr<Embedder>\ embedder;}
+\DoxyCodeLine{00016\ \ \ \ \ std::unique\_ptr<alyssa\_memory::AlyssaMemoryManager>\ memory\_manager;}
+\DoxyCodeLine{00017\ \ \ \ \ }
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{comment}{//\ Especialistas\ gerenciados\ via\ interface}}
+\DoxyCodeLine{00019\ \ \ \ \ std::unordered\_map<std::string,\ std::unique\_ptr<alyssa\_experts::IExpert>>\ experts;}
+\DoxyCodeLine{00020\ \ \ \ \ std::unordered\_map<std::string,\ std::vector<llama\_chat\_message>>\ expert\_histories;}
+\DoxyCodeLine{00021\ \ \ \ \ }
+\DoxyCodeLine{00022\ \ \ \ \ std::string\ active\_expert\_in\_cache;}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{bool}\ initialized;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00026\ \ \ \ \ CoreIntegration();}
+\DoxyCodeLine{00027\ \ \ \ \ \string~CoreIntegration();}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{void}\ set\_user\_name(\textcolor{keyword}{const}\ std::string\&\ name);}
+\DoxyCodeLine{00030\ \ \ \ \ std::string\ user\_name\ =\ \textcolor{stringliteral}{"{}"{}};}
+\DoxyCodeLine{00031\ \ \ \ \ }
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{bool}\ initialize(\textcolor{keyword}{const}\ std::string\&\ base\_model\_path);}
+\DoxyCodeLine{00033\ \ \ \ \ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ Métodos\ principais}}
+\DoxyCodeLine{00035\ \ \ \ \ std::string\ think(\textcolor{keyword}{const}\ std::string\&\ input,\ \mbox{\hyperlink{classElevenLabsTTS}{ElevenLabsTTS}}\&\ tts);}
+\DoxyCodeLine{00036\ \ \ \ \ std::string\ think\_with\_fusion(\textcolor{keyword}{const}\ std::string\&\ input,\ \mbox{\hyperlink{classElevenLabsTTS}{ElevenLabsTTS}}\&\ tts);}
+\DoxyCodeLine{00037\ \ \ \ \ std::string\ think\_with\_fusion\_ttsless(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00038\ \ \ \ \ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{comment}{//\ Gerenciamento\ de\ especialistas}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{void}\ register\_expert(std::unique\_ptr<alyssa\_experts::IExpert>\ expert);}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{void}\ remove\_expert(\textcolor{keyword}{const}\ std::string\&\ expert\_id);}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{bool}\ has\_expert(\textcolor{keyword}{const}\ std::string\&\ expert\_id)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{bool}\ validate\_context\_size(\textcolor{keyword}{const}\ std::string\&\ prompt,\ \textcolor{keyword}{const}\ std::string\&\ expert\_id);}
+\DoxyCodeLine{00044\ \ \ \ \ std::string\ detect\_emotion\_with\_heuristics(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{float}\ calculate\_committee\_coherence(\textcolor{keyword}{const}\ std::vector<alyssa\_fusion::ExpertContribution>\&\ contributions);}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{bool}\ should\_store\_in\_memory(\textcolor{keyword}{const}\ std::string\&\ input,\ \textcolor{keyword}{const}\ std::string\&\ response);}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{comment}{//\ Utilitários}}
+\DoxyCodeLine{00050\ \ \ \ \ std::string\ generate\_fused\_input(}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ original\_input,}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<alyssa\_fusion::ExpertContribution>\&\ contributions,}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ emotion}
+\DoxyCodeLine{00054\ \ \ \ \ );}
+\DoxyCodeLine{00055\ \ \ \ \ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ log\_source\_awareness(\textcolor{keyword}{const}\ std::string\&\ source,\ \textcolor{keyword}{const}\ std::string\&\ message);}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{void}\ clear\_all\_cache()\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ clear\_kv\_cache();}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ pair\ :\ expert\_histories)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ msg\ :\ pair.second)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{char}*)msg.content);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ pair.second.clear();}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}[Orquestrador]\ Todos\ os\ caches\ limpos."{}}\ <<\ std::endl;}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{comment}{//\ Execução\ de\ especialistas}}
+\DoxyCodeLine{00071\ \ \ \ \ std::string\ run\_expert(}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ expert\_id,}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ use\_tts\ =\ \textcolor{keyword}{false},}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classElevenLabsTTS}{ElevenLabsTTS}}*\ tts\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00076\ \ \ \ \ );}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordtype}{bool}\ are\_signals\_compatible(\textcolor{keyword}{const}\ std::string\&\ signal1,\ \textcolor{keyword}{const}\ std::string\&\ signal2);}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{float}\ calculate\_string\_similarity(\textcolor{keyword}{const}\ std::string\&\ str1,\ \textcolor{keyword}{const}\ std::string\&\ str2);}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_small\_talk(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00081\ \ \ \ \ }
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{//\ Comitê\ de\ especialistas\ para\ fusão}}
+\DoxyCodeLine{00083\ \ \ \ \ std::vector<alyssa\_fusion::ExpertContribution>\ run\_expert\_committee(}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<std::string>\&\ expert\_ids,}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input}
+\DoxyCodeLine{00086\ \ \ \ \ );}
+\DoxyCodeLine{00087\ \ \ \ \ }
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{//\ Gerenciamento\ de\ histórico\ e\ cache}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{void}\ manage\_dynamic\_history(}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ expert\_id,}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\&\ history}
+\DoxyCodeLine{00092\ \ \ \ \ );}
+\DoxyCodeLine{00093\ \ \ \ \ }
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ calculate\_history\_limit(\textcolor{keyword}{const}\ std::string\&\ expert\_id);}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordtype}{void}\ clear\_kv\_cache();}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{void}\ switch\_expert\_context(\textcolor{keyword}{const}\ std::string\&\ new\_expert\_id);}
+\DoxyCodeLine{00097\ \ \ \ \ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{comment}{//\ Métodos\ de\ reflexão\ e\ ação}}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordtype}{void}\ act(\textcolor{keyword}{const}\ std::string\&\ command);}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordtype}{void}\ reflect();}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{void}\ run\_interactive\_loop();}
+\DoxyCodeLine{00104\ \};}
+
+\end{DoxyCode}

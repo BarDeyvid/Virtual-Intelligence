@@ -1,0 +1,101 @@
+\doxysection{alyssa\+\_\+memory\+::Advanced\+Memory\+System Class Reference}
+\hypertarget{classalyssa__memory_1_1AdvancedMemorySystem}{}\label{classalyssa__memory_1_1AdvancedMemorySystem}\index{alyssa\_memory::AdvancedMemorySystem@{alyssa\_memory::AdvancedMemorySystem}}
+
+
+Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional.  
+
+
+
+
+{\ttfamily \#include $<$Alyssa\+Memory\+Handler.\+hpp$>$}
+
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{Contextual\+Memory}}
+\item 
+struct \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Semantic\+Memory}}
+\item 
+struct \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{Hybrid\+Memory\+Result}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ab67d2cc92fce9b624a07d1d036d87fa0}\label{classalyssa__memory_1_1AdvancedMemorySystem_ab67d2cc92fce9b624a07d1d036d87fa0} 
+{\bfseries Advanced\+Memory\+System} (const std\+::string \&db\+\_\+path, std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$ embedder\+\_\+ref)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a30a442d414faf39043087933cd2b5f22}\label{classalyssa__memory_1_1AdvancedMemorySystem_a30a442d414faf39043087933cd2b5f22} 
+void {\bfseries set\+Emotional\+State} (const std\+::string \&emotion, double intensity)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ace61c75af0ee176935578c7dbedbc324}\label{classalyssa__memory_1_1AdvancedMemorySystem_ace61c75af0ee176935578c7dbedbc324} 
+\mbox{\hyperlink{structEmotionalState}{Emotional\+State}} {\bfseries get\+Current\+Emotional\+State} () const
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a4c9c5cfba447db7e44ff58a4deeaf81e}\label{classalyssa__memory_1_1AdvancedMemorySystem_a4c9c5cfba447db7e44ff58a4deeaf81e} 
+void {\bfseries link\+Memory\+To\+Intention} (int memory\+\_\+id, int intention\+\_\+id)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ad606b4a9dae8a7f1873469bbf868f349}\label{classalyssa__memory_1_1AdvancedMemorySystem_ad606b4a9dae8a7f1873469bbf868f349} 
+int {\bfseries store\+Memory\+With\+Emotional\+Analysis} (const std\+::string \&content, const std\+::string \&context="{}"{})
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_aa96e532d50c25f589039ace27a71aad2}\label{classalyssa__memory_1_1AdvancedMemorySystem_aa96e532d50c25f589039ace27a71aad2} 
+void {\bfseries apply\+Memory\+Decay} ()
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a63bb84bca57cb092ce048e82c9544416}\label{classalyssa__memory_1_1AdvancedMemorySystem_a63bb84bca57cb092ce048e82c9544416} 
+void {\bfseries activate\+Intention} (const std\+::string \&description, const std\+::string \&type, const std\+::string \&trigger="{}"{}, double motivation\+\_\+boost=0.\+0)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_abebdddf421bfcca722072c2c34bb1dbf}\label{classalyssa__memory_1_1AdvancedMemorySystem_abebdddf421bfcca722072c2c34bb1dbf} 
+void {\bfseries deactivate\+Intention} (int intention\+\_\+id)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ab19b7ed96da40af47a6da6d4ece2860b}\label{classalyssa__memory_1_1AdvancedMemorySystem_ab19b7ed96da40af47a6da6d4ece2860b} 
+std\+::vector$<$ \mbox{\hyperlink{structIntention}{Intention}} $>$ {\bfseries get\+Active\+Intentions} () const
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_aa24a03c7e83706a92ac90b13ad3ba872}\label{classalyssa__memory_1_1AdvancedMemorySystem_aa24a03c7e83706a92ac90b13ad3ba872} 
+void {\bfseries generate\+Reflections} ()
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ad4f858b2c8c6943cae4ea3c6272a43f3}\label{classalyssa__memory_1_1AdvancedMemorySystem_ad4f858b2c8c6943cae4ea3c6272a43f3} 
+void {\bfseries create\+Memory\+Link} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} source\+\_\+id, \mbox{\hyperlink{structMemoryId}{Memory\+Id}} target\+\_\+id, double weight=1.\+0, const std\+::string \&link\+\_\+type="{}association"{})
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a6254ffa6ecdd2d18e250374f02e9b8ea}\label{classalyssa__memory_1_1AdvancedMemorySystem_a6254ffa6ecdd2d18e250374f02e9b8ea} 
+std\+::vector$<$ \mbox{\hyperlink{structMemoryLink}{Memory\+Link}} $>$ {\bfseries get\+Memory\+Links} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} memory\+\_\+id)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a6de450731d78b477e631d4368f09b5b0}\label{classalyssa__memory_1_1AdvancedMemorySystem_a6de450731d78b477e631d4368f09b5b0} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{Contextual\+Memory}} $>$ {\bfseries search\+Contextual\+Memories} (const std\+::string \&query, int top\+\_\+k=5)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a24e054d355be5ce6bbaaab4305645509}\label{classalyssa__memory_1_1AdvancedMemorySystem_a24e054d355be5ce6bbaaab4305645509} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Semantic\+Memory}} $>$ {\bfseries semantic\+Search} (const std\+::string \&query, int top\+\_\+k=5)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a64e80d220f00428a3a863829257c6553}\label{classalyssa__memory_1_1AdvancedMemorySystem_a64e80d220f00428a3a863829257c6553} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Semantic\+Memory}} $>$ {\bfseries semantic\+Search\+With\+Embedding} (const std\+::vector$<$ float $>$ \&query\+\_\+embedding, int top\+\_\+k=5)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_af758d021af2c7da892b0da4c163e635c}\label{classalyssa__memory_1_1AdvancedMemorySystem_af758d021af2c7da892b0da4c163e635c} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{Hybrid\+Memory\+Result}} $>$ {\bfseries hybrid\+Search} (const std\+::string \&query, int top\+\_\+k=5)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_aa3a562b0f5bd7148653580f90d383d09}\label{classalyssa__memory_1_1AdvancedMemorySystem_aa3a562b0f5bd7148653580f90d383d09} 
+bool {\bfseries has\+Embedder} () const
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_aef7cac313113b2bac3a0f6ab7a0b594b}\label{classalyssa__memory_1_1AdvancedMemorySystem_aef7cac313113b2bac3a0f6ab7a0b594b} 
+bool {\bfseries generate\+And\+Store\+Embedding} (int memory\+\_\+id, const std\+::string \&content)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a615e8823acb324e9969652a2f7ec4588}\label{classalyssa__memory_1_1AdvancedMemorySystem_a615e8823acb324e9969652a2f7ec4588} 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} {\bfseries analyze\+Emotional\+Content} (const std\+::string \&text)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ad4ba1ef7b814237d9e7638d324a4138d}\label{classalyssa__memory_1_1AdvancedMemorySystem_ad4ba1ef7b814237d9e7638d324a4138d} 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} {\bfseries analyze\+Conversation\+Emotions} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_af4dc106047024356b952103bf9ccf284}\label{classalyssa__memory_1_1AdvancedMemorySystem_af4dc106047024356b952103bf9ccf284} 
+std\+::vector$<$ float $>$ {\bfseries get\+Auto\+Emotional\+Vector} (const std\+::string \&text)
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_a7c827b4b752435720996bbb52b9b3f31}\label{classalyssa__memory_1_1AdvancedMemorySystem_a7c827b4b752435720996bbb52b9b3f31} 
+void {\bfseries print\+System\+Status} ()
+\item 
+\Hypertarget{classalyssa__memory_1_1AdvancedMemorySystem_ab8d194949351c84e93c58a5249f1fd63}\label{classalyssa__memory_1_1AdvancedMemorySystem_ab8d194949351c84e93c58a5249f1fd63} 
+void {\bfseries demonstrate\+Semantic\+Search} (const std\+::string \&query)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/Alyssa\+Memory\+Handler.\+hpp\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/Alyssa\+Memory\+Handler.\+cpp\end{DoxyCompactItemize}

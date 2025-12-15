@@ -1,0 +1,272 @@
+\doxysection{Alyssa\+Core.\+hpp}
+\hypertarget{AlyssaCore_8hpp_source}{}\label{AlyssaCore_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/AlyssaCore.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/AlyssaCore.hpp}}
+\mbox{\hyperlink{AlyssaCore_8hpp}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}llama.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}json.hpp"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#pragma\ warning(disable:\ 4244\ 4267\ 4458)}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{using\ }json\ =\ nlohmann::json;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structSimpleModelParameters}{SimpleModelParameters}}\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{structSimpleModelParameters_a039312edbf297a123b51c3abc595a7fb}{temperature}}\ =\ 0.0;\ }
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{structSimpleModelParameters_aae2cc2a8d6ae9b1d6b133bbb1d5e6aa3}{top\_p}}\ =\ 0.0;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{structSimpleModelParameters_aa598d61535a3d2b6753cd8ffb9a1a4b4}{max\_tokens}}\ =\ 0;\ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00034\ \};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ std::string\ \mbox{\hyperlink{structSimpleModelConfig_a577769a490ad65e55b01d2b4e06bf916}{id}};\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ std::string\ \mbox{\hyperlink{structSimpleModelConfig_a7ba69a6438bd77a63da95c5f7497e19f}{model\_path}};\ \ \ \ \ \ \ }
+\DoxyCodeLine{00043\ \ \ \ \ std::string\ \mbox{\hyperlink{structSimpleModelConfig_a500f99e025e2313fb2ad727e65853705}{system\_prompt}};\ \ \ \ }
+\DoxyCodeLine{00044\ \ \ \ \ std::string\ \mbox{\hyperlink{structSimpleModelConfig_a4d60a67b03784f5e3e1785ac2d4e3267}{role\_instruction}};\ }
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{structSimpleModelConfig_a2c9c7c5349991e078717be56dd38452e}{usa\_LoRA}};\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00046\ \ \ \ \ std::string\ \mbox{\hyperlink{structSimpleModelConfig_ad2c953673841aac8e216b0a2af311c62}{lora\_path}};\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00047\ \ \ \ \ \mbox{\hyperlink{structSimpleModelParameters}{SimpleModelParameters}}\ \mbox{\hyperlink{structSimpleModelConfig_a4683354dfebbfd3ab9338439e138b813}{params}};\ \ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{structSimpleModelConfig_aa0028ae76c2055cb355fd1383ab022de}{n\_ctx}}\ =\ 8192;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00049\ \};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{using\ }AllModelConfigs\ =\ std::vector<SimpleModelConfig>;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{inline}\ AllModelConfigs\ \mbox{\hyperlink{AlyssaCore_8hpp_a60efc42108eacefc96f55f0d2be75a47}{load\_config}}()\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ AllModelConfigs\ configs;}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ filepath\ =\ \textcolor{stringliteral}{"{}config/ConfigsLLM.json"{}};}
+\DoxyCodeLine{00064\ \ \ \ \ std::ifstream\ file(filepath);}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordflow}{if}\ (!file.is\_open())\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}ERRO:\ Não\ foi\ possível\ abrir\ o\ arquivo\ de\ configuração:\ "{}}\ <<\ filepath\ <<\ std::endl;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ configs;}
+\DoxyCodeLine{00068\ \ \ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ json\ j\ =\ json::parse(file);}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (j.contains(\textcolor{stringliteral}{"{}models"{}})\ \&\&\ j[\textcolor{stringliteral}{"{}models"{}}].is\_array())\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ model\_json\ :\ j[\textcolor{stringliteral}{"{}models"{}}])\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\ config;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Campos\ de\ nível\ superior}}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}id"{}}))\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a577769a490ad65e55b01d2b4e06bf916}{id}}\ =\ model\_json[\textcolor{stringliteral}{"{}id"{}}].get<std::string>();}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}model\_path"{}}))\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a7ba69a6438bd77a63da95c5f7497e19f}{model\_path}}\ =\ model\_json[\textcolor{stringliteral}{"{}model\_path"{}}].get<std::string>();}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}system\_prompt"{}}))\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a500f99e025e2313fb2ad727e65853705}{system\_prompt}}\ =\ model\_json[\textcolor{stringliteral}{"{}system\_prompt"{}}].get<std::string>();}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}role\_instruction"{}}))\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a4d60a67b03784f5e3e1785ac2d4e3267}{role\_instruction}}\ =\ model\_json[\textcolor{stringliteral}{"{}role\_instruction"{}}].get<std::string>();}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}usa\_LoRA"{}}))\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a2c9c7c5349991e078717be56dd38452e}{usa\_LoRA}}\ =\ model\_json[\textcolor{stringliteral}{"{}usa\_LoRA"{}}].get<\textcolor{keywordtype}{bool}>();}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}lora\_path"{}}))\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_ad2c953673841aac8e216b0a2af311c62}{lora\_path}}\ =\ model\_json[\textcolor{stringliteral}{"{}lora\_path"{}}].get<std::string>();}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}n\_ctx"{}}))\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_aa0028ae76c2055cb355fd1383ab022de}{n\_ctx}}\ =\ model\_json[\textcolor{stringliteral}{"{}n\_ctx"{}}].get<\textcolor{keywordtype}{int}>();}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Extrair\ campos\ aninhados\ "{}parametros"{}}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model\_json.contains(\textcolor{stringliteral}{"{}parametros"{}})\ \&\&\ model\_json[\textcolor{stringliteral}{"{}parametros"{}}].is\_object())\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ params\_json\ =\ model\_json[\textcolor{stringliteral}{"{}parametros"{}}];}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (params\_json.contains(\textcolor{stringliteral}{"{}temperatura"{}}))\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a4683354dfebbfd3ab9338439e138b813}{params}}.\mbox{\hyperlink{structSimpleModelParameters_a039312edbf297a123b51c3abc595a7fb}{temperature}}\ =\ params\_json[\textcolor{stringliteral}{"{}temperatura"{}}].get<\textcolor{keywordtype}{double}>();}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (params\_json.contains(\textcolor{stringliteral}{"{}top\_p"{}}))\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a4683354dfebbfd3ab9338439e138b813}{params}}.\mbox{\hyperlink{structSimpleModelParameters_aae2cc2a8d6ae9b1d6b133bbb1d5e6aa3}{top\_p}}\ =\ params\_json[\textcolor{stringliteral}{"{}top\_p"{}}].get<\textcolor{keywordtype}{double}>();}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (params\_json.contains(\textcolor{stringliteral}{"{}max\_tokens"{}}))\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.\mbox{\hyperlink{structSimpleModelConfig_a4683354dfebbfd3ab9338439e138b813}{params}}.\mbox{\hyperlink{structSimpleModelParameters_aa598d61535a3d2b6753cd8ffb9a1a4b4}{max\_tokens}}\ =\ params\_json[\textcolor{stringliteral}{"{}max\_tokens"{}}].get<\textcolor{keywordtype}{int}>();}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ configs.push\_back(config);}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00117\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ json::parse\_error\&\ e)\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}ERRO\ de\ Parsing\ JSON:\ "{}}\ <<\ e.what()\ <<\ std::endl;}
+\DoxyCodeLine{00119\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ json::exception\&\ e)\ \{}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}ERRO\ JSON\ (Campo\ ausente/Tipo\ errado?):\ "{}}\ <<\ e.what()\ <<\ std::endl;}
+\DoxyCodeLine{00121\ \ \ \ \ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keywordflow}{return}\ configs;}
+\DoxyCodeLine{00124\ \}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \textcolor{keyword}{namespace\ }alyssa\_core\ \{}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{class\ }\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a61b41d72133c37f19bd1592fd89355fe}{AlyssaCore}}\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ llama\_model*\ model;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ llama\_vocab*\ vocab;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ llama\_model\_params\ mParams;\ \ \ \ \ \ \ }
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ O\ CONTEXTO\ ÚNICO\ E\ COMPARTILHADO}}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ llama\_context*\ ctx;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\_ctx;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a61b41d72133c37f19bd1592fd89355fe}{AlyssaCore}}(\textcolor{keyword}{const}\ std::string\&\ base\_model\_path,\ \textcolor{keywordtype}{int}\ context\_size\ =\ 2048)\ }
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ :\ model(nullptr),\ vocab(nullptr),\ ctx(nullptr),\ n\_ctx(context\_size)\ }
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ mParams\ =\ llama\_model\_default\_params();}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \ \ \ \ mParams.n\_gpu\_layers\ =\ -\/1;\ }
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ model\ =\ llama\_model\_load\_from\_file(base\_model\_path.c\_str(),\ mParams);}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!model)\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Falha\ ao\ carregar\ o\ modelo\ BASE:\ "{}}\ +\ base\_model\_path);}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}Modelo\ BASE\ carregado\ com\ sucesso:\ "{}}\ <<\ base\_model\_path\ <<\ std::endl;}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \ \ \ \ vocab\ =\ llama\_model\_get\_vocab(model);}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Usar\ o\ n\_ctx\ passado\ como\ parâmetro}}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_context\_params\ ctx\_params\ =\ llama\_context\_default\_params();}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ ctx\_params.n\_ctx\ =\ n\_ctx;}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ ctx\_params.n\_batch\ =\ n\_ctx;}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \ \ \ \ ctx\ =\ llama\_init\_from\_model(model,\ ctx\_params);}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!ctx)\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}AlyssaCore:\ Falha\ ao\ criar\ contexto\ ÚNICO."{}});}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}Contexto\ ÚNICO\ criado\ com\ n\_ctx\ =\ "{}}\ <<\ n\_ctx\ <<\ std::endl;}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_aa4d21f372030daf761338aaa6acf15c5}{\string~AlyssaCore}}()\ \{}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Libera\ TUDO}}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ctx)\ llama\_free(ctx);}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (model)\ llama\_model\_free(model);}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}Modelo\ BASE\ e\ Contexto\ ÚNICO\ liberados."{}}\ <<\ std::endl;}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ llama\_model*\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_add6b48478dc75c65b430ab2044b42bdb}{get\_model}}()\ \{\ \textcolor{keywordflow}{return}\ model;\ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ llama\_vocab*\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a513d25983e315a2b9f92c3b0df22dcc7}{get\_vocab}}()\ \{\ \textcolor{keywordflow}{return}\ vocab;\ \}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ llama\_context*\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_aaf33368807f90fda42827914d90a0294}{get\_context}}()\ \{\ \textcolor{keywordflow}{return}\ ctx;\ \}}
+\DoxyCodeLine{00212\ }
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_ac78193db7c2dda4c0638f4cc907422b2}{get\_n\_ctx}}()\ \{\ \textcolor{keywordflow}{return}\ n\_ctx;\ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ std::string\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182}{generate\_raw}}(}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\ \&\ prompt,}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structSimpleModelParameters}{SimpleModelParameters}}\&\ params,}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora,\ \textcolor{comment}{//\ LoRA\ a\ ser\ aplicado}}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&\ piece)>\ stream\_callback}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ )\ \{}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ response;}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\_prompt\_tokens\_total;}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 1.\ APLICAR\ O\ LoRA\ (se\ fornecido)}}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lora\ !=\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ err\ =\ llama\_set\_adapter\_lora(ctx,\ lora,\ 1.0);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (err\ !=\ 0)\ \{}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}AlyssaLLM:\ Falha\ ao\ aplicar\ LoRA"{}}\ <<\ std::endl;}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}Adaptador\ LoRA\ aplicado."{}}\ <<\ std::endl;}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 2.\ CRIAR\ O\ SAMPLER\ (com\ parâmetros\ do\ especialista)}}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler*\ smpl\ =\ llama\_sampler\_chain\_init(llama\_sampler\_chain\_default\_params());}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\ top\_p\ =\ (params.\mbox{\hyperlink{structSimpleModelParameters_aae2cc2a8d6ae9b1d6b133bbb1d5e6aa3}{top\_p}}\ >\ 0.0)\ ?\ params.\mbox{\hyperlink{structSimpleModelParameters_aae2cc2a8d6ae9b1d6b133bbb1d5e6aa3}{top\_p}}\ :\ 0.05f;}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler\_chain\_add(smpl,\ llama\_sampler\_init\_min\_p(top\_p,\ 1));}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\ temp\ =\ (params.\mbox{\hyperlink{structSimpleModelParameters_a039312edbf297a123b51c3abc595a7fb}{temperature}}\ >\ 0.0)\ ?\ params.\mbox{\hyperlink{structSimpleModelParameters_a039312edbf297a123b51c3abc595a7fb}{temperature}}\ :\ 0.8f;}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler\_chain\_add(smpl,\ llama\_sampler\_init\_temp(temp));}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler\_chain\_add(smpl,\ llama\_sampler\_init\_penalties(64,\ 1.3f,\ 0.0f,\ 0.0f));}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler\_chain\_add(smpl,\ llama\_sampler\_init\_dist(LLAMA\_DEFAULT\_SEED));}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 3.\ Verifica\ se\ o\ contexto\ já\ tem\ tokens}}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ is\_first\_run\ =\ llama\_memory\_seq\_pos\_max(llama\_get\_memory(ctx),\ 0)\ ==\ -\/1;}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 4.\ Obtém\ o\ número\ de\ tokens\ que\ JÁ\ ESTÃO\ no\ KV\ cache.}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ n\_cached\ =\ is\_first\_run\ ?\ 0\ :\ llama\_memory\_seq\_pos\_max(llama\_get\_memory(ctx),\ 0)\ +\ 1;}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 5.\ Tokeniza\ o\ prompt\ COMPLETO}}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ n\_prompt\_tokens\_total\ =\ llama\_tokenize(\ }
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ vocab,\ prompt.c\_str(),\ prompt.size(),\ NULL,\ 0,\ is\_first\_run,\ \textcolor{keyword}{true}}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ );}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Inverte\ o\ sinal\ para\ obter\ o\ número\ total\ de\ tokens}}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_prompt\_tokens\_total\ <\ 0)\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n\_prompt\_tokens\_total\ =\ -\/n\_prompt\_tokens\_total;}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\_prompt\_tokens\_total\ ==\ 0)\ \{}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}"{}};\ }
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<llama\_token>\ prompt\_tokens(n\_prompt\_tokens\_total);}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (llama\_tokenize(vocab,\ prompt.c\_str(),\ prompt.size(),}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ prompt\_tokens.data(),\ prompt\_tokens.size(),}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_first\_run,\ \textcolor{keyword}{true})\ <\ 0)\ \{}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Falha\ ao\ tokenizar\ o\ prompt\(\backslash\)n"{}});}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 6.\ Calcula\ quantos\ tokens\ são\ REALMENTE\ NOVOS}}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ n\_new\_tokens\ =\ prompt\_tokens.size()\ -\/\ n\_cached;}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_new\_tokens\ <\ 0)\ \{}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Dessincronização\ do\ KV\ Cache}}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}AVISO:\ Detectada\ dessincronização\ do\ KV\ Cache.\ Limpando\ cache."{}}\ <<\ std::endl;}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ llama\_memory\_seq\_rm(llama\_get\_memory(ctx),\ 0,\ -\/1,\ -\/1);}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Recursivamente\ tenta\ novamente\ com\ cache\ limpo}}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182}{generate\_raw}}(prompt,\ params,\ lora,\ stream\_callback);}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 7.\ Prepara\ um\ batch\ APENAS\ com\ os\ tokens\ NOVOS}}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_batch\ batch\ =\ llama\_batch\_get\_one(}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ prompt\_tokens.data()\ +\ n\_cached,\ }
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n\_new\_tokens\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \ \ \ \ );}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_token\ new\_token\_id;}
+\DoxyCodeLine{00302\ }
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Loop\ principal\ de\ geração}}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\_ctx\_total\ =\ llama\_n\_ctx(ctx);}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\_ctx\_used\ \ =\ llama\_memory\_seq\_pos\_max(llama\_get\_memory(ctx),\ 0)\ +\ 1;}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_ctx\_used\ +\ batch.n\_tokens\ >\ n\_ctx\_total)\ \{}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Tamanho\ do\ contexto\ excedido\(\backslash\)n"{}});}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Tamanho\ do\ contexto\ excedido\(\backslash\)n"{}});}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ llama\_decode(ctx,\ batch);}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ret\ !=\ 0)\ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Falha\ ao\ decodificar"{}});}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ new\_token\_id\ =\ llama\_sampler\_sample(smpl,\ ctx,\ -\/1);}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (llama\_vocab\_is\_eog(vocab,\ new\_token\_id))\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}\ buf[256];}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\ =\ llama\_token\_to\_piece(vocab,\ new\_token\_id,\ buf,\ \textcolor{keyword}{sizeof}(buf),\ 0,\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <\ 0)\ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Falha\ ao\ converter\ token\(\backslash\)n"{}});}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ piece(buf,\ n);}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%s"{}},\ piece.c\_str());}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fflush(stdout);}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ response\ +=\ piece;}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_callback)\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ stream\_callback(piece);}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ batch\ =\ llama\_batch\_get\_one(\&new\_token\_id,\ 1);}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_sampler\_free(smpl);}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ response;}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00339\ \ \ \ \ \};}
+\DoxyCodeLine{00340\ \}}
+
+\end{DoxyCode}

@@ -1,0 +1,470 @@
+\doxysection{Alyssa\+Memory\+Handler.\+hpp}
+\hypertarget{AlyssaMemoryHandler_8hpp_source}{}\label{AlyssaMemoryHandler_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/AlyssaMemoryHandler.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/AlyssaMemoryHandler.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//AlyssaMemoryHandler.hpp}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}sqlite3.h"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <random>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <ctime>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <curl/curl.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <cstdlib>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <regex>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <numeric>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ "{}json.hpp"{}}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ "{}EmotionLexiconLoader.hpp"{}}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{using\ }json\ =\ nlohmann::json;}
+\DoxyCodeLine{00033\ \textcolor{keyword}{namespace\ }fs\ =\ std::filesystem;}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00036\ \textcolor{comment}{//\ Data\ Struct\ Settings}}
+\DoxyCodeLine{00037\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structEmotionalAnalyzerConfig}{EmotionalAnalyzerConfig}}\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structEmotionalAnalyzerConfig_1_1EmotionWeight}{EmotionWeight}}\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ std::string\ emotion;}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ weight;}
+\DoxyCodeLine{00043\ \ \ \ \ \};}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \ \ std::vector<EmotionWeight>\ default\_weights\ =\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}alegria"{}},\ 1.0\},\ \{\textcolor{stringliteral}{"{}tristeza"{}},\ 1.0\},\ \{\textcolor{stringliteral}{"{}raiva"{}},\ 1.0\},\ }
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}medo"{}},\ 1.0\},\ \{\textcolor{stringliteral}{"{}surpresa"{}},\ 0.8\},\ \{\textcolor{stringliteral}{"{}confiança"{}},\ 0.9\},}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}antecipacao"{}},\ 0.7\},\ \{\textcolor{stringliteral}{"{}desgosto"{}},\ 0.9\}}
+\DoxyCodeLine{00049\ \ \ \ \ \};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ std::vector<std::string>\ emotion\_categories\ =\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}alegria"{}},\ \textcolor{stringliteral}{"{}tristeza"{}},\ \textcolor{stringliteral}{"{}raiva"{}},\ \textcolor{stringliteral}{"{}medo"{}},\ }
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}surpresa"{}},\ \textcolor{stringliteral}{"{}confiança"{}},\ \textcolor{stringliteral}{"{}antecipacao"{}},\ \textcolor{stringliteral}{"{}desgosto"{}}}
+\DoxyCodeLine{00054\ \ \ \ \ \};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{double}\ lexicon\_word\_weight\ =\ 0.1;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{double}\ intesifier\_boost\ =\ 0.15;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{double}\ negation\_penalty\ =\ 0.1;}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{double}\ exclamation\_boost\ =\ 0.05;}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{double}\ question\_boost\ =\ 0.08;}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{double}\ period\_frustation\_boost\ =\ 0.05;}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{double}\ min\_confidence\_threshold\ =\ 0.1;}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{double}\ user\_input\_weight\ =\ 0.7;}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{double}\ ai\_response\_weight\ =\ 0.3;}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \};}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structMemorySearchConfig}{MemorySearchConfig}}\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{int}\ default\_top\_k\ =\ 5;}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{double}\ text\_weight\ =\ 0.4;}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{double}\ semantic\_weight\ =\ 0.6;}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordtype}{double}\ intention\_boost\_weight\ =\ 0.3;}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{double}\ emotional\_boost\_weight\ =\ 0.2;}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{double}\ min\_similarity\_score\ =\ 0.1;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structMemorySearchConfig_1_1BoostConfig}{BoostConfig}}\ \{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ active\_intention\_multiplier\ =\ 0.3;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ emotional\_match\_multiplier\ =\ 0.2;}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ recent\_memory\_boost\ =\ 0.1;}
+\DoxyCodeLine{00081\ \ \ \ \ \}\ boost\_config;}
+\DoxyCodeLine{00082\ \};}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ Estruturas\ de\ Dados}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00092\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ std::vector<float>\ emotional\_vector;}
+\DoxyCodeLine{00094\ \ \ \ \ std::string\ dominant\_emotion;}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordtype}{double}\ confidence;}
+\DoxyCodeLine{00096\ \ \ \ \ std::unordered\_map<std::string,\ double>\ emotion\_scores;}
+\DoxyCodeLine{00097\ \};}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{struct\ }EmotionalState\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ std::string\ name;}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{double}\ intensity;}
+\DoxyCodeLine{00105\ \ \ \ \ uint64\_t\ timestamp;}
+\DoxyCodeLine{00106\ \ \ \ \ }
+\DoxyCodeLine{00107\ \ \ \ \ EmotionalState(\textcolor{keyword}{const}\ std::string\&\ n\ =\ \textcolor{stringliteral}{"{}neutral"{}},\ \textcolor{keywordtype}{double}\ i\ =\ 0.5);}
+\DoxyCodeLine{00108\ \ \ \ \ \};}
+\DoxyCodeLine{00109\ \ \ \ \ }
+\DoxyCodeLine{00113\ \ \ \ \ }
+\DoxyCodeLine{00114\ \textcolor{keyword}{struct\ }MemoryId\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keywordtype}{int}\ value;}
+\DoxyCodeLine{00116\ \ \ \ \ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{explicit}\ \textcolor{keyword}{constexpr}\ MemoryId(\textcolor{keywordtype}{int}\ v)\ :\ value(v)\ \{\}}
+\DoxyCodeLine{00118\ \ \ \ \ }
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ MemoryId\&\ other)\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ ==\ other.value;\}}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator!=(\textcolor{keyword}{const}\ MemoryId\&\ other)\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ !=\ other.value;\}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{operator}\ int()\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value;\}}
+\DoxyCodeLine{00122\ \ \ \ \ }
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ MemoryId\ invalid()\ \{\textcolor{keywordflow}{return}\ MemoryId(-\/1);\}}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordtype}{bool}\ isValid()\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ >\ 0;\}}
+\DoxyCodeLine{00125\ \};}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{keyword}{struct\ }IntentionId\ \{}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordtype}{int}\ value;}
+\DoxyCodeLine{00133\ \ \ \ \ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keyword}{explicit}\ \textcolor{keyword}{constexpr}\ IntentionId(\textcolor{keywordtype}{int}\ v)\ :\ value(v)\ \{\}}
+\DoxyCodeLine{00135\ \ \ \ \ }
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ IntentionId\&\ other)\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ ==\ other.value;\}}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator!=(\textcolor{keyword}{const}\ IntentionId\&\ other)\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ !=\ other.value;\}}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{operator}\ int()\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value;\}}
+\DoxyCodeLine{00139\ \ \ \ \ }
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ IntentionId\ invalid()\ \{\textcolor{keywordflow}{return}\ IntentionId(-\/1);\}}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keywordtype}{bool}\ isValid()\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ value\ >\ 0;\}}
+\DoxyCodeLine{00142\ \};}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00147\ \textcolor{keyword}{struct\ }Intention\ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keywordtype}{int}\ id;}
+\DoxyCodeLine{00149\ \ \ \ \ std::string\ description;}
+\DoxyCodeLine{00150\ \ \ \ \ std::string\ type;}
+\DoxyCodeLine{00151\ \ \ \ \ std::string\ trigger;}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keywordtype}{bool}\ active;}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{double}\ motivation;}
+\DoxyCodeLine{00154\ \ \ \ \ std::string\ created\_at;}
+\DoxyCodeLine{00155\ \ \ \ \ }
+\DoxyCodeLine{00156\ \ \ \ \ Intention(\textcolor{keyword}{const}\ std::string\&\ desc,\ \textcolor{keyword}{const}\ std::string\&\ t,\ \textcolor{keyword}{const}\ std::string\&\ trig\ =\ \textcolor{stringliteral}{"{}"{}});}
+\DoxyCodeLine{00157\ \};}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00162\ \textcolor{keyword}{struct\ }MemoryLink\ \{}
+\DoxyCodeLine{00163\ \ \ \ \ \mbox{\hyperlink{structMemoryId}{MemoryId}}\ source\_id;}
+\DoxyCodeLine{00164\ \ \ \ \ \mbox{\hyperlink{structMemoryId}{MemoryId}}\ target\_id;}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{double}\ weight;}
+\DoxyCodeLine{00166\ \ \ \ \ std::string\ type;}
+\DoxyCodeLine{00167\ \ \ \ \ }
+\DoxyCodeLine{00168\ \ \ \ \ MemoryLink(\mbox{\hyperlink{structMemoryId}{MemoryId}}\ src,\ \mbox{\hyperlink{structMemoryId}{MemoryId}}\ tgt,\ \textcolor{keywordtype}{double}\ w\ =\ 1.0,\ \textcolor{keyword}{const}\ std::string\&\ t\ =\ \textcolor{stringliteral}{"{}association"{}});}
+\DoxyCodeLine{00169\ \};}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00174\ \textcolor{keyword}{struct\ }Reflection\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \mbox{\hyperlink{structMemoryId}{MemoryId}}\ memory\_id;}
+\DoxyCodeLine{00176\ \ \ \ \ std::string\ type;}
+\DoxyCodeLine{00177\ \ \ \ \ std::string\ content;}
+\DoxyCodeLine{00178\ \ \ \ \ std::string\ created\_at;}
+\DoxyCodeLine{00179\ \ \ \ \ }
+\DoxyCodeLine{00180\ \ \ \ \ Reflection(\mbox{\hyperlink{structMemoryId}{MemoryId}}\ mem\_id,\ \textcolor{keyword}{const}\ std::string\&\ t,\ \textcolor{keyword}{const}\ std::string\&\ c);}
+\DoxyCodeLine{00181\ \};}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00184\ \textcolor{comment}{//\ Classe\ IScoreCalculator}}
+\DoxyCodeLine{00185\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00186\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classIScoreCalculator}{IScoreCalculator}}\ \{}
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{classIScoreCalculator}{\string~IScoreCalculator}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ calculate(\textcolor{keyword}{const}\ std::string\&\ text,\ std::unordered\_map<std::string,\ double>\&\ scores)\ =\ 0;}
+\DoxyCodeLine{00190\ \};}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \textcolor{keyword}{class\ }LexiconScoreCalculator\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classIScoreCalculator}{IScoreCalculator}}\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_map<std::string,\ std::vector<std::string>>\&\ lexicons\_;}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_map<std::string,\ double>\&\ weights\_;}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ LexiconScoreCalculator(}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_map<std::string,\ std::vector<std::string>>\&\ lexicons,}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_map<std::string,\ double>\&\ weights)}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ :\ lexicons\_(lexicons),\ weights\_(weights)\ \{\}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ calculate(\textcolor{keyword}{const}\ std::string\&\ text,}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00205\ \};}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00208\ \textcolor{comment}{//\ Classe\ EmotionalAnalyzer}}
+\DoxyCodeLine{00209\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00214\ \textcolor{keyword}{class\ }EmotionalAnalyzer\ \{}
+\DoxyCodeLine{00215\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00216\ \ \ \ \ std::unordered\_map<std::string,\ std::vector<std::string>>\ emotion\_lexicons;}
+\DoxyCodeLine{00217\ \ \ \ \ std::unordered\_map<std::string,\ double>\ emotion\_weights;}
+\DoxyCodeLine{00218\ \ \ \ \ std::vector<std::string>\ emotion\_categories;}
+\DoxyCodeLine{00219\ \ \ \ \ std::vector<std::unique\_ptr<IScoreCalculator>>\ score\_calculators\_;}
+\DoxyCodeLine{00220\ \ \ \ \ }
+\DoxyCodeLine{00221\ \ \ \ \ \mbox{\hyperlink{structEmotionalAnalyzerConfig}{EmotionalAnalyzerConfig}}\ config\_;}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keywordtype}{void}\ setupScoreCalculators();}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keywordtype}{void}\ initializeEmotionLexicons();}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordtype}{void}\ analyzeWithLexicon(\textcolor{keyword}{const}\ std::string\&\ text,\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keywordtype}{void}\ analyzePatterns(\textcolor{keyword}{const}\ std::string\&\ text,\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordtype}{void}\ analyzePunctuation(\textcolor{keyword}{const}\ std::string\&\ text,\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00228\ \ \ \ \ std::vector<float>\ normalizeScores(\textcolor{keyword}{const}\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00229\ \ \ \ \ std::string\ findDominantEmotion(\textcolor{keyword}{const}\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{keywordtype}{double}\ calculateConfidence(\textcolor{keyword}{const}\ std::unordered\_map<std::string,\ double>\&\ scores)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00232\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keyword}{explicit}\ EmotionalAnalyzer(\textcolor{keyword}{const}\ \mbox{\hyperlink{structEmotionalAnalyzerConfig}{EmotionalAnalyzerConfig}}\&\ config\ =\ \{\});}
+\DoxyCodeLine{00234\ \ \ \ \ }
+\DoxyCodeLine{00235\ \ \ \ \ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\ analyzeText(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00236\ \ \ \ \ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\ analyzeConversation(\textcolor{keyword}{const}\ std::string\&\ user\_input,\ \textcolor{keyword}{const}\ std::string\&\ ai\_response);}
+\DoxyCodeLine{00237\ \};}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00239\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00240\ \textcolor{comment}{//\ Embedding}}
+\DoxyCodeLine{00241\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classEmbedder}{Embedder}};}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00246\ \textcolor{comment}{//\ Classe\ Utils}}
+\DoxyCodeLine{00247\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00252\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classUtils}{Utils}}\ \{}
+\DoxyCodeLine{00253\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keyword}{static}\ std::vector<float>\ getTimeStamp();}
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ getCurrentISOTime();}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ sigmoid(\textcolor{keywordtype}{double}\ x);}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ normalizeImportance(\textcolor{keywordtype}{double}\ raw\_importance);}
+\DoxyCodeLine{00258\ \};}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00263\ \textcolor{comment}{//\ Classe\ TextNormalizer}}
+\DoxyCodeLine{00264\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classTextNormalizer}{TextNormalizer}}\ \{}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::string\ toLowerCase(\textcolor{keyword}{const}\ std::string\&\ text);\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::string\ removeExtraSpaces(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::string\ normalizePunctuation(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::string\ normalizePortugueseAccents(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::vector<std::string>\ extractWords(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::unordered\_map<char,\ char>\ accent\_map;}
+\DoxyCodeLine{00276\ \};}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00279\ \textcolor{comment}{//\ Classe\ SQLStatementBuilder}}
+\DoxyCodeLine{00280\ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00281\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classSQLStatementBuilder}{SQLStatementBuilder}}\ \{}
+\DoxyCodeLine{00282\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ createMemoryInsert(\textcolor{keyword}{const}\ std::string\&\ content,\ }
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ context,}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ emotion,}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ importance,}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ timestamp,}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ vtime);}
+\DoxyCodeLine{00289\ \ \ \ \ }
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ createEmbeddingInsert(\mbox{\hyperlink{structMemoryId}{MemoryId}}\ memory\_id,}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<float>\&\ embedding,}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ created\_at);}
+\DoxyCodeLine{00293\ \ \ \ \ }
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ createSemanticSearchQuery();}
+\DoxyCodeLine{00295\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ createContextualSearchQuery(\textcolor{keyword}{const}\ std::string\&\ pattern,\ \textcolor{keywordtype}{int}\ limit);}
+\DoxyCodeLine{00296\ \ \ \ \ }
+\DoxyCodeLine{00297\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keyword}{static}\ std::string\ escapeSQLString(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00299\ \};}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \textcolor{keyword}{namespace\ }alyssa\_memory\ \{}
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{keyword}{class\ }SQLiteWrapper\ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ sqlite3*\ db\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{explicit}\ SQLiteWrapper(\textcolor{keyword}{const}\ std::string\&\ db\_path)\ \{}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rc\ =\ sqlite3\_open\_v2(db\_path.c\_str(),\ \&db\_,\ }
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SQLITE\_OPEN\_READWRITE\ |\ SQLITE\_OPEN\_CREATE,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rc\ !=\ SQLITE\_OK)\ \{}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Cannot\ open\ database:\ "{}}\ +\ }
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string(sqlite3\_errmsg(db\_)));}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ \string~SQLiteWrapper()\ \{}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (db\_)\ \{}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sqlite3\_close(db\_);}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Delete\ copy\ operations}}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \ \ \ \ SQLiteWrapper(\textcolor{keyword}{const}\ SQLiteWrapper\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \ \ \ \ SQLiteWrapper\&\ operator=(\textcolor{keyword}{const}\ SQLiteWrapper\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Allow\ move}}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \ \ \ \ SQLiteWrapper(SQLiteWrapper\&\&\ other)\ noexcept\ :\ db\_(other.db\_)\ \{}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ other.db\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ sqlite3*\ get()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ db\_;\ \};}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{operator}\ sqlite3*()\ \textcolor{keyword}{const}\ \{\ \textcolor{keywordflow}{return}\ db\_;\ \};}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{comment}{//\ Classe\ AdvancedMemorySystem}}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00338\ \ \ \ \ }
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{keyword}{class\ }AdvancedMemorySystem\ \{}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ sqlite3*\ db;}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structEmotionalState}{EmotionalState}}\ current\_emotional\_state;}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ std::vector<Intention>\ active\_intentions;}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ std::map<std::string,\ double>\ emotion\_weights;}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ std::shared\_ptr<Embedder>\ embedder;}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ std::unique\_ptr<EmotionalAnalyzer>\ emotional\_analyzer;}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ TODO:\ Make\ A\ Neural\ Network\ in\ ONNX\ for\ better\ results}}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ std::unordered\_map<std::string,\ std::pair<std::string,\ std::string>>\ emotion\_to\_intention\ =\ \{}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}tristeza"{}},\ \{\textcolor{stringliteral}{"{}Refletir\ sobre\ sentimentos\ difíceis"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}alegria"{}},\ \{\textcolor{stringliteral}{"{}Manter\ momentos\ positivos"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}raiva"{}},\ \{\textcolor{stringliteral}{"{}Redirecionar\ frustrações"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}medo"{}},\ \{\textcolor{stringliteral}{"{}Buscar\ segurança"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}surpresa"{}},\ \{\textcolor{stringliteral}{"{}Explorar\ novidade"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}confiança"{}},\ \{\textcolor{stringliteral}{"{}Apoiar\ outros"{}},\ \textcolor{stringliteral}{"{}emocional"{}}\}\},}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \ \ \ \ \{\textcolor{stringliteral}{"{}antecipacao"{}},\ \{\textcolor{stringliteral}{"{}Planejar\ próximos\ passos"{}},\ \textcolor{stringliteral}{"{}planejamento"{}}\}\}}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ initializeDatabase();}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ loadCurrentState();}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ saveCurrentState();}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ loadActiveIntentions();}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ storeEmbedding(\textcolor{keywordtype}{int}\ memory\_id,\ \textcolor{keyword}{const}\ std::vector<float>\&\ embedding);}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ checkEmotionalAutoActivation();}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ saveReflection(\textcolor{keywordtype}{int}\ memory\_id,\ \textcolor{keyword}{const}\ std::string\&\ type,\ \textcolor{keyword}{const}\ std::string\&\ content);}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ calculateIntentionBoost(\textcolor{keyword}{const}\ std::string\&\ content);}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ calculateEmotionalBoost(\textcolor{keyword}{const}\ std::string\&\ memory\_emotion);}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ calculateAutomaticImportance(\textcolor{keyword}{const}\ std::string\&\ content,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\&\ analysis);}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Estruturas\ para\ resultados\ de\ busca}}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{ContextualMemory}}\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ id;}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ content;}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ relevance\_score;}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ emotion;}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{SemanticMemory}}\ \{}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ memory\_id;}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ content;}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ similarity\_score;}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ emotion;}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ importance;}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{HybridMemoryResult}}\ \{}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ memory\_id;}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ content;}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ text\_score;}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ semantic\_score;}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ combined\_score;}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ emotion;}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ AdvancedMemorySystem(\textcolor{keyword}{const}\ std::string\&\ db\_path,\ std::shared\_ptr<Embedder>\ embedder\_ref);}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ \string~AdvancedMemorySystem();}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Gerenciamento\ de\ estado\ emocional}}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ setEmotionalState(\textcolor{keyword}{const}\ std::string\&\ emotion,\ \textcolor{keywordtype}{double}\ intensity);}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structEmotionalState}{EmotionalState}}\ getCurrentEmotionalState()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ linkMemoryToIntention(\textcolor{keywordtype}{int}\ memory\_id,\ \textcolor{keywordtype}{int}\ intention\_id);}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Gerenciamento\ de\ memórias}}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ storeMemoryWithEmotionalAnalysis(\textcolor{keyword}{const}\ std::string\&\ content,\ \textcolor{keyword}{const}\ std::string\&\ context\ =\ \textcolor{stringliteral}{"{}"{}});}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ applyMemoryDecay();}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ intenções}}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ activateIntention(\textcolor{keyword}{const}\ std::string\&\ description,\ \textcolor{keyword}{const}\ std::string\&\ type,\ }
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ trigger\ =\ \textcolor{stringliteral}{"{}"{}},\ \textcolor{keywordtype}{double}\ motivation\_boost\ =\ 0.0);}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ deactivateIntention(\textcolor{keywordtype}{int}\ intention\_id);}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<Intention>\ getActiveIntentions()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ reflexões}}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ generateReflections();}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ vínculos}}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ createMemoryLink(\mbox{\hyperlink{structMemoryId}{MemoryId}}\ source\_id,\ \mbox{\hyperlink{structMemoryId}{MemoryId}}\ target\_id,\ \textcolor{keywordtype}{double}\ weight\ =\ 1.0,\ }
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ link\_type\ =\ \textcolor{stringliteral}{"{}association"{}});}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<MemoryLink>\ getMemoryLinks(\mbox{\hyperlink{structMemoryId}{MemoryId}}\ memory\_id);}
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ busca}}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<ContextualMemory>\ searchContextualMemories(\textcolor{keyword}{const}\ std::string\&\ query,\ \textcolor{keywordtype}{int}\ top\_k\ =\ 5);}
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<SemanticMemory>\ semanticSearch(\textcolor{keyword}{const}\ std::string\&\ query,\ \textcolor{keywordtype}{int}\ top\_k\ =\ 5);}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<SemanticMemory>\ semanticSearchWithEmbedding(\textcolor{keyword}{const}\ std::vector<float>\&\ query\_embedding,\ \textcolor{keywordtype}{int}\ top\_k\ =\ 5);}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<HybridMemoryResult>\ hybridSearch(\textcolor{keyword}{const}\ std::string\&\ query,\ \textcolor{keywordtype}{int}\ top\_k\ =\ 5);}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ embeddings}}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ hasEmbedder()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ generateAndStoreEmbedding(\textcolor{keywordtype}{int}\ memory\_id,\ \textcolor{keyword}{const}\ std::string\&\ content);}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Análise\ emocional\ automática}}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\ analyzeEmotionalContent(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\ analyzeConversationEmotions(\textcolor{keyword}{const}\ std::string\&\ user\_input,\ \textcolor{keyword}{const}\ std::string\&\ ai\_response);}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<float>\ getAutoEmotionalVector(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Monitoramento\ e\ debug}}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ printSystemStatus();}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ demonstrateSemanticSearch(\textcolor{keyword}{const}\ std::string\&\ query);}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Classe\ AlyssaMemoryManager}}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \textcolor{keyword}{class\ }AlyssaMemoryManager\ \{}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::unique\_ptr<AdvancedMemorySystem>\ memory\_system;}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structMemorySearchConfig}{MemorySearchConfig}}\ search\_config\_;}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ printEmotionalAnalysis(\textcolor{keyword}{const}\ \mbox{\hyperlink{structEmotionalAnalysis}{EmotionalAnalysis}}\&\ analysis,\ \textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ analyzeInputForIntentions(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ setSearchConfig(\textcolor{keyword}{const}\ \mbox{\hyperlink{structMemorySearchConfig}{MemorySearchConfig}}\&\ config)\ \{\ search\_config\_\ =\ config;\ \}}
+\DoxyCodeLine{00463\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structMemorySearchConfig}{MemorySearchConfig}}\&\ getSearchConfig()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ search\_config\_;\ \}}
+\DoxyCodeLine{00464\ }
+\DoxyCodeLine{00465\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AlyssaMemoryManager(\textcolor{keyword}{const}\ std::string\&\ db\_path,\ std::shared\_ptr<Embedder>\ embedder\_ref);\ \ \ \ }
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Processamento\ de\ interações}}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ processInteraction(\textcolor{keyword}{const}\ std::string\&\ user\_input,\ \textcolor{keyword}{const}\ std::string\&\ ai\_response);}
+\DoxyCodeLine{00468\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ processInteraction(\textcolor{keyword}{const}\ std::string\&\ user\_input,\ }
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ ai\_response,}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<float>\&\ emotional\_vector);}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sistema\ de\ recuperação}}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<AdvancedMemorySystem::ContextualMemory>\ getRelevantMemories(\textcolor{keyword}{const}\ std::string\&\ context);}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<AdvancedMemorySystem::SemanticMemory>\ getSemanticMemories(\textcolor{keyword}{const}\ std::string\&\ context);}
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<AdvancedMemorySystem::HybridMemoryResult>\ getHybridMemories(\textcolor{keyword}{const}\ std::string\&\ context);}
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structEmotionalState}{EmotionalState}}\ getCurrentEmotionalState()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00478\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<Intention>\ getActiveIntentions()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00479\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ storeMemoryWithEmotionalAnalysis(\textcolor{keyword}{const}\ std::string\&\ content,\ \textcolor{keyword}{const}\ std::string\&\ context);}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ linkMemoryToIntention(\textcolor{keywordtype}{int}\ memory\_id,\ \textcolor{keywordtype}{int}\ intention\_id);}
+\DoxyCodeLine{00482\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00483\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Controle\ de\ objetivos}}
+\DoxyCodeLine{00484\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ setCurrentGoal(\textcolor{keyword}{const}\ std::string\&\ goal,\ \textcolor{keyword}{const}\ std::string\&\ type\ =\ \textcolor{stringliteral}{"{}learning"{}});}
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ processIdentityFact(\textcolor{keyword}{const}\ std::string\&\ fact\_value,\ \textcolor{keyword}{const}\ std::string\&\ fact\_type);}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00489\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Constantes}}
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ============================================================================}}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ VTIME\_DIM\ =\ 2;}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ MAX\_TOKENS\ =\ 38216;}
+\DoxyCodeLine{00494\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ DECAY\_PER\_HOUR\ =\ 0.01;}
+\DoxyCodeLine{00495\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ MIN\_IMPORTANCE\ =\ 0.3;}
+\DoxyCodeLine{00496\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ HARD\_LOCK\_IMPORTANCE\ =\ 0.9;}
+\DoxyCodeLine{00497\ \ \ \ \ \ \ \ \ \}}
+
+\end{DoxyCode}

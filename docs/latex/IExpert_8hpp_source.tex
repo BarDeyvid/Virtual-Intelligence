@@ -1,0 +1,51 @@
+\doxysection{IExpert.\+hpp}
+\hypertarget{IExpert_8hpp_source}{}\label{IExpert_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/IExpert.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/IExpert.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ "{}llama.h"{}}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{AlyssaCore_8hpp}{AlyssaCore.hpp}}"{}}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}WeightedFusion/WeightedFusion.hpp"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}AlyssaMemoryHandler.hpp"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacealyssa__experts}{alyssa\_experts}}\ \{}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keyword}{class\ }\mbox{\hyperlink{classalyssa__experts_1_1IExpert}{IExpert}}\ \{}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{\string~IExpert}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Inicialização\ Padrão}}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ initialize(llama\_model*\ shared\_model)\ =\ 0;}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Método\ principal\ para\ obter\ a\ resposta}}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ std::string\ run(}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\_core::AlyssaCore}}*\ core\_instance,}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora\_override,}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\&\ history,}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora**\ active\_lora\_in\_context,}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>\ stream\_callback\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ )\ =\ 0;}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Obter\ contribuição\ para\ fusão\ ponderada}}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\_fusion::ExpertContribution}}\ get\_contribution(}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\_core::AlyssaCore}}*\ core\_instance,}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ std::shared\_ptr<Embedder>\ embedder,}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora\_override,}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\&\ history,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora**\ active\_lora\_in\_context,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>\ stream\_callback\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ )\ =\ 0;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keyword}{const}\ std::string\&\ get\_id()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keyword}{const}\ \mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\&\ get\_config()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keyword}{const}\ std::vector<llama\_chat\_message>\&\ get\_history()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ clear\_history()\ =\ 0;}
+\DoxyCodeLine{00047\ \ \ \ \ \};}
+\DoxyCodeLine{00048\ \}}
+
+\end{DoxyCode}

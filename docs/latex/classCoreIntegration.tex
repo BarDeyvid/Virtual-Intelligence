@@ -1,0 +1,65 @@
+\doxysection{Core\+Integration Class Reference}
+\hypertarget{classCoreIntegration}{}\label{classCoreIntegration}\index{CoreIntegration@{CoreIntegration}}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233}\label{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233} 
+void {\bfseries set\+\_\+user\+\_\+name} (const std\+::string \&name)
+\item 
+\Hypertarget{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670}\label{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670} 
+bool {\bfseries initialize} (const std\+::string \&base\+\_\+model\+\_\+path)
+\item 
+\Hypertarget{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85}\label{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85} 
+std\+::string {\bfseries think} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
+\item 
+\Hypertarget{classCoreIntegration_a1e437e88997c796d82c3a48163942537}\label{classCoreIntegration_a1e437e88997c796d82c3a48163942537} 
+std\+::string {\bfseries think\+\_\+with\+\_\+fusion} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
+\item 
+\Hypertarget{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07}\label{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07} 
+std\+::string {\bfseries think\+\_\+with\+\_\+fusion\+\_\+ttsless} (const std\+::string \&input)
+\item 
+\Hypertarget{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622}\label{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622} 
+void {\bfseries register\+\_\+expert} (std\+::unique\+\_\+ptr$<$ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}} $>$ expert)
+\item 
+\Hypertarget{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc}\label{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc} 
+void {\bfseries remove\+\_\+expert} (const std\+::string \&expert\+\_\+id)
+\item 
+\Hypertarget{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825}\label{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825} 
+bool {\bfseries has\+\_\+expert} (const std\+::string \&expert\+\_\+id) const
+\item 
+\Hypertarget{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65}\label{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65} 
+bool {\bfseries validate\+\_\+context\+\_\+size} (const std\+::string \&prompt, const std\+::string \&expert\+\_\+id)
+\item 
+\Hypertarget{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57}\label{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57} 
+std\+::string {\bfseries detect\+\_\+emotion\+\_\+with\+\_\+heuristics} (const std\+::string \&input)
+\item 
+\Hypertarget{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d}\label{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d} 
+float {\bfseries calculate\+\_\+committee\+\_\+coherence} (const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions)
+\item 
+\Hypertarget{classCoreIntegration_adf6f49f41b4605623b13938e0351b463}\label{classCoreIntegration_adf6f49f41b4605623b13938e0351b463} 
+bool {\bfseries should\+\_\+store\+\_\+in\+\_\+memory} (const std\+::string \&input, const std\+::string \&response)
+\item 
+\Hypertarget{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee}\label{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee} 
+std\+::string {\bfseries generate\+\_\+fused\+\_\+input} (const std\+::string \&original\+\_\+input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions, const std\+::string \&emotion)
+\item 
+\Hypertarget{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773}\label{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773} 
+void {\bfseries log\+\_\+source\+\_\+awareness} (const std\+::string \&source, const std\+::string \&message)
+\item 
+\Hypertarget{classCoreIntegration_af59090e676d2b27556e20b85b88b0883}\label{classCoreIntegration_af59090e676d2b27556e20b85b88b0883} 
+void {\bfseries clear\+\_\+all\+\_\+cache} ()
+\item 
+\Hypertarget{classCoreIntegration_a6a079a27eab5048e494503d25513a701}\label{classCoreIntegration_a6a079a27eab5048e494503d25513a701} 
+void {\bfseries run\+\_\+interactive\+\_\+loop} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classCoreIntegration_a5c22b97061386dadc44daafbfc8575b2}\label{classCoreIntegration_a5c22b97061386dadc44daafbfc8575b2} 
+std\+::string {\bfseries user\+\_\+name} = "{}"{}
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/Core\+LLM.\+hpp\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/Alyssa\+Net.\+cpp\end{DoxyCompactItemize}

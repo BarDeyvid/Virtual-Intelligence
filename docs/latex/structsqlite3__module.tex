@@ -1,0 +1,82 @@
+\doxysection{sqlite3\+\_\+module Struct Reference}
+\hypertarget{structsqlite3__module}{}\label{structsqlite3__module}\index{sqlite3\_module@{sqlite3\_module}}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{structsqlite3__module_a42b11d080dc205aea43581b18f925afe}\label{structsqlite3__module_a42b11d080dc205aea43581b18f925afe} 
+int {\bfseries i\+Version}
+\item 
+\Hypertarget{structsqlite3__module_a5934e38da1222cac999d01d372af293e}\label{structsqlite3__module_a5934e38da1222cac999d01d372af293e} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Create} )(sqlite3 \texorpdfstring{$\ast$}{*}, void \texorpdfstring{$\ast$}{*}p\+Aux, int argc, const char \texorpdfstring{$\ast$}{*}const \texorpdfstring{$\ast$}{*}argv, \mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}pp\+VTab, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_a457fe622b5334195640e3e835c9923a8}\label{structsqlite3__module_a457fe622b5334195640e3e835c9923a8} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Connect} )(sqlite3 \texorpdfstring{$\ast$}{*}, void \texorpdfstring{$\ast$}{*}p\+Aux, int argc, const char \texorpdfstring{$\ast$}{*}const \texorpdfstring{$\ast$}{*}argv, \mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}pp\+VTab, char \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_aad92b2cd56253baaeac656d7693ce4af}\label{structsqlite3__module_aad92b2cd56253baaeac656d7693ce4af} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Best\+Index} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab, \mbox{\hyperlink{structsqlite3__index__info}{sqlite3\+\_\+index\+\_\+info}} \texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_a0107afd3c350db14098edbaae04342df}\label{structsqlite3__module_a0107afd3c350db14098edbaae04342df} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Disconnect} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_a0ec3414a65bb24f400e8cfd820751412}\label{structsqlite3__module_a0ec3414a65bb24f400e8cfd820751412} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Destroy} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_a3f1e18ef5e5bd4ddbd9500c7cd951f34}\label{structsqlite3__module_a3f1e18ef5e5bd4ddbd9500c7cd951f34} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Open} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab, \mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}pp\+Cursor)
+\item 
+\Hypertarget{structsqlite3__module_acc6c4d6d41f3d056e297eea9725b887c}\label{structsqlite3__module_acc6c4d6d41f3d056e297eea9725b887c} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Close} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_a46ba11ba4d07f7fdcab4f35bf2045300}\label{structsqlite3__module_a46ba11ba4d07f7fdcab4f35bf2045300} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Filter} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*}, int idx\+Num, const char \texorpdfstring{$\ast$}{*}idx\+Str, int argc, sqlite3\+\_\+value \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}argv)
+\item 
+\Hypertarget{structsqlite3__module_a7a95af281219212e50f3417f8c816bfc}\label{structsqlite3__module_a7a95af281219212e50f3417f8c816bfc} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Next} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_afad8fda57fb28a01196230bc554e44b1}\label{structsqlite3__module_afad8fda57fb28a01196230bc554e44b1} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Eof} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_a7cde490d5d06e19b90d768b90991f4a6}\label{structsqlite3__module_a7cde490d5d06e19b90d768b90991f4a6} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Column} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*}, sqlite3\+\_\+context \texorpdfstring{$\ast$}{*}, int)
+\item 
+\Hypertarget{structsqlite3__module_a26c91e3a8a34d356ff36790488e4acf1}\label{structsqlite3__module_a26c91e3a8a34d356ff36790488e4acf1} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Rowid} )(\mbox{\hyperlink{structsqlite3__vtab__cursor}{sqlite3\+\_\+vtab\+\_\+cursor}} \texorpdfstring{$\ast$}{*}, sqlite3\+\_\+int64 \texorpdfstring{$\ast$}{*}p\+Rowid)
+\item 
+\Hypertarget{structsqlite3__module_aa6c44549a07cc5bf36fae44930069ade}\label{structsqlite3__module_aa6c44549a07cc5bf36fae44930069ade} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Update} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}, int, sqlite3\+\_\+value \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}, sqlite3\+\_\+int64 \texorpdfstring{$\ast$}{*})
+\item 
+\Hypertarget{structsqlite3__module_af190bd5cbd1e3ff30a09ca7b015af1a1}\label{structsqlite3__module_af190bd5cbd1e3ff30a09ca7b015af1a1} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Begin} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_a3a2dda4b384eef16bf939e3c25df7282}\label{structsqlite3__module_a3a2dda4b384eef16bf939e3c25df7282} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Sync} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_a1d9fa3ed3dd16165cfcda3a532a7a3fc}\label{structsqlite3__module_a1d9fa3ed3dd16165cfcda3a532a7a3fc} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Commit} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_a2168ba5102151712f8bbfdc5b2ccaf9c}\label{structsqlite3__module_a2168ba5102151712f8bbfdc5b2ccaf9c} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Rollback} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab)
+\item 
+\Hypertarget{structsqlite3__module_afb7bf9d156a767a50f5e9d92b135a80f}\label{structsqlite3__module_afb7bf9d156a767a50f5e9d92b135a80f} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Find\+Function} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+Vtab, int n\+Arg, const char \texorpdfstring{$\ast$}{*}z\+Name, void(\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}px\+Func)(sqlite3\+\_\+context \texorpdfstring{$\ast$}{*}, int, sqlite3\+\_\+value \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}), void \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}pp\+Arg)
+\item 
+\Hypertarget{structsqlite3__module_a684849a921202d5dec6012824c1d2308}\label{structsqlite3__module_a684849a921202d5dec6012824c1d2308} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Rename} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+Vtab, const char \texorpdfstring{$\ast$}{*}z\+New)
+\item 
+\Hypertarget{structsqlite3__module_a3819f1935503e558637647c359193ef9}\label{structsqlite3__module_a3819f1935503e558637647c359193ef9} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Savepoint} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab, int)
+\item 
+\Hypertarget{structsqlite3__module_ac5f0d86a3e9a26668dbf1251a7c51517}\label{structsqlite3__module_ac5f0d86a3e9a26668dbf1251a7c51517} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Release} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab, int)
+\item 
+\Hypertarget{structsqlite3__module_aaf96452ff3240596b8b8850c2baff3eb}\label{structsqlite3__module_aaf96452ff3240596b8b8850c2baff3eb} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Rollback\+To} )(\mbox{\hyperlink{structsqlite3__vtab}{sqlite3\+\_\+vtab}} \texorpdfstring{$\ast$}{*}p\+VTab, int)
+\item 
+\Hypertarget{structsqlite3__module_a5f6dce4ca6293bcd2e14a00a5db66bcb}\label{structsqlite3__module_a5f6dce4ca6293bcd2e14a00a5db66bcb} 
+int(\texorpdfstring{$\ast$}{*} {\bfseries x\+Shadow\+Name} )(const char \texorpdfstring{$\ast$}{*})
+\end{DoxyCompactItemize}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/sqlite3.\+h\end{DoxyCompactItemize}

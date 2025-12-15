@@ -1,0 +1,309 @@
+\doxysection{Embedder Class Reference}
+\hypertarget{classEmbedder}{}\label{classEmbedder}\index{Embedder@{Embedder}}
+
+
+Main class for generating text embeddings using llama.\+cpp models.  
+
+
+
+
+{\ttfamily \#include $<$Embedder.\+hpp$>$}
+
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structEmbedder_1_1Config}{Config}}
+\begin{DoxyCompactList}\small\item\em Configuration structure for \doxylink{classEmbedder}{Embedder} initialization. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classEmbedder_ae2f155486f8b98367db84698dda4e80d}\label{classEmbedder_ae2f155486f8b98367db84698dda4e80d} 
+{\bfseries Embedder} ()
+\begin{DoxyCompactList}\small\item\em Default constructor. Initializes llama.\+cpp backend. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classEmbedder_af6fea5da0874ebd99e33348220ee7286}{Embedder}} (const std\+::string \&config\+\_\+path)
+\begin{DoxyCompactList}\small\item\em Constructor with configuration file path. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classEmbedder_af0343e8c22ab3543aeaac3f322ce2717}{\texorpdfstring{$\sim$}{\string~}\+Embedder}} ()
+\begin{DoxyCompactList}\small\item\em Destructor. Cleans up llama.\+cpp resources. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classEmbedder_a9355b85355160ade1798ffc72fe991b8}{initialize}} ()
+\begin{DoxyCompactList}\small\item\em Initialize the embedder with default config path. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classEmbedder_ae924ce94dc25b4592ae17765ef70e358}{initialize}} (const std\+::string \&config\+\_\+path)
+\begin{DoxyCompactList}\small\item\em Initialize the embedder with specified config file. \end{DoxyCompactList}\item 
+std\+::vector$<$ float $>$ \mbox{\hyperlink{classEmbedder_a13bfe32221a3b83278e3c8b9decb6aaf}{generate\+\_\+embedding}} (const std\+::string \&text)
+\begin{DoxyCompactList}\small\item\em Generate embedding for a single text. \end{DoxyCompactList}\item 
+std\+::vector$<$ std\+::vector$<$ float $>$ $>$ \mbox{\hyperlink{classEmbedder_ac11e873758613723519fd2b43696cede}{generate\+\_\+embeddings}} (const std\+::vector$<$ std\+::string $>$ \&texts)
+\begin{DoxyCompactList}\small\item\em Generate embeddings for multiple texts. \end{DoxyCompactList}\item 
+\Hypertarget{classEmbedder_a2baaa0db730b77236b0e8e414c0a344c}\label{classEmbedder_a2baaa0db730b77236b0e8e414c0a344c} 
+void {\bfseries clear\+\_\+embedding\+\_\+cache} ()
+\begin{DoxyCompactList}\small\item\em Clear the embedding cache. Useful for freeing memory between batches. \end{DoxyCompactList}\item 
+std\+::vector$<$ std\+::tuple$<$ double, int, std\+::string $>$ $>$ \mbox{\hyperlink{classEmbedder_a97d2136ba3eb2287dfbbcf555d0de5f3}{semantic\+\_\+search}} (const std\+::string \&query, const std\+::vector$<$ std\+::string $>$ \&documents, int top\+\_\+k=5)
+\begin{DoxyCompactList}\small\item\em Perform semantic search on documents. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classEmbedder_a5386885e08040f9b4425915d49037a0f}{is\+\_\+initialized}} () const
+\begin{DoxyCompactList}\small\item\em Check if embedder is initialized. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{structEmbedder_1_1Config}{Config}} \mbox{\hyperlink{classEmbedder_a42cdf0133bc6f20143249e008c431dbe}{get\+\_\+config}} () const
+\begin{DoxyCompactList}\small\item\em Get current configuration. \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classEmbedder_a3f034dd7cd7ea17373f37c6cc035cbf1}{get\+\_\+embedding\+\_\+dimension}} () const
+\begin{DoxyCompactList}\small\item\em Get embedding dimension. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static double \mbox{\hyperlink{classEmbedder_af6afade55aff593379dff4a24b635789}{cosine\+\_\+similarity}} (const std\+::vector$<$ float $>$ \&a, const std\+::vector$<$ float $>$ \&b)
+\begin{DoxyCompactList}\small\item\em Compute cosine similarity between two embeddings. \end{DoxyCompactList}\item 
+static double \mbox{\hyperlink{classEmbedder_add790d28eeec3788d203e84389037093}{dot\+\_\+product}} (const std\+::vector$<$ float $>$ \&a, const std\+::vector$<$ float $>$ \&b)
+\begin{DoxyCompactList}\small\item\em Compute dot product of two embeddings. \end{DoxyCompactList}\item 
+static double \mbox{\hyperlink{classEmbedder_a761ab47a90c27c3be17cbdf99b5d4622}{magnitude}} (const std\+::vector$<$ float $>$ \&a)
+\begin{DoxyCompactList}\small\item\em Compute magnitude (L2 norm) of an embedding. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Main class for generating text embeddings using llama.\+cpp models. 
+
+This class provides functionality to load embedding models, generate embeddings for text inputs, compute similarity metrics, and perform semantic search. It supports various configuration options and batch processing for efficiency. 
+
+\label{doc-constructors}
+\Hypertarget{classEmbedder_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classEmbedder_af6fea5da0874ebd99e33348220ee7286}\index{Embedder@{Embedder}!Embedder@{Embedder}}
+\index{Embedder@{Embedder}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{Embedder()}{Embedder()}}
+{\footnotesize\ttfamily \label{classEmbedder_af6fea5da0874ebd99e33348220ee7286} 
+Embedder\+::\+Embedder (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{config\+\_\+path}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+
+
+Constructor with configuration file path. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em config\+\_\+path} & Path to JSON configuration file. \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classEmbedder_af0343e8c22ab3543aeaac3f322ce2717}\index{Embedder@{Embedder}!````~Embedder@{\texorpdfstring{$\sim$}{\string~}Embedder}}
+\index{````~Embedder@{\texorpdfstring{$\sim$}{\string~}Embedder}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}Embedder()}{\string~Embedder()}}
+{\footnotesize\ttfamily \label{classEmbedder_af0343e8c22ab3543aeaac3f322ce2717} 
+Embedder\+::\texorpdfstring{$\sim$}{\string~}\+Embedder (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Destructor. Cleans up llama.\+cpp resources. 
+
+Destructor. Cleans up llama.\+cpp resources and frees allocated memory. 
+
+\label{doc-func-members}
+\Hypertarget{classEmbedder_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classEmbedder_af6afade55aff593379dff4a24b635789}\index{Embedder@{Embedder}!cosine\_similarity@{cosine\_similarity}}
+\index{cosine\_similarity@{cosine\_similarity}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{cosine\_similarity()}{cosine\_similarity()}}
+{\footnotesize\ttfamily \label{classEmbedder_af6afade55aff593379dff4a24b635789} 
+double Embedder\+::cosine\+\_\+similarity (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ float $>$ \&}]{a}{, }\item[{const std\+::vector$<$ float $>$ \&}]{b}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Compute cosine similarity between two embeddings. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em a} & First embedding vector. \\
+\hline
+{\em b} & Second embedding vector. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Cosine similarity score between -\/1 and 1. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_add790d28eeec3788d203e84389037093}\index{Embedder@{Embedder}!dot\_product@{dot\_product}}
+\index{dot\_product@{dot\_product}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{dot\_product()}{dot\_product()}}
+{\footnotesize\ttfamily \label{classEmbedder_add790d28eeec3788d203e84389037093} 
+double Embedder\+::dot\+\_\+product (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ float $>$ \&}]{a}{, }\item[{const std\+::vector$<$ float $>$ \&}]{b}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Compute dot product of two embeddings. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em a} & First embedding vector. \\
+\hline
+{\em b} & Second embedding vector. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Dot product value. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a13bfe32221a3b83278e3c8b9decb6aaf}\index{Embedder@{Embedder}!generate\_embedding@{generate\_embedding}}
+\index{generate\_embedding@{generate\_embedding}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{generate\_embedding()}{generate\_embedding()}}
+{\footnotesize\ttfamily \label{classEmbedder_a13bfe32221a3b83278e3c8b9decb6aaf} 
+std\+::vector$<$ float $>$ Embedder\+::generate\+\_\+embedding (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{text}{}\end{DoxyParamCaption})}
+
+
+
+Generate embedding for a single text. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em text} & Input text to embed. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of floats representing the embedding. 
+\end{DoxyReturn}
+
+\begin{DoxyExceptions}{Exceptions}
+{\em std\+::runtime\+\_\+error} & if embedder not initialized. \\
+\hline
+\end{DoxyExceptions}
+\Hypertarget{classEmbedder_ac11e873758613723519fd2b43696cede}\index{Embedder@{Embedder}!generate\_embeddings@{generate\_embeddings}}
+\index{generate\_embeddings@{generate\_embeddings}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{generate\_embeddings()}{generate\_embeddings()}}
+{\footnotesize\ttfamily \label{classEmbedder_ac11e873758613723519fd2b43696cede} 
+std\+::vector$<$ std\+::vector$<$ float $>$ $>$ Embedder\+::generate\+\_\+embeddings (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ std\+::string $>$ \&}]{texts}{}\end{DoxyParamCaption})}
+
+
+
+Generate embeddings for multiple texts. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em texts} & Vector of input texts. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of embedding vectors. 
+\end{DoxyReturn}
+
+\begin{DoxyExceptions}{Exceptions}
+{\em std\+::runtime\+\_\+error} & if embedder not initialized. \\
+\hline
+\end{DoxyExceptions}
+\Hypertarget{classEmbedder_a42cdf0133bc6f20143249e008c431dbe}\index{Embedder@{Embedder}!get\_config@{get\_config}}
+\index{get\_config@{get\_config}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{get\_config()}{get\_config()}}
+{\footnotesize\ttfamily \label{classEmbedder_a42cdf0133bc6f20143249e008c431dbe} 
+\mbox{\hyperlink{structEmbedder_1_1Config}{Config}} Embedder\+::get\+\_\+config (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get current configuration. 
+
+\begin{DoxyReturn}{Returns}
+\doxylink{structEmbedder_1_1Config}{Config} structure with current settings. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a3f034dd7cd7ea17373f37c6cc035cbf1}\index{Embedder@{Embedder}!get\_embedding\_dimension@{get\_embedding\_dimension}}
+\index{get\_embedding\_dimension@{get\_embedding\_dimension}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{get\_embedding\_dimension()}{get\_embedding\_dimension()}}
+{\footnotesize\ttfamily \label{classEmbedder_a3f034dd7cd7ea17373f37c6cc035cbf1} 
+int Embedder\+::get\+\_\+embedding\+\_\+dimension (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+
+
+Get embedding dimension. 
+
+\begin{DoxyReturn}{Returns}
+Dimension of embeddings, or 0 if not initialized. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a9355b85355160ade1798ffc72fe991b8}\index{Embedder@{Embedder}!initialize@{initialize}}
+\index{initialize@{initialize}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{classEmbedder_a9355b85355160ade1798ffc72fe991b8} 
+bool Embedder\+::initialize (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Initialize the embedder with default config path. 
+
+\begin{DoxyReturn}{Returns}
+true if initialization successful, false otherwise. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_ae924ce94dc25b4592ae17765ef70e358}\index{Embedder@{Embedder}!initialize@{initialize}}
+\index{initialize@{initialize}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{classEmbedder_ae924ce94dc25b4592ae17765ef70e358} 
+bool Embedder\+::initialize (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{config\+\_\+path\+\_\+}{}\end{DoxyParamCaption})}
+
+
+
+Initialize the embedder with specified config file. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em config\+\_\+path} & Path to configuration file. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if initialization successful, false otherwise.
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+{\em config\+\_\+path\+\_\+} & Path to configuration file. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if initialization successful, false otherwise. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a5386885e08040f9b4425915d49037a0f}\index{Embedder@{Embedder}!is\_initialized@{is\_initialized}}
+\index{is\_initialized@{is\_initialized}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{is\_initialized()}{is\_initialized()}}
+{\footnotesize\ttfamily \label{classEmbedder_a5386885e08040f9b4425915d49037a0f} 
+bool Embedder\+::is\+\_\+initialized (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Check if embedder is initialized. 
+
+\begin{DoxyReturn}{Returns}
+true if initialized, false otherwise. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a761ab47a90c27c3be17cbdf99b5d4622}\index{Embedder@{Embedder}!magnitude@{magnitude}}
+\index{magnitude@{magnitude}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{magnitude()}{magnitude()}}
+{\footnotesize\ttfamily \label{classEmbedder_a761ab47a90c27c3be17cbdf99b5d4622} 
+double Embedder\+::magnitude (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ float $>$ \&}]{a}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Compute magnitude (L2 norm) of an embedding. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em a} & Embedding vector. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Magnitude of the vector. 
+\end{DoxyReturn}
+\Hypertarget{classEmbedder_a97d2136ba3eb2287dfbbcf555d0de5f3}\index{Embedder@{Embedder}!semantic\_search@{semantic\_search}}
+\index{semantic\_search@{semantic\_search}!Embedder@{Embedder}}
+\doxysubsubsection{\texorpdfstring{semantic\_search()}{semantic\_search()}}
+{\footnotesize\ttfamily \label{classEmbedder_a97d2136ba3eb2287dfbbcf555d0de5f3} 
+std\+::vector$<$ std\+::tuple$<$ double, int, std\+::string $>$ $>$ Embedder\+::semantic\+\_\+search (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{query}{, }\item[{const std\+::vector$<$ std\+::string $>$ \&}]{documents}{, }\item[{int}]{top\+\_\+k}{ = {\ttfamily 5}}\end{DoxyParamCaption})}
+
+
+
+Perform semantic search on documents. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em query} & Search query text. \\
+\hline
+{\em documents} & Vector of document texts to search through. \\
+\hline
+{\em top\+\_\+k} & Number of top results to return (default\+: 5). \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of tuples (similarity\+\_\+score, document\+\_\+index, document\+\_\+text). 
+\end{DoxyReturn}
+
+\begin{DoxyExceptions}{Exceptions}
+{\em std\+::runtime\+\_\+error} & if embedder not initialized. \\
+\hline
+\end{DoxyExceptions}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/\+Embedding/Embedder.\+hpp\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/\+Embedding/Embedder.\+cpp\end{DoxyCompactItemize}

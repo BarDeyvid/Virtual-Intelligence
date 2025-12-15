@@ -1,0 +1,216 @@
+\doxysection{Expert\+Base.\+hpp}
+\hypertarget{ExpertBase_8hpp_source}{}\label{ExpertBase_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/ExpertBase.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/ExpertBase.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ ExpertBase.hpp\ -\/\ versão\ corrigida}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}IExpert.hpp"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}AlyssaMemoryHandler.hpp"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}pc\_metrics\_reader.cpp"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <regex>}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacealyssa__experts}{alyssa\_experts}}\ \{}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{keyword}{class\ }ExpertBase\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{IExpert}}\ \{}
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00012\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\ config;}
+\DoxyCodeLine{00013\ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\ history;}
+\DoxyCodeLine{00014\ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora;}
+\DoxyCodeLine{00015\ \ \ \ \ \ \ \ \ std::string\ expert\_id;}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ std::string\ parse\_expert\_signal(\textcolor{keyword}{const}\ std::string\&\ raw\_response,\ \textcolor{keyword}{const}\ std::string\&\ expert\_id)\ \{}
+\DoxyCodeLine{00018\ \ \ \ \ \ \ \ \ std::string\ signal;}
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Padrões\ de\ parsing\ para\ cada\ especialista}}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ std::regex\ pattern;}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (expert\_id\ ==\ \textcolor{stringliteral}{"{}emotionalModel"{}})\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ pattern\ =\ std::regex(R\textcolor{stringliteral}{"{}(\(\backslash\)[SINAL\(\backslash\)]\(\backslash\)s*(\(\backslash\)w+)\(\backslash\)s*\(\backslash\)[CONFIANÇA\(\backslash\)]\(\backslash\)s*(\(\backslash\)d+\(\backslash\).?\(\backslash\)d*)\(\backslash\)s*\(\backslash\)[JUSTIFICATIVA\(\backslash\)]\(\backslash\)s*(.+))"{});}}
+\DoxyCodeLine{00025\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \}\ }\textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (expert\_id\ ==\ \textcolor{stringliteral}{"{}analyticalModel"{}})\ \{}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ pattern\ =\ std::regex(R\textcolor{stringliteral}{"{}(\(\backslash\)[SINAL\(\backslash\)]\(\backslash\)s*(\(\backslash\)w+)\(\backslash\)s*\(\backslash\)[CONFIANÇA\(\backslash\)]\(\backslash\)s*(\(\backslash\)d+\(\backslash\).?\(\backslash\)d*)\(\backslash\)s*\(\backslash\)[PADRÃO\(\backslash\)]\(\backslash\)s*(.+))"{});}}
+\DoxyCodeLine{00027\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \}\ }\textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (expert\_id\ ==\ \textcolor{stringliteral}{"{}memoryModel"{}})\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ pattern\ =\ std::regex(R\textcolor{stringliteral}{"{}(\(\backslash\)[FATO\(\backslash\)]\(\backslash\)s*(\(\backslash\)w+)\(\backslash\)s*\(\backslash\)[CONFIANÇA\(\backslash\)]\(\backslash\)s*(\(\backslash\)d+\(\backslash\).?\(\backslash\)d*)\(\backslash\)s*\(\backslash\)[CONTEXTO\(\backslash\)]\(\backslash\)s*(.+))"{});}}
+\DoxyCodeLine{00029\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \}\ }\textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Fallback\ para\ outros\ especialistas}}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ pattern\ =\ std::regex(R\textcolor{stringliteral}{"{}(\(\backslash\)[SINAL\(\backslash\)].+)"{});}}
+\DoxyCodeLine{00032\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00033\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ }}
+\DoxyCodeLine{00034\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ std::smatch\ matches;}}
+\DoxyCodeLine{00035\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ }\textcolor{keywordflow}{if}\ (std::regex\_search(raw\_response,\ matches,\ pattern)\ \&\&\ matches.size()\ >=\ 2)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ signal\ =\ matches[0];}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Se\ não\ seguir\ o\ formato,\ retorna\ sinal\ de\ erro}}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ signal\ =\ \textcolor{stringliteral}{"{}[ERRO]\ Formato\ inválido.\ Use:\ [SINAL]\ tipo\ [CONFIANÇA]\ 0.00-\/1.00\ [CONTEXTO]\ info"{}};}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ signal;}
+\DoxyCodeLine{00043\ \ \ \ \ \}}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ ExpertBase(\textcolor{keyword}{const}\ \mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\&\ cfg)\ }
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ :\ config(cfg),\ lora(\textcolor{keyword}{nullptr}),\ expert\_id(cfg.\mbox{\hyperlink{structSimpleModelConfig_a577769a490ad65e55b01d2b4e06bf916}{id}})\ }
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \string~ExpertBase()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ clear\_history();}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lora)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora\_free(lora);}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ get\_id()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ expert\_id;\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structSimpleModelConfig}{SimpleModelConfig}}\&\ get\_config()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ config;\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<llama\_chat\_message>\&\ get\_history()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ history;\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ clear\_history()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ msg\ :\ history)\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{char}*)msg.content);}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ history.clear();}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ initialize(llama\_model*\ shared\_model)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (config.usa\_LoRA\ \&\&\ !config.lora\_path.empty())\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lora\ =\ llama\_adapter\_lora\_init(shared\_model,\ config.lora\_path.c\_str());}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!lora)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}Falha\ ao\ carregar\ LoRA:\ "{}}\ <<\ config.lora\_path\ <<\ std::endl;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}LoRA\ carregado\ para\ "{}}\ <<\ expert\_id\ <<\ \textcolor{stringliteral}{"{}:\ "{}}\ <<\ config.lora\_path\ <<\ std::endl;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ std::string\ run(}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\_core::AlyssaCore}}*\ core\_instance,}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora\_override,}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\&\ current\_history,}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora**\ active\_lora\_in\_context,}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>\ stream\_callback\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ )\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classPCMetricsReader}{PCMetricsReader}}\ pcmetrics;}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 1.\ Adiciona\ mensagem\ do\ usuário\ ao\ histórico}}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ expert\_input\_with\_role\ =\ \textcolor{stringliteral}{"{}"{}};}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!config.role\_instruction.empty())\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expert\_input\_with\_role\ =\ \textcolor{stringliteral}{"{}[ROLE]:\ "{}}\ +\ config.role\_instruction\ +\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}}\ +\ input;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expert\_input\_with\_role\ =\ input;}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ IMPORTANTE:\ Verificar\ se\ precisamos\ alocar\ memória\ para\ a\ string}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ user\_msg\ =\ strdup(expert\_input\_with\_role.c\_str());}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ current\_history.push\_back(\{\textcolor{stringliteral}{"{}user"{}},\ user\_msg\});}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 2.\ Monta\ template\ com\ métricas\ do\ sistema}}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\ messages\_to\_template;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ system\_prompt\_index\ =\ -\/1;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ external\ =\ pcmetrics.\mbox{\hyperlink{classPCMetricsReader_a2045eae4a26bcddbc46070c0d7ebadad}{get\_simple\_metrics\_text}}();}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ combined\_system\_prompt\ =\ config.system\_prompt;}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!external.empty())\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ combined\_system\_prompt\ +=\ \textcolor{stringliteral}{"{}\(\backslash\)n[CONTEXTO\ DO\ SISTEMA\ -\/\ MÉTRICAS\ DO\ PC]:\(\backslash\)n"{}}\ +\ external;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!combined\_system\_prompt.empty())\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ system\_prompt\_index\ =\ messages\_to\_template.size();}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ sys\_msg\ =\ strdup(combined\_system\_prompt.c\_str());}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ messages\_to\_template.push\_back(\{\textcolor{stringliteral}{"{}system"{}},\ sys\_msg\});}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Adiciona\ histórico\ da\ conversa}}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ messages\_to\_template.insert(messages\_to\_template.end(),\ }
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ current\_history.begin(),\ current\_history.end());}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 3.\ Aplica\ template}}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<char>\ formatted(core\_instance-\/>\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_ac78193db7c2dda4c0638f4cc907422b2}{get\_n\_ctx}}()\ *\ 2);\ \textcolor{comment}{//\ Buffer\ maior}}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ tmpl\ =\ llama\_model\_chat\_template(core\_instance-\/>\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_add6b48478dc75c65b430ab2044b42bdb}{get\_model}}(),\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ len\ =\ llama\_chat\_apply\_template(}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tmpl,\ messages\_to\_template.data(),\ messages\_to\_template.size(),\ }
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{true},\ formatted.data(),\ formatted.size()}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ );}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Limpa\ alocação\ do\ system\ prompt\ (se\ existir)}}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (system\_prompt\_index\ !=\ -\/1)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{char}*)messages\_to\_template[system\_prompt\_index].content);}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ <\ 0)\ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Tentar\ com\ buffer\ maior}}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ formatted.resize(-\/len);}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ len\ =\ llama\_chat\_apply\_template(}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tmpl,\ messages\_to\_template.data(),\ messages\_to\_template.size(),}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{true},\ formatted.data(),\ formatted.size()}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ <\ 0)\ \{}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}Erro\ ao\ processar\ template\ de\ conversa."{}};}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ prompt(formatted.begin(),\ formatted.begin()\ +\ len);}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 4.\ Executa\ geração}}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ final\_lora\ =\ (lora\_override\ !=\ \textcolor{keyword}{nullptr})\ ?\ lora\_override\ :\ lora;}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Atualizar\ o\ ponteiro\ ativo\ de\ LoRA}}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (active\_lora\_in\_context\ !=\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *active\_lora\_in\_context\ =\ final\_lora;}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ response\ =\ core\_instance-\/>\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182}{generate\_raw}}(}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ prompt,}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ config.params,}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ final\_lora,}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ stream\_callback}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ );}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 5.\ Adiciona\ resposta\ ao\ histórico}}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ assistant\_msg\ =\ strdup(response.c\_str());}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ current\_history.push\_back(\{\textcolor{stringliteral}{"{}assistant"{}},\ assistant\_msg\});}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ response;}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\_fusion::ExpertContribution}}\ get\_contribution(}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore}{alyssa\_core::AlyssaCore}}*\ core\_instance,}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ std::shared\_ptr<Embedder>\ embedder,}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ llama\_adapter\_lora*\ lora\_override,}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ std::vector<llama\_chat\_message>\&\ current\_history,}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ llama\_adapter\_lora**\ active\_lora\_in\_context,}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>\ stream\_callback\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00184\ \ \ \ \ )\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\_fusion::ExpertContribution}}\ contrib;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ contrib.\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a6e06df6971e285fae26640a93e5c2d84}{expert\_id}}\ =\ expert\_id;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Executa\ geração}}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ std::string\ raw\_response\ =\ run(input,\ core\_instance,\ lora\_override,\ }
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ current\_history,\ active\_lora\_in\_context,\ stream\_callback);}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ PARSE\ DA\ RESPOSTA\ EM\ SINAL\ ESTRUTURADO}}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ contrib.\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a2ead8518fff301c22a8257124de6df82}{response}}\ =\ parse\_expert\_signal(raw\_response,\ expert\_id);}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remover\ atribuição\ de\ identidades\ do\ usuário}}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ contrib.\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a4269086ec6e0d10429a2df9b466d89aa}{source}}\ =\ expert\_id;\ \textcolor{comment}{//\ Usar\ apenas\ o\ ID,\ sem\ interpretação}}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (embedder)\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ contrib.\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a352a1185f3ca531367b11be23a350186}{embedding}}\ =\ embedder-\/>generate\_embedding(contrib.\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a2ead8518fff301c22a8257124de6df82}{response}});}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&\ e)\ \{}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}Erro\ ao\ calcular\ embedding\ para\ "{}}\ <<\ expert\_id\ }
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}:\ "{}}\ <<\ e.what()\ <<\ std::endl;}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ contrib;}
+\DoxyCodeLine{00208\ \ \ \ \ \}}
+\DoxyCodeLine{00209\ \ \ \ \ \};}
+\DoxyCodeLine{00210\ \}}
+
+\end{DoxyCode}

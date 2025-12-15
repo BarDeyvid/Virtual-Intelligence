@@ -1,0 +1,155 @@
+\doxysection{alyssa\+\_\+core\+::Alyssa\+Core Class Reference}
+\hypertarget{classalyssa__core_1_1AlyssaCore}{}\label{classalyssa__core_1_1AlyssaCore}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+
+
+Class to manage language models and generate text.  
+
+
+
+
+{\ttfamily \#include $<$Alyssa\+Core.\+hpp$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a61b41d72133c37f19bd1592fd89355fe}{Alyssa\+Core}} (const std\+::string \&base\+\_\+model\+\_\+path, int context\+\_\+size=2048)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{classalyssa__core_1_1AlyssaCore}{Alyssa\+Core}. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_aa4d21f372030daf761338aaa6acf15c5}{\texorpdfstring{$\sim$}{\string~}\+Alyssa\+Core}} ()
+\begin{DoxyCompactList}\small\item\em Destructor for \doxylink{classalyssa__core_1_1AlyssaCore}{Alyssa\+Core}. \end{DoxyCompactList}\item 
+llama\+\_\+model \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_add6b48478dc75c65b430ab2044b42bdb}{get\+\_\+model}} ()
+\begin{DoxyCompactList}\small\item\em Getter for the model. \end{DoxyCompactList}\item 
+const llama\+\_\+vocab \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a513d25983e315a2b9f92c3b0df22dcc7}{get\+\_\+vocab}} ()
+\begin{DoxyCompactList}\small\item\em Getter for the vocabulary. \end{DoxyCompactList}\item 
+llama\+\_\+context \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_aaf33368807f90fda42827914d90a0294}{get\+\_\+context}} ()
+\begin{DoxyCompactList}\small\item\em Getter for the context. \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_ac78193db7c2dda4c0638f4cc907422b2}{get\+\_\+n\+\_\+ctx}} ()
+\begin{DoxyCompactList}\small\item\em Getter for the context size. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182}{generate\+\_\+raw}} (const std\+::string \&prompt, const \mbox{\hyperlink{structSimpleModelParameters}{Simple\+Model\+Parameters}} \&params, llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}lora, std\+::function$<$ void(const std\+::string \&piece)$>$ stream\+\_\+callback)
+\begin{DoxyCompactList}\small\item\em Generates text based on a given prompt and parameters. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class to manage language models and generate text. 
+
+The \doxylink{classalyssa__core_1_1AlyssaCore}{Alyssa\+Core} class loads a base language model, manages its context, applies Lo\+RA adaptation if necessary, and generates text based on given prompts. It provides methods for getting model details and generating text. 
+
+\label{doc-constructors}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_a61b41d72133c37f19bd1592fd89355fe}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!AlyssaCore@{AlyssaCore}}
+\index{AlyssaCore@{AlyssaCore}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{AlyssaCore()}{AlyssaCore()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_a61b41d72133c37f19bd1592fd89355fe} 
+alyssa\+\_\+core\+::\+Alyssa\+Core\+::\+Alyssa\+Core (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{base\+\_\+model\+\_\+path}{, }\item[{int}]{context\+\_\+size}{ = {\ttfamily 2048}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Constructor for \doxylink{classalyssa__core_1_1AlyssaCore}{Alyssa\+Core}. 
+
+Loads a base model from the specified path and initializes a context with the given size.
+
+
+\begin{DoxyParams}{Parameters}
+{\em base\+\_\+model\+\_\+path} & Path to the base model file. \\
+\hline
+{\em context\+\_\+size} & Context size for the model (default is 2048). \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_aa4d21f372030daf761338aaa6acf15c5}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!````~AlyssaCore@{\texorpdfstring{$\sim$}{\string~}AlyssaCore}}
+\index{````~AlyssaCore@{\texorpdfstring{$\sim$}{\string~}AlyssaCore}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}AlyssaCore()}{\string~AlyssaCore()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_aa4d21f372030daf761338aaa6acf15c5} 
+alyssa\+\_\+core\+::\+Alyssa\+Core\+::\texorpdfstring{$\sim$}{\string~}\+Alyssa\+Core (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Destructor for \doxylink{classalyssa__core_1_1AlyssaCore}{Alyssa\+Core}. 
+
+Frees the model and context resources. 
+
+\label{doc-func-members}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!generate\_raw@{generate\_raw}}
+\index{generate\_raw@{generate\_raw}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{generate\_raw()}{generate\_raw()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_a9298bdd1c5c0ed309fd022d1a9233182} 
+std\+::string alyssa\+\_\+core\+::\+Alyssa\+Core\+::generate\+\_\+raw (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{prompt}{, }\item[{const \mbox{\hyperlink{structSimpleModelParameters}{Simple\+Model\+Parameters}} \&}]{params}{, }\item[{llama\+\_\+adapter\+\_\+lora \texorpdfstring{$\ast$}{*}}]{lora}{, }\item[{std\+::function$<$ void(const std\+::string \&piece)$>$}]{stream\+\_\+callback}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Generates text based on a given prompt and parameters. 
+
+Applies Lo\+RA adaptation if necessary, creates a sampler with specified parameters, tokenizes the prompt, and generates tokens until an end-\/of-\/generation (EOG) token is encountered.
+
+
+\begin{DoxyParams}{Parameters}
+{\em prompt} & The input prompt for text generation. \\
+\hline
+{\em params} & Parameters for controlling the text generation process. \\
+\hline
+{\em lora} & Pointer to Lo\+RA adapter (can be nullptr). \\
+\hline
+{\em stream\+\_\+callback} & Callback function to stream generated tokens (optional). \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Generated text as a string. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_aaf33368807f90fda42827914d90a0294}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!get\_context@{get\_context}}
+\index{get\_context@{get\_context}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{get\_context()}{get\_context()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_aaf33368807f90fda42827914d90a0294} 
+llama\+\_\+context \texorpdfstring{$\ast$}{*} alyssa\+\_\+core\+::\+Alyssa\+Core\+::get\+\_\+context (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Getter for the context. 
+
+\begin{DoxyReturn}{Returns}
+Pointer to the unique shared context. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_add6b48478dc75c65b430ab2044b42bdb}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!get\_model@{get\_model}}
+\index{get\_model@{get\_model}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{get\_model()}{get\_model()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_add6b48478dc75c65b430ab2044b42bdb} 
+llama\+\_\+model \texorpdfstring{$\ast$}{*} alyssa\+\_\+core\+::\+Alyssa\+Core\+::get\+\_\+model (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Getter for the model. 
+
+\begin{DoxyReturn}{Returns}
+Pointer to the loaded base model. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_ac78193db7c2dda4c0638f4cc907422b2}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!get\_n\_ctx@{get\_n\_ctx}}
+\index{get\_n\_ctx@{get\_n\_ctx}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{get\_n\_ctx()}{get\_n\_ctx()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_ac78193db7c2dda4c0638f4cc907422b2} 
+int alyssa\+\_\+core\+::\+Alyssa\+Core\+::get\+\_\+n\+\_\+ctx (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Getter for the context size. 
+
+\begin{DoxyReturn}{Returns}
+Size of the context. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__core_1_1AlyssaCore_a513d25983e315a2b9f92c3b0df22dcc7}\index{alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}!get\_vocab@{get\_vocab}}
+\index{get\_vocab@{get\_vocab}!alyssa\_core::AlyssaCore@{alyssa\_core::AlyssaCore}}
+\doxysubsubsection{\texorpdfstring{get\_vocab()}{get\_vocab()}}
+{\footnotesize\ttfamily \label{classalyssa__core_1_1AlyssaCore_a513d25983e315a2b9f92c3b0df22dcc7} 
+const llama\+\_\+vocab \texorpdfstring{$\ast$}{*} alyssa\+\_\+core\+::\+Alyssa\+Core\+::get\+\_\+vocab (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Getter for the vocabulary. 
+
+\begin{DoxyReturn}{Returns}
+Pointer to the vocabulary used by the model. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/\mbox{\hyperlink{AlyssaCore_8hpp}{Alyssa\+Core.\+hpp}}\end{DoxyCompactItemize}

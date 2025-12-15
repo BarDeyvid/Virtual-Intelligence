@@ -1,0 +1,271 @@
+\doxysection{basic\+\_\+json\texorpdfstring{$<$}{<} Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classbasic__json}{}\label{classbasic__json}\index{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}}
+
+
+namespace for Niels Lohmann  
+
+
+Inheritance diagram for basic\+\_\+json\texorpdfstring{$<$}{<} Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class \texorpdfstring{$>$}{>}\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=0.998218cm]{classbasic__json}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classbasic__json_a966e900415e66f3ab60f7b5ef52fd63b}\label{classbasic__json_a966e900415e66f3ab60f7b5ef52fd63b} 
+using {\bfseries value\+\_\+t} = \mbox{\hyperlink{namespacedetail_a917c3efabea8a20dc72d9ae2c673d632}{detail\+::value\+\_\+t}}
+\item 
+\Hypertarget{classbasic__json_afe66720a34c11920f359394a4430a16e}\label{classbasic__json_afe66720a34c11920f359394a4430a16e} 
+using {\bfseries json\+\_\+pointer} = \+::nlohmann\+::json\+\_\+pointer$<$String\+Type$>$
+\item 
+\Hypertarget{classbasic__json_ab75fd791f0b8fca724e5ed70b4956414}\label{classbasic__json_ab75fd791f0b8fca724e5ed70b4956414} 
+{\footnotesize template$<$typename T, typename SFINAE$>$ }\\using {\bfseries json\+\_\+serializer} = JSONSerializer$<$T, SFINAE$>$
+\item 
+\Hypertarget{classbasic__json_a2ebde9badb4f1b4cf6517f6b8e302d0d}\label{classbasic__json_a2ebde9badb4f1b4cf6517f6b8e302d0d} 
+using {\bfseries error\+\_\+handler\+\_\+t} = \mbox{\hyperlink{namespacedetail_abe7cfa1fd8fa706ff4392bff9d1a8298}{detail\+::error\+\_\+handler\+\_\+t}}
+\item 
+\Hypertarget{classbasic__json_a067b4f0e63e55055272fec0a26b5b991}\label{classbasic__json_a067b4f0e63e55055272fec0a26b5b991} 
+using {\bfseries cbor\+\_\+tag\+\_\+handler\+\_\+t} = \mbox{\hyperlink{namespacedetail_a7c070b2bf3d61e3d8b8013f6fb18d592}{detail\+::cbor\+\_\+tag\+\_\+handler\+\_\+t}}
+\item 
+\Hypertarget{classbasic__json_ac826d6fa0bd044c1955d01850bfe28f7}\label{classbasic__json_ac826d6fa0bd044c1955d01850bfe28f7} 
+using {\bfseries bjdata\+\_\+version\+\_\+t} = detail\+::bjdata\+\_\+version\+\_\+t
+\item 
+\Hypertarget{classbasic__json_a6dc15c0f6c156e43c956ad6ca0c19de3}\label{classbasic__json_a6dc15c0f6c156e43c956ad6ca0c19de3} 
+using {\bfseries initializer\+\_\+list\+\_\+t} = std\+::initializer\+\_\+list$<$\mbox{\hyperlink{classdetail_1_1json__ref}{detail\+::json\+\_\+ref}}$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$$>$
+\item 
+\Hypertarget{classbasic__json_a143e447269d8beb1d02400093eccd018}\label{classbasic__json_a143e447269d8beb1d02400093eccd018} 
+using {\bfseries input\+\_\+format\+\_\+t} = \mbox{\hyperlink{namespacedetail_a0ab3b338d0eadc6890b72cccef0ea04f}{detail\+::input\+\_\+format\+\_\+t}}
+\item 
+\Hypertarget{classbasic__json_acefb05e1022be791038db86c9963cec7}\label{classbasic__json_acefb05e1022be791038db86c9963cec7} 
+using {\bfseries json\+\_\+sax\+\_\+t} = \mbox{\hyperlink{structjson__sax}{json\+\_\+sax}}$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+using \mbox{\hyperlink{classbasic__json_a234b0680fe6af3500a01e281891dc132}{parse\+\_\+error}}
+\item 
+\Hypertarget{classbasic__json_a34b69b2a91df080e00cc8f36c342bb6b}\label{classbasic__json_a34b69b2a91df080e00cc8f36c342bb6b} 
+using {\bfseries invalid\+\_\+iterator} = \mbox{\hyperlink{classdetail_1_1invalid__iterator}{detail\+::invalid\+\_\+iterator}}
+\item 
+\Hypertarget{classbasic__json_a2c52f112e54d1be294055ea9186a1c35}\label{classbasic__json_a2c52f112e54d1be294055ea9186a1c35} 
+using {\bfseries type\+\_\+error} = \mbox{\hyperlink{classdetail_1_1type__error}{detail\+::type\+\_\+error}}
+\item 
+\Hypertarget{classbasic__json_aa45e2d88a6cf9236c1f45a1fad18442d}\label{classbasic__json_aa45e2d88a6cf9236c1f45a1fad18442d} 
+using {\bfseries out\+\_\+of\+\_\+range} = \mbox{\hyperlink{classdetail_1_1out__of__range}{detail\+::out\+\_\+of\+\_\+range}}
+\item 
+\Hypertarget{classbasic__json_adb2d18607e0835c4695f53996b181379}\label{classbasic__json_adb2d18607e0835c4695f53996b181379} 
+using {\bfseries other\+\_\+error} = \mbox{\hyperlink{classdetail_1_1other__error}{detail\+::other\+\_\+error}}
+\item 
+using \mbox{\hyperlink{classbasic__json_a9df56e0f89a20bf40ae88474bea7b214}{reference}}
+\item 
+\Hypertarget{classbasic__json_a31370bb451b78198d42c86dd31955deb}\label{classbasic__json_a31370bb451b78198d42c86dd31955deb} 
+using {\bfseries const\+\_\+reference} = const value\+\_\+type\&
+\item 
+\Hypertarget{classbasic__json_ae45e8f7ce7c3e62035cd097a39910399}\label{classbasic__json_ae45e8f7ce7c3e62035cd097a39910399} 
+using {\bfseries difference\+\_\+type} = std\+::ptrdiff\+\_\+t
+\item 
+\Hypertarget{classbasic__json_a2c086af43cf06b1b7118f5351cab3ec9}\label{classbasic__json_a2c086af43cf06b1b7118f5351cab3ec9} 
+using {\bfseries size\+\_\+type} = std\+::size\+\_\+t
+\item 
+\Hypertarget{classbasic__json_a83f845db2d54cedad97279bad70aea52}\label{classbasic__json_a83f845db2d54cedad97279bad70aea52} 
+using {\bfseries allocator\+\_\+type} = Allocator\+Type$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+\Hypertarget{classbasic__json_a84279673ab13fb6360cf17173a29a1f1}\label{classbasic__json_a84279673ab13fb6360cf17173a29a1f1} 
+using {\bfseries pointer} = typename std\+::allocator\+\_\+traits$<$allocator\+\_\+type$>$\+::pointer
+\item 
+\Hypertarget{classbasic__json_a2862fa42527f5c14d9f737411e0facd4}\label{classbasic__json_a2862fa42527f5c14d9f737411e0facd4} 
+using {\bfseries const\+\_\+pointer} = typename std\+::allocator\+\_\+traits$<$allocator\+\_\+type$>$\+::const\+\_\+pointer
+\item 
+\Hypertarget{classbasic__json_ae206a491161d043f8efaa1330f1ccf97}\label{classbasic__json_ae206a491161d043f8efaa1330f1ccf97} 
+using {\bfseries iterator} = iter\+\_\+impl$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+\Hypertarget{classbasic__json_a1f5af3d9d06d43b91fefe1767794b1e8}\label{classbasic__json_a1f5af3d9d06d43b91fefe1767794b1e8} 
+using {\bfseries const\+\_\+iterator} = iter\+\_\+impl$<$const \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+\Hypertarget{classbasic__json_aedc059cdae078322bb0d434b2127d1cf}\label{classbasic__json_aedc059cdae078322bb0d434b2127d1cf} 
+using {\bfseries reverse\+\_\+iterator} = json\+\_\+reverse\+\_\+iterator$<$typename basic\+\_\+json\+::iterator$>$
+\item 
+\Hypertarget{classbasic__json_a240f61567d8acffe831532f4f9b379cb}\label{classbasic__json_a240f61567d8acffe831532f4f9b379cb} 
+using {\bfseries const\+\_\+reverse\+\_\+iterator} = json\+\_\+reverse\+\_\+iterator$<$typename basic\+\_\+json\+::const\+\_\+iterator$>$
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classbasic__json_a75e5de214218e5207514d63c2828cdcb}\label{classbasic__json_a75e5de214218e5207514d63c2828cdcb} 
+\texorpdfstring{$\ast$}{*}JSON {\bfseries Pointer}
+\item 
+\Hypertarget{classbasic__json_a6a151fe7102b7979c9b72756af538950}\label{classbasic__json_a6a151fe7102b7979c9b72756af538950} 
+\texorpdfstring{$\ast$}{*}SAX interface {\bfseries type}
+\item 
+\Hypertarget{classbasic__json_ac584d4daeed6b9912cd66195557c0924}\label{classbasic__json_ac584d4daeed6b9912cd66195557c0924} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}brief returns the allocator associated with the container \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: static allocator\+\_\+type get\+\_\+allocator() \{ return allocator\+\_\+type()
+\item 
+\Hypertarget{classbasic__json_a667825e6f44da16a69e2c03ede29c8cf}\label{classbasic__json_a667825e6f44da16a69e2c03ede29c8cf} 
+\texorpdfstring{$\ast$}{*}brief returns version information on the library \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: JSON\+\_\+\+HEDLEY\+\_\+\+WARN\+\_\+\+UNUSED\+\_\+\+RESULT static \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} meta() \{ \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} result
+\item 
+\Hypertarget{classbasic__json_a0da01b05f22a8cbe95a98db5c12a6e52}\label{classbasic__json_a0da01b05f22a8cbe95a98db5c12a6e52} 
+{\bfseries result} \mbox{[}"{}copyright"{}\mbox{]} = "{}(C) 2013-\/2025 Niels Lohmann"{}
+\item 
+\Hypertarget{classbasic__json_abecae0e1ca71f684f5467347d31b99bc}\label{classbasic__json_abecae0e1ca71f684f5467347d31b99bc} 
+return {\bfseries result}
+\item 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name JSON value data types \texorpdfstring{$\ast$}{*}The data types to store a JSON value These types are derived from \texorpdfstring{$\ast$}{*}the template arguments passed to class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}brief a type for an object \texorpdfstring{$\ast$}{*}sa \mbox{\hyperlink{classbasic__json_a5b48dd519f3f0a4129e2524a6495a49c}{https}}\+: using object\+\_\+t = Object\+Type$<$String\+Type
+\item 
+\Hypertarget{classbasic__json_a3ea478fb74333ae3963aa6c1e7391ba1}\label{classbasic__json_a3ea478fb74333ae3963aa6c1e7391ba1} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name JSON value data types \texorpdfstring{$\ast$}{*}The data types to store a JSON value These types are derived from \texorpdfstring{$\ast$}{*}the template arguments passed to class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}brief a type for an object \texorpdfstring{$\ast$}{*}sa {\bfseries default\+\_\+object\+\_\+comparator\+\_\+t}
+\item 
+\Hypertarget{classbasic__json_a9fcfecc4007e87c11528773d25938ad9}\label{classbasic__json_a9fcfecc4007e87c11528773d25938ad9} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name JSON value data types \texorpdfstring{$\ast$}{*}The data types to store a JSON value These types are derived from \texorpdfstring{$\ast$}{*}the template arguments passed to class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}brief a type for an object \texorpdfstring{$\ast$}{*}sa {\bfseries Allocator\+Type$<$ std\+::pair$<$ const String\+Type, basic\+\_\+json $>$ $>$}
+\item 
+\Hypertarget{classbasic__json_a09a3d4d716a8f16ce7180877faa46548}\label{classbasic__json_a09a3d4d716a8f16ce7180877faa46548} 
+\texorpdfstring{$\ast$}{*}brief a type for an array \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using array\+\_\+t = Array\+Type$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}
+\item 
+\Hypertarget{classbasic__json_aec1a96efd731b111640e93f4b104fea9}\label{classbasic__json_aec1a96efd731b111640e93f4b104fea9} 
+\texorpdfstring{$\ast$}{*}brief a type for an array \texorpdfstring{$\ast$}{*}sa {\bfseries Allocator\+Type$<$ basic\+\_\+json $>$}
+\item 
+\Hypertarget{classbasic__json_a351492b9d67a79ab4e41f5c7d9745282}\label{classbasic__json_a351492b9d67a79ab4e41f5c7d9745282} 
+\texorpdfstring{$\ast$}{*}brief a type for a string \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using string\+\_\+t = String\+Type
+\item 
+\Hypertarget{classbasic__json_afe1064715ac733ce1f0ee113c22e8aa8}\label{classbasic__json_afe1064715ac733ce1f0ee113c22e8aa8} 
+\texorpdfstring{$\ast$}{*}brief a type for a boolean \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using boolean\+\_\+t = Boolean\+Type
+\item 
+\Hypertarget{classbasic__json_a73ca12b7ff58511eebb457cd8c1b1fd8}\label{classbasic__json_a73ca12b7ff58511eebb457cd8c1b1fd8} 
+\texorpdfstring{$\ast$}{*}brief a type for a number \texorpdfstring{$\ast$}{*}(integer) \texorpdfstring{$\ast$}{*}@sa https brief a type for a number \texorpdfstring{$\ast$}{*}(unsigned) \texorpdfstring{$\ast$}{*}@sa https brief a type for a number \texorpdfstring{$\ast$}{*}(floating-\/point) \texorpdfstring{$\ast$}{*}@sa https brief a type for a packed binary type \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using binary\+\_\+t = nlohmann\+::byte\+\_\+container\+\_\+with\+\_\+subtype$<$Binary\+Type$>$
+\item 
+\Hypertarget{classbasic__json_afe68de7b51641067cf4dd5c395648779}\label{classbasic__json_afe68de7b51641067cf4dd5c395648779} 
+\texorpdfstring{$\ast$}{*}brief object key comparator type \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using object\+\_\+comparator\+\_\+t = detail\+::actual\+\_\+object\+\_\+comparator\+\_\+t$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+\Hypertarget{classbasic__json_a4665f3aa8051b2b4d98194ff306722d5}\label{classbasic__json_a4665f3aa8051b2b4d98194ff306722d5} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}brief parser event types \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using parse\+\_\+event\+\_\+t = detail\+::parse\+\_\+event\+\_\+t
+\item 
+\Hypertarget{classbasic__json_a11e91e324e7d50d0462c0de1f8402b9f}\label{classbasic__json_a11e91e324e7d50d0462c0de1f8402b9f} 
+\texorpdfstring{$\ast$}{*}brief per element parser callback type \texorpdfstring{$\ast$}{*}sa {\bfseries https}\+: using parser\+\_\+callback\+\_\+t = detail\+::parser\+\_\+callback\+\_\+t$<$\mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$>$
+\item 
+\Hypertarget{classbasic__json_a5b40ca3a97a4045e5df28f923f47c841}\label{classbasic__json_a5b40ca3a97a4045e5df28f923f47c841} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name constructors and destructors \texorpdfstring{$\ast$}{*}Constructors of class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} copy move constructor copy \texorpdfstring{$\ast$}{*} {\bfseries assignment}
+\item 
+\Hypertarget{classbasic__json_aa6d8d4f3f22230f7da3839a7a2e178c5}\label{classbasic__json_aa6d8d4f3f22230f7da3839a7a2e178c5} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name constructors and destructors \texorpdfstring{$\ast$}{*}Constructors of class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} copy move constructor copy static functions creating and the destructor \texorpdfstring{$\ast$}{*}data {\bfseries m\+\_\+data} = \{\}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classbasic__json_a18e5e447d391e6bb53657066939df2da}\label{classbasic__json_a18e5e447d391e6bb53657066939df2da} 
+\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*}name constructors and destructors \texorpdfstring{$\ast$}{*}Constructors of class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}} copy move constructor copy static functions creating {\bfseries objects}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classbasic__json_a6275ed57bae6866cdf5db5370a7ad47c}\label{classbasic__json_a6275ed57bae6866cdf5db5370a7ad47c} 
+{\footnotesize template$<$\mbox{\hyperlink{namespacedetail_a917c3efabea8a20dc72d9ae2c673d632}{detail\+::value\+\_\+t}}$>$ }\\struct {\bfseries detail\+::external\+\_\+constructor}
+\item 
+\Hypertarget{classbasic__json_a43f901b14cf3f7135269b0c75c9ac233}\label{classbasic__json_a43f901b14cf3f7135269b0c75c9ac233} 
+{\footnotesize template$<$typename$>$ }\\class {\bfseries \+::nlohmann\+::json\+\_\+pointer}
+\item 
+\Hypertarget{classbasic__json_ac8f3125911eb018ef4ab00d879487baf}\label{classbasic__json_ac8f3125911eb018ef4ab00d879487baf} 
+{\footnotesize template$<$typename Basic\+Json\+Type, typename Input\+Type$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::parser}
+\item 
+\Hypertarget{classbasic__json_a842e5c7ca096025c18b11e715d3401f4}\label{classbasic__json_a842e5c7ca096025c18b11e715d3401f4} 
+{\footnotesize template$<$typename Basic\+Json\+Type$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::iter\+\_\+impl}
+\item 
+\Hypertarget{classbasic__json_a69d491bbda88ade6d3c7a2b11309e8bf}\label{classbasic__json_a69d491bbda88ade6d3c7a2b11309e8bf} 
+{\footnotesize template$<$typename Basic\+Json\+Type, typename Char\+Type$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::binary\+\_\+writer}
+\item 
+\Hypertarget{classbasic__json_aa226ed5103dfd10e27e562d35a3a106b}\label{classbasic__json_aa226ed5103dfd10e27e562d35a3a106b} 
+{\footnotesize template$<$typename Basic\+Json\+Type, typename Input\+Type, typename SAX$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::binary\+\_\+reader}
+\item 
+\Hypertarget{classbasic__json_a5c1ff6974578df0f1b6c6c807426dc86}\label{classbasic__json_a5c1ff6974578df0f1b6c6c807426dc86} 
+{\footnotesize template$<$typename Basic\+Json\+Type, typename Input\+Adapter\+Type$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::json\+\_\+sax\+\_\+dom\+\_\+parser}
+\item 
+\Hypertarget{classbasic__json_a1274e9615854974fc0f4c965691f2327}\label{classbasic__json_a1274e9615854974fc0f4c965691f2327} 
+{\footnotesize template$<$typename Basic\+Json\+Type, typename Input\+Adapter\+Type$>$ }\\class {\bfseries \+::nlohmann\+::detail\+::json\+\_\+sax\+\_\+dom\+\_\+callback\+\_\+parser}
+\item 
+\Hypertarget{classbasic__json_abdcb15d025676b4d3db0f32a50f4393f}\label{classbasic__json_abdcb15d025676b4d3db0f32a50f4393f} 
+class {\bfseries \+::nlohmann\+::detail\+::exception}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$template$<$ typename U, typename V, typename... Args $>$ class Object\+Type = std\+::map, template$<$ typename U, typename... Args $>$ class Array\+Type = std\+::vector, class String\+Type = std\+::string, class Boolean\+Type = bool, class Number\+Integer\+Type = std\+::int64\+\_\+t, class Number\+Unsigned\+Type = std\+::uint64\+\_\+t, class Number\+Float\+Type = double, template$<$ typename U $>$ class Allocator\+Type = std\+::allocator, template$<$ typename T, typename SFINAE=void $>$ class JSONSerializer = adl\+\_\+serializer, class Binary\+Type = std\+::vector$<$std\+::uint8\+\_\+t$>$, class Custom\+Base\+Class = void$>$\newline
+class basic\+\_\+json$<$ Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class $>$}
+namespace for Niels Lohmann 
+
+a class to store JSON values \begin{DoxySeeAlso}{See also}
+\href{https://json.nlohmann.me/api/basic_json/}{\texttt{https\+://json.\+nlohmann.\+me/api/basic\+\_\+json/}}
+
+\href{https://github.com/nlohmann}{\texttt{https\+://github.\+com/nlohmann}} 
+\end{DoxySeeAlso}
+\begin{DoxySince}{Since}
+version 1.\+0.\+0
+\end{DoxySince}
+a class to store JSON values
+
+\begin{DoxySince}{Since}
+version 1.\+0.\+0 
+\end{DoxySince}
+
+
+\label{doc-typedef-members}
+\Hypertarget{classbasic__json_doc-typedef-members}
+\doxysubsection{Member Typedef Documentation}
+\Hypertarget{classbasic__json_a234b0680fe6af3500a01e281891dc132}\index{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}!parse\_error@{parse\_error}}
+\index{parse\_error@{parse\_error}!basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}}
+\doxysubsubsection{\texorpdfstring{parse\_error}{parse\_error}}
+{\footnotesize\ttfamily \label{classbasic__json_a234b0680fe6af3500a01e281891dc132} 
+template$<$template$<$ typename U, typename V, typename... Args $>$ class Object\+Type = std\+::map, template$<$ typename U, typename... Args $>$ class Array\+Type = std\+::vector, class String\+Type = std\+::string, class Boolean\+Type = bool, class Number\+Integer\+Type = std\+::int64\+\_\+t, class Number\+Unsigned\+Type = std\+::uint64\+\_\+t, class Number\+Float\+Type = double, template$<$ typename U $>$ class Allocator\+Type = std\+::allocator, template$<$ typename T, typename SFINAE=void $>$ class JSONSerializer = adl\+\_\+serializer, class Binary\+Type = std\+::vector$<$std\+::uint8\+\_\+t$>$, class Custom\+Base\+Class = void$>$ \\
+using \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$<$ Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class $>$\+::parse\+\_\+error}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\{}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keyword}{using\ }exception\ =\ \mbox{\hyperlink{classdetail_1_1exception}{detail::exception}}\ \mbox{\hyperlink{classdetail_1_1parse__error}{detail::parse\_error}}}
+
+\end{DoxyCode}
+\Hypertarget{classbasic__json_a9df56e0f89a20bf40ae88474bea7b214}\index{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}!reference@{reference}}
+\index{reference@{reference}!basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}}
+\doxysubsubsection{\texorpdfstring{reference}{reference}}
+{\footnotesize\ttfamily \label{classbasic__json_a9df56e0f89a20bf40ae88474bea7b214} 
+template$<$template$<$ typename U, typename V, typename... Args $>$ class Object\+Type = std\+::map, template$<$ typename U, typename... Args $>$ class Array\+Type = std\+::vector, class String\+Type = std\+::string, class Boolean\+Type = bool, class Number\+Integer\+Type = std\+::int64\+\_\+t, class Number\+Unsigned\+Type = std\+::uint64\+\_\+t, class Number\+Float\+Type = double, template$<$ typename U $>$ class Allocator\+Type = std\+::allocator, template$<$ typename T, typename SFINAE=void $>$ class JSONSerializer = adl\+\_\+serializer, class Binary\+Type = std\+::vector$<$std\+::uint8\+\_\+t$>$, class Custom\+Base\+Class = void$>$ \\
+using \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$<$ Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class $>$\+::reference}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\{}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ *\ \ the\ type\ of\ elements\ in\ a\ basic\_json\ container}
+\DoxyCodeLine{\ \ \ \ \textcolor{keyword}{using\ }value\_type\ =\ basic\_json\ value\_type\&}
+
+\end{DoxyCode}
+
+
+\label{doc-variable-members}
+\Hypertarget{classbasic__json_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classbasic__json_a5b48dd519f3f0a4129e2524a6495a49c}\index{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}!https@{https}}
+\index{https@{https}!basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$@{basic\_json$<$ ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass $>$}}
+\doxysubsubsection{\texorpdfstring{https}{https}}
+{\footnotesize\ttfamily \label{classbasic__json_a5b48dd519f3f0a4129e2524a6495a49c} 
+template$<$template$<$ typename U, typename V, typename... Args $>$ class Object\+Type = std\+::map, template$<$ typename U, typename... Args $>$ class Array\+Type = std\+::vector, class String\+Type = std\+::string, class Boolean\+Type = bool, class Number\+Integer\+Type = std\+::int64\+\_\+t, class Number\+Unsigned\+Type = std\+::uint64\+\_\+t, class Number\+Float\+Type = double, template$<$ typename U $>$ class Allocator\+Type = std\+::allocator, template$<$ typename T, typename SFINAE=void $>$ class JSONSerializer = adl\+\_\+serializer, class Binary\+Type = std\+::vector$<$std\+::uint8\+\_\+t$>$, class Custom\+Base\+Class = void$>$ \\
+\texorpdfstring{$\ast$}{*} \texorpdfstring{$\ast$}{*} \texorpdfstring{$\ast$}{*} name JSON value data types\texorpdfstring{$\ast$}{*} The data types to store a JSON value These types are derived from\texorpdfstring{$\ast$}{*} the template arguments passed to class ref \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}\texorpdfstring{$\ast$}{*} \texorpdfstring{$\ast$}{*} brief a type for an object\texorpdfstring{$\ast$}{*} sa \mbox{\hyperlink{classbasic__json}{basic\+\_\+json}}$<$ Object\+Type, Array\+Type, String\+Type, Boolean\+Type, Number\+Integer\+Type, Number\+Unsigned\+Type, Number\+Float\+Type, Allocator\+Type, JSONSerializer, Binary\+Type, Custom\+Base\+Class $>$\+::https}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\{}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \ *\ \ @brief\ \textcolor{keywordflow}{default}\ \textcolor{keywordtype}{object}\ key\ comparator\ type}
+\DoxyCodeLine{\ \ \ \ \ *\ \ The\ actual\ \textcolor{keywordtype}{object}\ key\ comparator\ type\ (@ref\ object\_comparator\_t)\ may\ be}
+\DoxyCodeLine{\ \ \ \ \ *\ \ different.}
+\DoxyCodeLine{\ \ \ \ \ *\ \ @sa\ https:}
+\DoxyCodeLine{}
+\DoxyCodeLine{}
+\DoxyCodeLine{}
+\DoxyCodeLine{}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keyword}{using\ }default\_object\_comparator\_t\ =\ std::less<StringType>}
+
+\end{DoxyCode}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/deyvid/\+Virtual-\/\+Intelligence/includes/json.\+hpp\end{DoxyCompactItemize}

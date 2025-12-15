@@ -1,0 +1,82 @@
+\doxysection{Weighted\+Fusion.\+hpp}
+\hypertarget{WeightedFusion_8hpp_source}{}\label{WeightedFusion_8hpp_source}\index{/home/deyvid/Virtual-\/Intelligence/includes/WeightedFusion/WeightedFusion.hpp@{/home/deyvid/Virtual-\/Intelligence/includes/WeightedFusion/WeightedFusion.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ "{}Embedding/Embedder.hpp"{}}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <onnxruntime/onnxruntime\_cxx\_api.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <numeric>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{namespace\ }alyssa\_fusion\ \{}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{ExpertContribution}}\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ std::string\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a6e06df6971e285fae26640a93e5c2d84}{expert\_id}};\ \ \ \ \ \ }
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a3c035c1eecc689e3b15039cc5a4e1049}{weight}};\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00021\ \ \ \ \ std::string\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a2ead8518fff301c22a8257124de6df82}{response}};\ \ \ \ \ \ \ }
+\DoxyCodeLine{00022\ \ \ \ \ std::vector<float>\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a352a1185f3ca531367b11be23a350186}{embedding}};\ }
+\DoxyCodeLine{00023\ \ \ \ \ std::string\ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution_a4269086ec6e0d10429a2df9b466d89aa}{source}};\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00024\ \};}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_a75501d1774b75b52a6a897179f932b5d}{WeightedFusion}}\ \{}
+\DoxyCodeLine{00031\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00032\ \ \ \ \ \mbox{\hyperlink{classEmbedder}{Embedder}}\&\ embedder;}
+\DoxyCodeLine{00033\ \ \ \ \ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ ONNX\ Runtime\ Members}}
+\DoxyCodeLine{00035\ \ \ \ \ Ort::Env\ env;}
+\DoxyCodeLine{00036\ \ \ \ \ Ort::Session\ session;}
+\DoxyCodeLine{00037\ \ \ \ \ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{//\ Configurações\ de\ ponderação}}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{double}\ emotion\_weight\_base\ =\ 0.3;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{double}\ context\_similarity\_weight\ =\ 0.4;\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{double}\ historical\_relevance\_weight\ =\ 0.3;\ \ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{//\ Cache\ de\ similaridades}}
+\DoxyCodeLine{00044\ \ \ \ \ std::map<std::string,\ double>\ expert\_affinities;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00054\ \ \ \ \ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_a75501d1774b75b52a6a897179f932b5d}{WeightedFusion}}(\mbox{\hyperlink{classEmbedder}{Embedder}}\&\ embedder\_ref)\ }
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ :\ embedder(embedder\_ref),}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ env(ORT\_LOGGING\_LEVEL\_WARNING,\ \textcolor{stringliteral}{"{}AlyssaFusion"{}}),}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ session(nullptr)\ \{\ }
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ Ort::SessionOptions\ session\_options;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ session\_options.SetIntraOpNumThreads(1);\ }
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ session\_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT\_ENABLE\_BASIC);}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ session\ =\ Ort::Session(env,\ \textcolor{stringliteral}{"{}fusion\_router.onnx"{}},\ session\_options);}
+\DoxyCodeLine{00064\ \ \ \ \ \}\ \ \ }
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00075\ \ \ \ \ std::map<std::string,\ double>\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_af6f444c44486a0b8001ba75ba30428b4}{calculate\_rule\_based\_weights}}(}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,\ }
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<std::string>\&\ available\_experts);}
+\DoxyCodeLine{00078\ \ \ \ \ }
+\DoxyCodeLine{00088\ \ \ \ \ std::map<std::string,\ double>\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_ac0e4cf05792e298de145de37926b7909}{calculate\_feature\_based\_weights}}(}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<ExpertContribution>\&\ expert\_responses);}
+\DoxyCodeLine{00091\ \ \ \ \ }
+\DoxyCodeLine{00102\ \ \ \ \ std::map<std::string,\ double>\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_ae6e0726904d4ddd2a148ae785f2720b6}{calculate\_neural\_weights}}(}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<ExpertContribution>\&\ expert\_responses,}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ current\_emotion);}
+\DoxyCodeLine{00106\ \ \ \ \ }
+\DoxyCodeLine{00117\ \ \ \ \ std::string\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_acffd0c9a47f906c5ffcf221d47884ae5}{fuse\_responses}}(}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ input,}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<ExpertContribution>\&\ contributions,}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ current\_emotion\ =\ \textcolor{stringliteral}{"{}"{}});}
+\DoxyCodeLine{00121\ \ \ \ \ }
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_acaae4b9ac014b49a7443fa983a2a37f7}{calculate\_semantic\_similarity}}(\textcolor{keyword}{const}\ std::vector<float>\&\ emb1,\ \textcolor{keyword}{const}\ std::vector<float>\&\ emb2);}
+\DoxyCodeLine{00132\ \ \ \ \ }
+\DoxyCodeLine{00141\ \ \ \ \ std::string\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_a3beab22c3c4e6f20399e3c4e109be43a}{detect\_emotion\_from\_input}}(\textcolor{keyword}{const}\ std::string\&\ input);}
+\DoxyCodeLine{00142\ \ \ \ \ }
+\DoxyCodeLine{00151\ \ \ \ \ std::string\ \mbox{\hyperlink{classalyssa__fusion_1_1WeightedFusion_abcb7a569a7a15dbc986397ef38a3164b}{extract\_keywords}}(\textcolor{keyword}{const}\ std::string\&\ text);}
+\DoxyCodeLine{00152\ \};}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \}\ \textcolor{comment}{//\ namespace\ alyssa\_fusion}}
+
+\end{DoxyCode}
