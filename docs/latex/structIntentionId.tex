@@ -2,7 +2,7 @@
 \hypertarget{structIntentionId}{}\label{structIntentionId}\index{IntentionId@{IntentionId}}
 
 
-Estrutura para ID\textquotesingle{}s das intencoes.  
+Strongly-\/typed ID structure for intention identification.  
 
 
 
@@ -12,37 +12,87 @@ Estrutura para ID\textquotesingle{}s das intencoes.
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{structIntentionId_a588ac6e7fbb933bdace157db2be9387e}\label{structIntentionId_a588ac6e7fbb933bdace157db2be9387e} 
-constexpr {\bfseries Intention\+Id} (int v)
-\item 
+constexpr \mbox{\hyperlink{structIntentionId_a588ac6e7fbb933bdace157db2be9387e}{Intention\+Id}} (int v)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{structIntentionId}{Intention\+Id}. \end{DoxyCompactList}\item 
 \Hypertarget{structIntentionId_a9f2af216c4970f8b63e5090405a8c957}\label{structIntentionId_a9f2af216c4970f8b63e5090405a8c957} 
 bool {\bfseries operator==} (const \mbox{\hyperlink{structIntentionId}{Intention\+Id}} \&other) const
-\item 
+\begin{DoxyCompactList}\small\item\em Equality operator. \end{DoxyCompactList}\item 
 \Hypertarget{structIntentionId_a7f19ea3129bfe90ca25b620732d3c481}\label{structIntentionId_a7f19ea3129bfe90ca25b620732d3c481} 
 bool {\bfseries operator!=} (const \mbox{\hyperlink{structIntentionId}{Intention\+Id}} \&other) const
-\item 
+\begin{DoxyCompactList}\small\item\em Inequality operator. \end{DoxyCompactList}\item 
 \Hypertarget{structIntentionId_a4d871b032456d3e022d7b004070243b3}\label{structIntentionId_a4d871b032456d3e022d7b004070243b3} 
 {\bfseries operator int} () const
-\item 
-\Hypertarget{structIntentionId_a6675df1c8824481d7ebd8e596508cde9}\label{structIntentionId_a6675df1c8824481d7ebd8e596508cde9} 
-bool {\bfseries is\+Valid} () const
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Conversion operator to int. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{structIntentionId_a6675df1c8824481d7ebd8e596508cde9}{is\+Valid}} () const
+\begin{DoxyCompactList}\small\item\em Check if \doxylink{structIntentionId}{Intention\+Id} is valid. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Static Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{structIntentionId_ab21acabcd193b88b91f0f67fbbcdeb89}\label{structIntentionId_ab21acabcd193b88b91f0f67fbbcdeb89} 
-static constexpr \mbox{\hyperlink{structIntentionId}{Intention\+Id}} {\bfseries invalid} ()
-\end{DoxyCompactItemize}
+static constexpr \mbox{\hyperlink{structIntentionId}{Intention\+Id}} \mbox{\hyperlink{structIntentionId_ab21acabcd193b88b91f0f67fbbcdeb89}{invalid}} ()
+\begin{DoxyCompactList}\small\item\em Get invalid \doxylink{structIntentionId}{Intention\+Id} instance. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Public Attributes}
 \begin{DoxyCompactItemize}
 \item 
 \Hypertarget{structIntentionId_aac82d266897c33c30b002db524f50247}\label{structIntentionId_aac82d266897c33c30b002db524f50247} 
 int {\bfseries value}
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Integer value of the intention ID. \end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \doxysubsection{Detailed Description}
-Estrutura para ID\textquotesingle{}s das intencoes. 
+Strongly-\/typed ID structure for intention identification. 
+
+Provides type safety for intention IDs with validation methods. 
+
+\label{doc-constructors}
+\Hypertarget{structIntentionId_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{structIntentionId_a588ac6e7fbb933bdace157db2be9387e}\index{IntentionId@{IntentionId}!IntentionId@{IntentionId}}
+\index{IntentionId@{IntentionId}!IntentionId@{IntentionId}}
+\doxysubsubsection{\texorpdfstring{IntentionId()}{IntentionId()}}
+{\footnotesize\ttfamily \label{structIntentionId_a588ac6e7fbb933bdace157db2be9387e} 
+Intention\+Id\+::\+Intention\+Id (\begin{DoxyParamCaption}\item[{int}]{v}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [explicit]}, {\ttfamily [constexpr]}}
+
+
+
+Constructor for \doxylink{structIntentionId}{Intention\+Id}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em v} & Integer value for the ID \\
+\hline
+\end{DoxyParams}
+
+
+\label{doc-func-members}
+\Hypertarget{structIntentionId_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{structIntentionId_ab21acabcd193b88b91f0f67fbbcdeb89}\index{IntentionId@{IntentionId}!invalid@{invalid}}
+\index{invalid@{invalid}!IntentionId@{IntentionId}}
+\doxysubsubsection{\texorpdfstring{invalid()}{invalid()}}
+{\footnotesize\ttfamily \label{structIntentionId_ab21acabcd193b88b91f0f67fbbcdeb89} 
+constexpr \mbox{\hyperlink{structIntentionId}{Intention\+Id}} Intention\+Id\+::invalid (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+Get invalid \doxylink{structIntentionId}{Intention\+Id} instance. 
+
+\begin{DoxyReturn}{Returns}
+\doxylink{structIntentionId}{Intention\+Id} with value -\/1 
+\end{DoxyReturn}
+\Hypertarget{structIntentionId_a6675df1c8824481d7ebd8e596508cde9}\index{IntentionId@{IntentionId}!isValid@{isValid}}
+\index{isValid@{isValid}!IntentionId@{IntentionId}}
+\doxysubsubsection{\texorpdfstring{isValid()}{isValid()}}
+{\footnotesize\ttfamily \label{structIntentionId_a6675df1c8824481d7ebd8e596508cde9} 
+bool Intention\+Id\+::is\+Valid (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Check if \doxylink{structIntentionId}{Intention\+Id} is valid. 
+
+\begin{DoxyReturn}{Returns}
+true if value \texorpdfstring{$>$}{>} 0, false otherwise 
+\end{DoxyReturn}
+
 
 The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
 \item 

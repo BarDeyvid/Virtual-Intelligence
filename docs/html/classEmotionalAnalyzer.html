@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: EmotionalAnalyzer Class Reference</title>
+<title>Alyssa Docs: EmotionalAnalyzer Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -92,23 +92,116 @@ $(function(){initNavTree('classEmotionalAnalyzer.html','','classEmotionalAnalyze
 </div><!--header-->
 <div class="contents">
 
-<p>Analisador emocional baseado em lexicon para texto em português.  
+<p>Emotional analyzer for Portuguese text based on lexicon.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a692d6f33b021f056e9e855f81d5b01d8" id="r_a692d6f33b021f056e9e855f81d5b01d8"><td class="memItemLeft" align="right" valign="top"><a id="a692d6f33b021f056e9e855f81d5b01d8" name="a692d6f33b021f056e9e855f81d5b01d8"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>EmotionalAnalyzer</b> (const <a class="el" href="structEmotionalAnalyzerConfig.html">EmotionalAnalyzerConfig</a> &amp;config={})</td></tr>
-<tr class="memitem:a052363eb4b11e3225028c696caa3fe0f" id="r_a052363eb4b11e3225028c696caa3fe0f"><td class="memItemLeft" align="right" valign="top"><a id="a052363eb4b11e3225028c696caa3fe0f" name="a052363eb4b11e3225028c696caa3fe0f"></a>
-<a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><b>analyzeText</b> (const std::string &amp;text)</td></tr>
-<tr class="memitem:a85a6a0c436b957dd9023214248c7e7a9" id="r_a85a6a0c436b957dd9023214248c7e7a9"><td class="memItemLeft" align="right" valign="top"><a id="a85a6a0c436b957dd9023214248c7e7a9" name="a85a6a0c436b957dd9023214248c7e7a9"></a>
-<a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><b>analyzeConversation</b> (const std::string &amp;user_input, const std::string &amp;ai_response)</td></tr>
+<tr class="memitem:a692d6f33b021f056e9e855f81d5b01d8" id="r_a692d6f33b021f056e9e855f81d5b01d8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a692d6f33b021f056e9e855f81d5b01d8">EmotionalAnalyzer</a> (const <a class="el" href="structEmotionalAnalyzerConfig.html">EmotionalAnalyzerConfig</a> &amp;config={})</td></tr>
+<tr class="memdesc:a692d6f33b021f056e9e855f81d5b01d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="classEmotionalAnalyzer.html" title="Emotional analyzer for Portuguese text based on lexicon.">EmotionalAnalyzer</a>.  <br /></td></tr>
+<tr class="memitem:a052363eb4b11e3225028c696caa3fe0f" id="r_a052363eb4b11e3225028c696caa3fe0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a052363eb4b11e3225028c696caa3fe0f">analyzeText</a> (const std::string &amp;text)</td></tr>
+<tr class="memdesc:a052363eb4b11e3225028c696caa3fe0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Analyze emotional content of text.  <br /></td></tr>
+<tr class="memitem:a85a6a0c436b957dd9023214248c7e7a9" id="r_a85a6a0c436b957dd9023214248c7e7a9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a85a6a0c436b957dd9023214248c7e7a9">analyzeConversation</a> (const std::string &amp;user_input, const std::string &amp;ai_response)</td></tr>
+<tr class="memdesc:a85a6a0c436b957dd9023214248c7e7a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Analyze emotional content of conversation.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Analisador emocional baseado em lexicon para texto em português. </p>
-</div><hr/>The documentation for this class was generated from the following files:<ul>
+<div class="textblock"><p>Emotional analyzer for Portuguese text based on lexicon. </p>
+<p>Performs emotional analysis on text using lexicon matching, pattern analysis, and punctuation analysis to detect and quantify emotions. </p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a692d6f33b021f056e9e855f81d5b01d8" name="a692d6f33b021f056e9e855f81d5b01d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a692d6f33b021f056e9e855f81d5b01d8">&#9670;&#160;</a></span>EmotionalAnalyzer()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">EmotionalAnalyzer::EmotionalAnalyzer </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structEmotionalAnalyzerConfig.html">EmotionalAnalyzerConfig</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Constructor for <a class="el" href="classEmotionalAnalyzer.html" title="Emotional analyzer for Portuguese text based on lexicon.">EmotionalAnalyzer</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">config</td><td>Configuration settings (optional) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a85a6a0c436b957dd9023214248c7e7a9" name="a85a6a0c436b957dd9023214248c7e7a9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85a6a0c436b957dd9023214248c7e7a9">&#9670;&#160;</a></span>analyzeConversation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a> EmotionalAnalyzer::analyzeConversation </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>user_input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>ai_response</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Analyze emotional content of conversation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">user_input</td><td>User input text </td></tr>
+    <tr><td class="paramname">ai_response</td><td>AI response text </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Combined emotional analysis </dd></dl>
+
+</div>
+</div>
+<a id="a052363eb4b11e3225028c696caa3fe0f" name="a052363eb4b11e3225028c696caa3fe0f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a052363eb4b11e3225028c696caa3fe0f">&#9670;&#160;</a></span>analyzeText()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a> EmotionalAnalyzer::analyzeText </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>text</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Analyze emotional content of text. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">text</td><td>Input text to analyze </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="structEmotionalAnalysis.html" title="Structure for emotional analysis results of text.">EmotionalAnalysis</a> structure with results </dd></dl>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaMemoryHandler.cpp</b></li>
 </ul>

@@ -1,20 +1,118 @@
 \doxysection{SQLStatement\+Builder Class Reference}
 \hypertarget{classSQLStatementBuilder}{}\label{classSQLStatementBuilder}\index{SQLStatementBuilder@{SQLStatementBuilder}}
+
+
+SQL statement generation utilities.  
+
+
+
+
+{\ttfamily \#include $<$Alyssa\+Memory\+Handler.\+hpp$>$}
+
 \doxysubsubsection*{Static Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classSQLStatementBuilder_afb33c572a50b8221d78f23d0f8ce62bc}\label{classSQLStatementBuilder_afb33c572a50b8221d78f23d0f8ce62bc} 
-static std\+::string {\bfseries create\+Memory\+Insert} (const std\+::string \&content, const std\+::string \&context, const std\+::string \&emotion, double importance, uint64\+\_\+t timestamp, const std\+::string \&vtime)
-\item 
-\Hypertarget{classSQLStatementBuilder_ab7a10c7ee0d357d45fd557e81c557a0a}\label{classSQLStatementBuilder_ab7a10c7ee0d357d45fd557e81c557a0a} 
-static std\+::string {\bfseries create\+Embedding\+Insert} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} memory\+\_\+id, const std\+::vector$<$ float $>$ \&embedding, const std\+::string \&created\+\_\+at)
-\item 
-\Hypertarget{classSQLStatementBuilder_a6ee81a7da273c2f816c04085b7349415}\label{classSQLStatementBuilder_a6ee81a7da273c2f816c04085b7349415} 
-static std\+::string {\bfseries create\+Semantic\+Search\+Query} ()
-\item 
-\Hypertarget{classSQLStatementBuilder_a659ae805f2dff1344a515659cf4313ef}\label{classSQLStatementBuilder_a659ae805f2dff1344a515659cf4313ef} 
-static std\+::string {\bfseries create\+Contextual\+Search\+Query} (const std\+::string \&pattern, int limit)
-\end{DoxyCompactItemize}
+static std\+::string \mbox{\hyperlink{classSQLStatementBuilder_afb33c572a50b8221d78f23d0f8ce62bc}{create\+Memory\+Insert}} (const std\+::string \&content, const std\+::string \&context, const std\+::string \&emotion, double importance, uint64\+\_\+t timestamp, const std\+::string \&vtime)
+\begin{DoxyCompactList}\small\item\em Create SQL INSERT statement for memories. \end{DoxyCompactList}\item 
+static std\+::string \mbox{\hyperlink{classSQLStatementBuilder_ab7a10c7ee0d357d45fd557e81c557a0a}{create\+Embedding\+Insert}} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} memory\+\_\+id, const std\+::vector$<$ float $>$ \&embedding, const std\+::string \&created\+\_\+at)
+\begin{DoxyCompactList}\small\item\em Create SQL INSERT statement for embeddings. \end{DoxyCompactList}\item 
+static std\+::string \mbox{\hyperlink{classSQLStatementBuilder_a6ee81a7da273c2f816c04085b7349415}{create\+Semantic\+Search\+Query}} ()
+\begin{DoxyCompactList}\small\item\em Create SQL query for semantic search. \end{DoxyCompactList}\item 
+static std\+::string \mbox{\hyperlink{classSQLStatementBuilder_a659ae805f2dff1344a515659cf4313ef}{create\+Contextual\+Search\+Query}} (const std\+::string \&pattern, int limit)
+\begin{DoxyCompactList}\small\item\em Create SQL query for contextual search. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+SQL statement generation utilities. 
+
+Provides static methods for creating SQL statements with proper escaping. 
+
+\label{doc-func-members}
+\Hypertarget{classSQLStatementBuilder_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classSQLStatementBuilder_a659ae805f2dff1344a515659cf4313ef}\index{SQLStatementBuilder@{SQLStatementBuilder}!createContextualSearchQuery@{createContextualSearchQuery}}
+\index{createContextualSearchQuery@{createContextualSearchQuery}!SQLStatementBuilder@{SQLStatementBuilder}}
+\doxysubsubsection{\texorpdfstring{createContextualSearchQuery()}{createContextualSearchQuery()}}
+{\footnotesize\ttfamily \label{classSQLStatementBuilder_a659ae805f2dff1344a515659cf4313ef} 
+std\+::string SQLStatement\+Builder\+::create\+Contextual\+Search\+Query (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{pattern}{, }\item[{int}]{limit}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Create SQL query for contextual search. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern} & Search pattern for LIKE operator \\
+\hline
+{\em limit} & Result limit \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+SQL SELECT statement for contextual search 
+\end{DoxyReturn}
+\Hypertarget{classSQLStatementBuilder_ab7a10c7ee0d357d45fd557e81c557a0a}\index{SQLStatementBuilder@{SQLStatementBuilder}!createEmbeddingInsert@{createEmbeddingInsert}}
+\index{createEmbeddingInsert@{createEmbeddingInsert}!SQLStatementBuilder@{SQLStatementBuilder}}
+\doxysubsubsection{\texorpdfstring{createEmbeddingInsert()}{createEmbeddingInsert()}}
+{\footnotesize\ttfamily \label{classSQLStatementBuilder_ab7a10c7ee0d357d45fd557e81c557a0a} 
+std\+::string SQLStatement\+Builder\+::create\+Embedding\+Insert (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structMemoryId}{Memory\+Id}}}]{memory\+\_\+id}{, }\item[{const std\+::vector$<$ float $>$ \&}]{embedding}{, }\item[{const std\+::string \&}]{created\+\_\+at}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Create SQL INSERT statement for embeddings. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em memory\+\_\+id} & Memory ID \\
+\hline
+{\em embedding} & Vector embedding \\
+\hline
+{\em created\+\_\+at} & Creation timestamp \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+SQL INSERT statement string 
+\end{DoxyReturn}
+\Hypertarget{classSQLStatementBuilder_afb33c572a50b8221d78f23d0f8ce62bc}\index{SQLStatementBuilder@{SQLStatementBuilder}!createMemoryInsert@{createMemoryInsert}}
+\index{createMemoryInsert@{createMemoryInsert}!SQLStatementBuilder@{SQLStatementBuilder}}
+\doxysubsubsection{\texorpdfstring{createMemoryInsert()}{createMemoryInsert()}}
+{\footnotesize\ttfamily \label{classSQLStatementBuilder_afb33c572a50b8221d78f23d0f8ce62bc} 
+std\+::string SQLStatement\+Builder\+::create\+Memory\+Insert (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{content}{, }\item[{const std\+::string \&}]{context}{, }\item[{const std\+::string \&}]{emotion}{, }\item[{double}]{importance}{, }\item[{uint64\+\_\+t}]{timestamp}{, }\item[{const std\+::string \&}]{vtime}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Create SQL INSERT statement for memories. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em content} & Memory content \\
+\hline
+{\em context} & Memory context \\
+\hline
+{\em emotion} & Detected emotion \\
+\hline
+{\em importance} & Importance score \\
+\hline
+{\em timestamp} & Unix timestamp \\
+\hline
+{\em vtime} & Vector time representation \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+SQL INSERT statement string 
+\end{DoxyReturn}
+\Hypertarget{classSQLStatementBuilder_a6ee81a7da273c2f816c04085b7349415}\index{SQLStatementBuilder@{SQLStatementBuilder}!createSemanticSearchQuery@{createSemanticSearchQuery}}
+\index{createSemanticSearchQuery@{createSemanticSearchQuery}!SQLStatementBuilder@{SQLStatementBuilder}}
+\doxysubsubsection{\texorpdfstring{createSemanticSearchQuery()}{createSemanticSearchQuery()}}
+{\footnotesize\ttfamily \label{classSQLStatementBuilder_a6ee81a7da273c2f816c04085b7349415} 
+std\+::string SQLStatement\+Builder\+::create\+Semantic\+Search\+Query (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Create SQL query for semantic search. 
+
+\begin{DoxyReturn}{Returns}
+SQL SELECT statement for semantic search 
+\end{DoxyReturn}
 
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}

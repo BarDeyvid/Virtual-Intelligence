@@ -2,7 +2,7 @@
 \hypertarget{structEmotionalState}{}\label{structEmotionalState}\index{EmotionalState@{EmotionalState}}
 
 
-Estrutura para representar estado emocional.  
+Structure for representing emotional state with timestamp.  
 
 
 
@@ -12,25 +12,48 @@ Estrutura para representar estado emocional.
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{structEmotionalState_a7e7c2c865ed00253642d4839c8f33cde}\label{structEmotionalState_a7e7c2c865ed00253642d4839c8f33cde} 
-{\bfseries Emotional\+State} (const std\+::string \&n="{}neutral"{}, double i=0.\+5)
-\end{DoxyCompactItemize}
+\mbox{\hyperlink{structEmotionalState_a7e7c2c865ed00253642d4839c8f33cde}{Emotional\+State}} (const std\+::string \&n="{}neutral"{}, double i=0.\+5)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{structEmotionalState}{Emotional\+State}. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Public Attributes}
 \begin{DoxyCompactItemize}
 \item 
 \Hypertarget{structEmotionalState_a413955f65202a238b52a9cf022b5f040}\label{structEmotionalState_a413955f65202a238b52a9cf022b5f040} 
 std\+::string {\bfseries name}
-\item 
+\begin{DoxyCompactList}\small\item\em Name of the emotional state. \end{DoxyCompactList}\item 
 \Hypertarget{structEmotionalState_afcd23a7e73a1842899b58a5f0e20e1c6}\label{structEmotionalState_afcd23a7e73a1842899b58a5f0e20e1c6} 
 double {\bfseries intensity}
-\item 
+\begin{DoxyCompactList}\small\item\em Intensity of the emotion (0.\+0-\/1.\+0). \end{DoxyCompactList}\item 
 \Hypertarget{structEmotionalState_aecce9f22e8d95c0a0cbebe85fe149aca}\label{structEmotionalState_aecce9f22e8d95c0a0cbebe85fe149aca} 
 uint64\+\_\+t {\bfseries timestamp}
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Timestamp of when this state was recorded. \end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \doxysubsection{Detailed Description}
-Estrutura para representar estado emocional. 
+Structure for representing emotional state with timestamp. 
+
+Tracks current emotional state with intensity and timestamp. 
+
+\label{doc-constructors}
+\Hypertarget{structEmotionalState_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{structEmotionalState_a7e7c2c865ed00253642d4839c8f33cde}\index{EmotionalState@{EmotionalState}!EmotionalState@{EmotionalState}}
+\index{EmotionalState@{EmotionalState}!EmotionalState@{EmotionalState}}
+\doxysubsubsection{\texorpdfstring{EmotionalState()}{EmotionalState()}}
+{\footnotesize\ttfamily \label{structEmotionalState_a7e7c2c865ed00253642d4839c8f33cde} 
+Emotional\+State\+::\+Emotional\+State (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{n}{ = {\ttfamily "{}neutral"{}}, }\item[{double}]{i}{ = {\ttfamily 0.5}}\end{DoxyParamCaption})}
+
+
+
+Constructor for \doxylink{structEmotionalState}{Emotional\+State}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em n} & Emotion name (default\+: "{}neutral"{}) \\
+\hline
+{\em i} & Emotion intensity (default\+: 0.\+5) \\
+\hline
+\end{DoxyParams}
+
 
 The documentation for this struct was generated from the following files\+:\begin{DoxyCompactItemize}
 \item 

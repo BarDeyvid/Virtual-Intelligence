@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: MemoryLink Struct Reference</title>
+<title>Alyssa Docs: MemoryLink Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -92,30 +92,78 @@ $(function(){initNavTree('structMemoryLink.html','','structMemoryLink-members');
 </div><!--header-->
 <div class="contents">
 
-<p>Estrutura para vínculos entre memórias.  
+<p>Structure for links between memories.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:abdbb94a611d22afada74104062d20167" id="r_abdbb94a611d22afada74104062d20167"><td class="memItemLeft" align="right" valign="top"><a id="abdbb94a611d22afada74104062d20167" name="abdbb94a611d22afada74104062d20167"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>MemoryLink</b> (<a class="el" href="structMemoryId.html">MemoryId</a> src, <a class="el" href="structMemoryId.html">MemoryId</a> tgt, double w=1.0, const std::string &amp;t=&quot;association&quot;)</td></tr>
+<tr class="memitem:abdbb94a611d22afada74104062d20167" id="r_abdbb94a611d22afada74104062d20167"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abdbb94a611d22afada74104062d20167">MemoryLink</a> (<a class="el" href="structMemoryId.html">MemoryId</a> src, <a class="el" href="structMemoryId.html">MemoryId</a> tgt, double w=1.0, const std::string &amp;t=&quot;association&quot;)</td></tr>
+<tr class="memdesc:abdbb94a611d22afada74104062d20167"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="structMemoryLink.html" title="Structure for links between memories.">MemoryLink</a>.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:aae7ca7c8d7e9c2f945acfd432f3c314c" id="r_aae7ca7c8d7e9c2f945acfd432f3c314c"><td class="memItemLeft" align="right" valign="top"><a id="aae7ca7c8d7e9c2f945acfd432f3c314c" name="aae7ca7c8d7e9c2f945acfd432f3c314c"></a>
 <a class="el" href="structMemoryId.html">MemoryId</a>&#160;</td><td class="memItemRight" valign="bottom"><b>source_id</b></td></tr>
+<tr class="memdesc:aae7ca7c8d7e9c2f945acfd432f3c314c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Source memory ID. <br /></td></tr>
 <tr class="memitem:a2f977b9e231f7a2fd5bcf74c128bcb9f" id="r_a2f977b9e231f7a2fd5bcf74c128bcb9f"><td class="memItemLeft" align="right" valign="top"><a id="a2f977b9e231f7a2fd5bcf74c128bcb9f" name="a2f977b9e231f7a2fd5bcf74c128bcb9f"></a>
 <a class="el" href="structMemoryId.html">MemoryId</a>&#160;</td><td class="memItemRight" valign="bottom"><b>target_id</b></td></tr>
+<tr class="memdesc:a2f977b9e231f7a2fd5bcf74c128bcb9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Target memory ID. <br /></td></tr>
 <tr class="memitem:a5ded4357c75178069075c35e645a2d9d" id="r_a5ded4357c75178069075c35e645a2d9d"><td class="memItemLeft" align="right" valign="top"><a id="a5ded4357c75178069075c35e645a2d9d" name="a5ded4357c75178069075c35e645a2d9d"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>weight</b></td></tr>
+<tr class="memdesc:a5ded4357c75178069075c35e645a2d9d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Strength of the connection (0.0-1.0). <br /></td></tr>
 <tr class="memitem:a413015e5f8b28e249358ce02c91aa555" id="r_a413015e5f8b28e249358ce02c91aa555"><td class="memItemLeft" align="right" valign="top"><a id="a413015e5f8b28e249358ce02c91aa555" name="a413015e5f8b28e249358ce02c91aa555"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>type</b></td></tr>
+<tr class="memdesc:a413015e5f8b28e249358ce02c91aa555"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of link (e.g., "association"). <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Estrutura para vínculos entre memórias. </p>
-</div><hr/>The documentation for this struct was generated from the following files:<ul>
+<div class="textblock"><p>Structure for links between memories. </p>
+<p>Represents associative connections between different memories. </p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="abdbb94a611d22afada74104062d20167" name="abdbb94a611d22afada74104062d20167"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdbb94a611d22afada74104062d20167">&#9670;&#160;</a></span>MemoryLink()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">MemoryLink::MemoryLink </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structMemoryId.html">MemoryId</a></td>          <td class="paramname"><span class="paramname"><em>src</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structMemoryId.html">MemoryId</a></td>          <td class="paramname"><span class="paramname"><em>tgt</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>w</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>t</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;association&quot;</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Constructor for <a class="el" href="structMemoryLink.html" title="Structure for links between memories.">MemoryLink</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">src</td><td>Source memory ID </td></tr>
+    <tr><td class="paramname">tgt</td><td>Target memory ID </td></tr>
+    <tr><td class="paramname">w</td><td>Link weight (default: 1.0) </td></tr>
+    <tr><td class="paramname">t</td><td>Link type (default: "association") </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaMemoryHandler.cpp</b></li>
 </ul>

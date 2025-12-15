@@ -2,7 +2,7 @@
 \hypertarget{classEmotionalAnalyzer}{}\label{classEmotionalAnalyzer}\index{EmotionalAnalyzer@{EmotionalAnalyzer}}
 
 
-Analisador emocional baseado em lexicon para texto em português.  
+Emotional analyzer for Portuguese text based on lexicon.  
 
 
 
@@ -12,19 +12,81 @@ Analisador emocional baseado em lexicon para texto em português.
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classEmotionalAnalyzer_a692d6f33b021f056e9e855f81d5b01d8}\label{classEmotionalAnalyzer_a692d6f33b021f056e9e855f81d5b01d8} 
-{\bfseries Emotional\+Analyzer} (const \mbox{\hyperlink{structEmotionalAnalyzerConfig}{Emotional\+Analyzer\+Config}} \&config=\{\})
-\item 
-\Hypertarget{classEmotionalAnalyzer_a052363eb4b11e3225028c696caa3fe0f}\label{classEmotionalAnalyzer_a052363eb4b11e3225028c696caa3fe0f} 
-\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} {\bfseries analyze\+Text} (const std\+::string \&text)
-\item 
-\Hypertarget{classEmotionalAnalyzer_a85a6a0c436b957dd9023214248c7e7a9}\label{classEmotionalAnalyzer_a85a6a0c436b957dd9023214248c7e7a9} 
-\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} {\bfseries analyze\+Conversation} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response)
-\end{DoxyCompactItemize}
+\mbox{\hyperlink{classEmotionalAnalyzer_a692d6f33b021f056e9e855f81d5b01d8}{Emotional\+Analyzer}} (const \mbox{\hyperlink{structEmotionalAnalyzerConfig}{Emotional\+Analyzer\+Config}} \&config=\{\})
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{classEmotionalAnalyzer}{Emotional\+Analyzer}. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} \mbox{\hyperlink{classEmotionalAnalyzer_a052363eb4b11e3225028c696caa3fe0f}{analyze\+Text}} (const std\+::string \&text)
+\begin{DoxyCompactList}\small\item\em Analyze emotional content of text. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} \mbox{\hyperlink{classEmotionalAnalyzer_a85a6a0c436b957dd9023214248c7e7a9}{analyze\+Conversation}} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response)
+\begin{DoxyCompactList}\small\item\em Analyze emotional content of conversation. \end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \doxysubsection{Detailed Description}
-Analisador emocional baseado em lexicon para texto em português. 
+Emotional analyzer for Portuguese text based on lexicon. 
+
+Performs emotional analysis on text using lexicon matching, pattern analysis, and punctuation analysis to detect and quantify emotions. 
+
+\label{doc-constructors}
+\Hypertarget{classEmotionalAnalyzer_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classEmotionalAnalyzer_a692d6f33b021f056e9e855f81d5b01d8}\index{EmotionalAnalyzer@{EmotionalAnalyzer}!EmotionalAnalyzer@{EmotionalAnalyzer}}
+\index{EmotionalAnalyzer@{EmotionalAnalyzer}!EmotionalAnalyzer@{EmotionalAnalyzer}}
+\doxysubsubsection{\texorpdfstring{EmotionalAnalyzer()}{EmotionalAnalyzer()}}
+{\footnotesize\ttfamily \label{classEmotionalAnalyzer_a692d6f33b021f056e9e855f81d5b01d8} 
+Emotional\+Analyzer\+::\+Emotional\+Analyzer (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{structEmotionalAnalyzerConfig}{Emotional\+Analyzer\+Config}} \&}]{config}{ = {\ttfamily \{\}}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+
+
+Constructor for \doxylink{classEmotionalAnalyzer}{Emotional\+Analyzer}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em config} & Configuration settings (optional) \\
+\hline
+\end{DoxyParams}
+
+
+\label{doc-func-members}
+\Hypertarget{classEmotionalAnalyzer_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classEmotionalAnalyzer_a85a6a0c436b957dd9023214248c7e7a9}\index{EmotionalAnalyzer@{EmotionalAnalyzer}!analyzeConversation@{analyzeConversation}}
+\index{analyzeConversation@{analyzeConversation}!EmotionalAnalyzer@{EmotionalAnalyzer}}
+\doxysubsubsection{\texorpdfstring{analyzeConversation()}{analyzeConversation()}}
+{\footnotesize\ttfamily \label{classEmotionalAnalyzer_a85a6a0c436b957dd9023214248c7e7a9} 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} Emotional\+Analyzer\+::analyze\+Conversation (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{user\+\_\+input}{, }\item[{const std\+::string \&}]{ai\+\_\+response}{}\end{DoxyParamCaption})}
+
+
+
+Analyze emotional content of conversation. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em user\+\_\+input} & User input text \\
+\hline
+{\em ai\+\_\+response} & AI response text \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Combined emotional analysis 
+\end{DoxyReturn}
+\Hypertarget{classEmotionalAnalyzer_a052363eb4b11e3225028c696caa3fe0f}\index{EmotionalAnalyzer@{EmotionalAnalyzer}!analyzeText@{analyzeText}}
+\index{analyzeText@{analyzeText}!EmotionalAnalyzer@{EmotionalAnalyzer}}
+\doxysubsubsection{\texorpdfstring{analyzeText()}{analyzeText()}}
+{\footnotesize\ttfamily \label{classEmotionalAnalyzer_a052363eb4b11e3225028c696caa3fe0f} 
+\mbox{\hyperlink{structEmotionalAnalysis}{Emotional\+Analysis}} Emotional\+Analyzer\+::analyze\+Text (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{text}{}\end{DoxyParamCaption})}
+
+
+
+Analyze emotional content of text. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em text} & Input text to analyze \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\doxylink{structEmotionalAnalysis}{Emotional\+Analysis} structure with results 
+\end{DoxyReturn}
+
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
 \item 

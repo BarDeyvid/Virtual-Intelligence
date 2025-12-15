@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: CoreIntegration Class Reference</title>
+<title>Alyssa Docs: CoreIntegration Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -91,47 +91,539 @@ $(function(){initNavTree('classCoreIntegration.html','','classCoreIntegration-me
   <div class="headertitle"><div class="title">CoreIntegration Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="CoreLLM_8hpp_source.html">CoreLLM.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a7f59d33becbba44981cd1d9c78215233" id="r_a7f59d33becbba44981cd1d9c78215233"><td class="memItemLeft" align="right" valign="top"><a id="a7f59d33becbba44981cd1d9c78215233" name="a7f59d33becbba44981cd1d9c78215233"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set_user_name</b> (const std::string &amp;name)</td></tr>
-<tr class="memitem:aa7da5760ef5eefc3c3cbc016cdaac670" id="r_aa7da5760ef5eefc3c3cbc016cdaac670"><td class="memItemLeft" align="right" valign="top"><a id="aa7da5760ef5eefc3c3cbc016cdaac670" name="aa7da5760ef5eefc3c3cbc016cdaac670"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::string &amp;base_model_path)</td></tr>
-<tr class="memitem:a4aeb9de0e6a186bf9d1d66372986ba85" id="r_a4aeb9de0e6a186bf9d1d66372986ba85"><td class="memItemLeft" align="right" valign="top"><a id="a4aeb9de0e6a186bf9d1d66372986ba85" name="a4aeb9de0e6a186bf9d1d66372986ba85"></a>
-std::string&#160;</td><td class="memItemRight" valign="bottom"><b>think</b> (const std::string &amp;input, <a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;tts)</td></tr>
-<tr class="memitem:a1e437e88997c796d82c3a48163942537" id="r_a1e437e88997c796d82c3a48163942537"><td class="memItemLeft" align="right" valign="top"><a id="a1e437e88997c796d82c3a48163942537" name="a1e437e88997c796d82c3a48163942537"></a>
-std::string&#160;</td><td class="memItemRight" valign="bottom"><b>think_with_fusion</b> (const std::string &amp;input, <a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;tts)</td></tr>
-<tr class="memitem:a4c111fd7f6302718cfdab7e035a03e07" id="r_a4c111fd7f6302718cfdab7e035a03e07"><td class="memItemLeft" align="right" valign="top"><a id="a4c111fd7f6302718cfdab7e035a03e07" name="a4c111fd7f6302718cfdab7e035a03e07"></a>
-std::string&#160;</td><td class="memItemRight" valign="bottom"><b>think_with_fusion_ttsless</b> (const std::string &amp;input)</td></tr>
-<tr class="memitem:a1a599210624a99886ef7f03c4b8e0622" id="r_a1a599210624a99886ef7f03c4b8e0622"><td class="memItemLeft" align="right" valign="top"><a id="a1a599210624a99886ef7f03c4b8e0622" name="a1a599210624a99886ef7f03c4b8e0622"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>register_expert</b> (std::unique_ptr&lt; <a class="el" href="classalyssa__experts_1_1IExpert.html">alyssa_experts::IExpert</a> &gt; expert)</td></tr>
-<tr class="memitem:a6125b948e70ad850161d9f45d8bb2adc" id="r_a6125b948e70ad850161d9f45d8bb2adc"><td class="memItemLeft" align="right" valign="top"><a id="a6125b948e70ad850161d9f45d8bb2adc" name="a6125b948e70ad850161d9f45d8bb2adc"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>remove_expert</b> (const std::string &amp;expert_id)</td></tr>
-<tr class="memitem:aff2510b0122ee6a9a5a385e183433825" id="r_aff2510b0122ee6a9a5a385e183433825"><td class="memItemLeft" align="right" valign="top"><a id="aff2510b0122ee6a9a5a385e183433825" name="aff2510b0122ee6a9a5a385e183433825"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_expert</b> (const std::string &amp;expert_id) const</td></tr>
-<tr class="memitem:a60addb560ac6020b02fada2e7b7b8d65" id="r_a60addb560ac6020b02fada2e7b7b8d65"><td class="memItemLeft" align="right" valign="top"><a id="a60addb560ac6020b02fada2e7b7b8d65" name="a60addb560ac6020b02fada2e7b7b8d65"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>validate_context_size</b> (const std::string &amp;prompt, const std::string &amp;expert_id)</td></tr>
-<tr class="memitem:ac94a5f34c9eeda658273c4aab9a9eb57" id="r_ac94a5f34c9eeda658273c4aab9a9eb57"><td class="memItemLeft" align="right" valign="top"><a id="ac94a5f34c9eeda658273c4aab9a9eb57" name="ac94a5f34c9eeda658273c4aab9a9eb57"></a>
-std::string&#160;</td><td class="memItemRight" valign="bottom"><b>detect_emotion_with_heuristics</b> (const std::string &amp;input)</td></tr>
-<tr class="memitem:af7d8f4e2b769482f138a2a5e8604d54d" id="r_af7d8f4e2b769482f138a2a5e8604d54d"><td class="memItemLeft" align="right" valign="top"><a id="af7d8f4e2b769482f138a2a5e8604d54d" name="af7d8f4e2b769482f138a2a5e8604d54d"></a>
-float&#160;</td><td class="memItemRight" valign="bottom"><b>calculate_committee_coherence</b> (const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;contributions)</td></tr>
-<tr class="memitem:adf6f49f41b4605623b13938e0351b463" id="r_adf6f49f41b4605623b13938e0351b463"><td class="memItemLeft" align="right" valign="top"><a id="adf6f49f41b4605623b13938e0351b463" name="adf6f49f41b4605623b13938e0351b463"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>should_store_in_memory</b> (const std::string &amp;input, const std::string &amp;response)</td></tr>
-<tr class="memitem:a2ca9b431832480a5181b9fd923b9d3ee" id="r_a2ca9b431832480a5181b9fd923b9d3ee"><td class="memItemLeft" align="right" valign="top"><a id="a2ca9b431832480a5181b9fd923b9d3ee" name="a2ca9b431832480a5181b9fd923b9d3ee"></a>
-std::string&#160;</td><td class="memItemRight" valign="bottom"><b>generate_fused_input</b> (const std::string &amp;original_input, const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;contributions, const std::string &amp;emotion)</td></tr>
-<tr class="memitem:a0f50243d938c7252ac2548a5ccc66773" id="r_a0f50243d938c7252ac2548a5ccc66773"><td class="memItemLeft" align="right" valign="top"><a id="a0f50243d938c7252ac2548a5ccc66773" name="a0f50243d938c7252ac2548a5ccc66773"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>log_source_awareness</b> (const std::string &amp;source, const std::string &amp;message)</td></tr>
+<tr class="memitem:a8dea14e6ebb67536e4346d0aa366bd42" id="r_a8dea14e6ebb67536e4346d0aa366bd42"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8dea14e6ebb67536e4346d0aa366bd42">CoreIntegration</a> ()</td></tr>
+<tr class="memdesc:a8dea14e6ebb67536e4346d0aa366bd42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
+<tr class="memitem:a0ce069b1eb54149e13b45e59231e88d1" id="r_a0ce069b1eb54149e13b45e59231e88d1"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0ce069b1eb54149e13b45e59231e88d1">~CoreIntegration</a> ()</td></tr>
+<tr class="memdesc:a0ce069b1eb54149e13b45e59231e88d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructor.  <br /></td></tr>
+<tr class="memitem:a7f59d33becbba44981cd1d9c78215233" id="r_a7f59d33becbba44981cd1d9c78215233"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7f59d33becbba44981cd1d9c78215233">set_user_name</a> (const std::string &amp;name)</td></tr>
+<tr class="memdesc:a7f59d33becbba44981cd1d9c78215233"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the user's name for personalized interactions.  <br /></td></tr>
+<tr class="memitem:aa7da5760ef5eefc3c3cbc016cdaac670" id="r_aa7da5760ef5eefc3c3cbc016cdaac670"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa7da5760ef5eefc3c3cbc016cdaac670">initialize</a> (const std::string &amp;base_model_path)</td></tr>
+<tr class="memdesc:aa7da5760ef5eefc3c3cbc016cdaac670"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the complete Alyssa AI system.  <br /></td></tr>
+<tr class="memitem:a4aeb9de0e6a186bf9d1d66372986ba85" id="r_a4aeb9de0e6a186bf9d1d66372986ba85"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4aeb9de0e6a186bf9d1d66372986ba85">think</a> (const std::string &amp;input, <a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;tts)</td></tr>
+<tr class="memdesc:a4aeb9de0e6a186bf9d1d66372986ba85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process user input using standard MoE architecture.  <br /></td></tr>
+<tr class="memitem:a1e437e88997c796d82c3a48163942537" id="r_a1e437e88997c796d82c3a48163942537"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e437e88997c796d82c3a48163942537">think_with_fusion</a> (const std::string &amp;input, <a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;tts)</td></tr>
+<tr class="memdesc:a1e437e88997c796d82c3a48163942537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process user input with weighted fusion and TTS.  <br /></td></tr>
+<tr class="memitem:a4c111fd7f6302718cfdab7e035a03e07" id="r_a4c111fd7f6302718cfdab7e035a03e07"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c111fd7f6302718cfdab7e035a03e07">think_with_fusion_ttsless</a> (const std::string &amp;input)</td></tr>
+<tr class="memdesc:a4c111fd7f6302718cfdab7e035a03e07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process user input with weighted fusion without TTS.  <br /></td></tr>
+<tr class="memitem:a1a599210624a99886ef7f03c4b8e0622" id="r_a1a599210624a99886ef7f03c4b8e0622"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1a599210624a99886ef7f03c4b8e0622">register_expert</a> (std::unique_ptr&lt; <a class="el" href="classalyssa__experts_1_1IExpert.html">alyssa_experts::IExpert</a> &gt; expert)</td></tr>
+<tr class="memdesc:a1a599210624a99886ef7f03c4b8e0622"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a new expert model with the system.  <br /></td></tr>
+<tr class="memitem:a6125b948e70ad850161d9f45d8bb2adc" id="r_a6125b948e70ad850161d9f45d8bb2adc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6125b948e70ad850161d9f45d8bb2adc">remove_expert</a> (const std::string &amp;expert_id)</td></tr>
+<tr class="memdesc:a6125b948e70ad850161d9f45d8bb2adc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove an expert from the system.  <br /></td></tr>
+<tr class="memitem:aff2510b0122ee6a9a5a385e183433825" id="r_aff2510b0122ee6a9a5a385e183433825"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff2510b0122ee6a9a5a385e183433825">has_expert</a> (const std::string &amp;expert_id) const</td></tr>
+<tr class="memdesc:aff2510b0122ee6a9a5a385e183433825"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if an expert is registered.  <br /></td></tr>
+<tr class="memitem:a60addb560ac6020b02fada2e7b7b8d65" id="r_a60addb560ac6020b02fada2e7b7b8d65"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a60addb560ac6020b02fada2e7b7b8d65">validate_context_size</a> (const std::string &amp;prompt, const std::string &amp;expert_id)</td></tr>
+<tr class="memdesc:a60addb560ac6020b02fada2e7b7b8d65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate if input fits within expert's context window.  <br /></td></tr>
+<tr class="memitem:ac94a5f34c9eeda658273c4aab9a9eb57" id="r_ac94a5f34c9eeda658273c4aab9a9eb57"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac94a5f34c9eeda658273c4aab9a9eb57">detect_emotion_with_heuristics</a> (const std::string &amp;input)</td></tr>
+<tr class="memdesc:ac94a5f34c9eeda658273c4aab9a9eb57"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect emotional content in input using heuristics.  <br /></td></tr>
+<tr class="memitem:af7d8f4e2b769482f138a2a5e8604d54d" id="r_af7d8f4e2b769482f138a2a5e8604d54d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af7d8f4e2b769482f138a2a5e8604d54d">calculate_committee_coherence</a> (const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;contributions)</td></tr>
+<tr class="memdesc:af7d8f4e2b769482f138a2a5e8604d54d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate coherence metric for expert committee responses.  <br /></td></tr>
+<tr class="memitem:adf6f49f41b4605623b13938e0351b463" id="r_adf6f49f41b4605623b13938e0351b463"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf6f49f41b4605623b13938e0351b463">should_store_in_memory</a> (const std::string &amp;input, const std::string &amp;response)</td></tr>
+<tr class="memdesc:adf6f49f41b4605623b13938e0351b463"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determine if interaction should be stored in long-term memory.  <br /></td></tr>
+<tr class="memitem:a2ca9b431832480a5181b9fd923b9d3ee" id="r_a2ca9b431832480a5181b9fd923b9d3ee"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ca9b431832480a5181b9fd923b9d3ee">generate_fused_input</a> (const std::string &amp;original_input, const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;contributions, const std::string &amp;emotion)</td></tr>
+<tr class="memdesc:a2ca9b431832480a5181b9fd923b9d3ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate fused input for Alyssa model from expert contributions.  <br /></td></tr>
+<tr class="memitem:a0f50243d938c7252ac2548a5ccc66773" id="r_a0f50243d938c7252ac2548a5ccc66773"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0f50243d938c7252ac2548a5ccc66773">log_source_awareness</a> (const std::string &amp;source, const std::string &amp;message)</td></tr>
+<tr class="memdesc:a0f50243d938c7252ac2548a5ccc66773"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log source awareness information.  <br /></td></tr>
 <tr class="memitem:af59090e676d2b27556e20b85b88b0883" id="r_af59090e676d2b27556e20b85b88b0883"><td class="memItemLeft" align="right" valign="top"><a id="af59090e676d2b27556e20b85b88b0883" name="af59090e676d2b27556e20b85b88b0883"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>clear_all_cache</b> ()</td></tr>
-<tr class="memitem:a6a079a27eab5048e494503d25513a701" id="r_a6a079a27eab5048e494503d25513a701"><td class="memItemLeft" align="right" valign="top"><a id="a6a079a27eab5048e494503d25513a701" name="a6a079a27eab5048e494503d25513a701"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>run_interactive_loop</b> ()</td></tr>
+<tr class="memdesc:af59090e676d2b27556e20b85b88b0883"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all caches including KV cache and expert histories. <br /></td></tr>
+<tr class="memitem:a6a079a27eab5048e494503d25513a701" id="r_a6a079a27eab5048e494503d25513a701"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a079a27eab5048e494503d25513a701">run_interactive_loop</a> ()</td></tr>
+<tr class="memdesc:a6a079a27eab5048e494503d25513a701"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run interactive command-line interface.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a5c22b97061386dadc44daafbfc8575b2" id="r_a5c22b97061386dadc44daafbfc8575b2"><td class="memItemLeft" align="right" valign="top"><a id="a5c22b97061386dadc44daafbfc8575b2" name="a5c22b97061386dadc44daafbfc8575b2"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>user_name</b> = &quot;&quot;</td></tr>
+<tr class="memdesc:a5c22b97061386dadc44daafbfc8575b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current user's name for personalization. <br /></td></tr>
 </table>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture. </p>
+<p>This class integrates multiple specialized AI models (experts) with weighted fusion capabilities, memory management, and text-to-speech functionality. It serves as the central controller for processing user inputs through different expert models and generating coherent responses.</p>
+<p>Key features:</p><ul>
+<li>Mixture of Experts (MoE) architecture with specialized models</li>
+<li>Weighted fusion of expert contributions</li>
+<li>Long-term memory integration</li>
+<li>Context switching between experts</li>
+<li>TTS (Text-to-Speech) integration</li>
+<li>Dynamic history management </li>
+</ul>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a8dea14e6ebb67536e4346d0aa366bd42" name="a8dea14e6ebb67536e4346d0aa366bd42"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8dea14e6ebb67536e4346d0aa366bd42">&#9670;&#160;</a></span>CoreIntegration()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">CoreIntegration::CoreIntegration </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Default constructor. </p>
+<p>Default constructor for <a class="el" href="classCoreIntegration.html" title="Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.">CoreIntegration</a>.</p>
+<p>Initializes the <a class="el" href="classCoreIntegration.html" title="Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.">CoreIntegration</a> system with default values.</p>
+<p>Initializes with default values and logs construction. </p>
+
+</div>
+</div>
+<a id="a0ce069b1eb54149e13b45e59231e88d1" name="a0ce069b1eb54149e13b45e59231e88d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0ce069b1eb54149e13b45e59231e88d1">&#9670;&#160;</a></span>~CoreIntegration()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">CoreIntegration::~CoreIntegration </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Destructor. </p>
+<p>Destructor for <a class="el" href="classCoreIntegration.html" title="Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.">CoreIntegration</a>.</p>
+<p>Cleans up all allocated resources and expert histories.</p>
+<p>Cleans up expert histories and logs destruction. </p>
+
+</div>
+</div>
+<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="af7d8f4e2b769482f138a2a5e8604d54d" name="af7d8f4e2b769482f138a2a5e8604d54d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7d8f4e2b769482f138a2a5e8604d54d">&#9670;&#160;</a></span>calculate_committee_coherence()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CoreIntegration::calculate_committee_coherence </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>contributions</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate coherence metric for expert committee responses. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">contributions</td><td>Vector of contributions from different experts. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Coherence score between 0.0 (incoherent) and 1.0 (fully coherent). </dd></dl>
+
+</div>
+</div>
+<a id="ac94a5f34c9eeda658273c4aab9a9eb57" name="ac94a5f34c9eeda658273c4aab9a9eb57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac94a5f34c9eeda658273c4aab9a9eb57">&#9670;&#160;</a></span>detect_emotion_with_heuristics()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CoreIntegration::detect_emotion_with_heuristics </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Detect emotional content in input using heuristics. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>Text to analyze for emotional content. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Detected emotion as string (e.g., "neutralidade", "curiosidade"). </dd></dl>
+
+</div>
+</div>
+<a id="a2ca9b431832480a5181b9fd923b9d3ee" name="a2ca9b431832480a5181b9fd923b9d3ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ca9b431832480a5181b9fd923b9d3ee">&#9670;&#160;</a></span>generate_fused_input()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CoreIntegration::generate_fused_input </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>original_input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structalyssa__fusion_1_1ExpertContribution.html">alyssa_fusion::ExpertContribution</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>contributions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>emotion</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Generate fused input for Alyssa model from expert contributions. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">original_input</td><td>Original user input. </td></tr>
+    <tr><td class="paramname">contributions</td><td>Vector of expert contributions. </td></tr>
+    <tr><td class="paramname">emotion</td><td>Detected emotion for context. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Formatted prompt with expert thoughts and memory context. </dd></dl>
+
+</div>
+</div>
+<a id="aff2510b0122ee6a9a5a385e183433825" name="aff2510b0122ee6a9a5a385e183433825"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff2510b0122ee6a9a5a385e183433825">&#9670;&#160;</a></span>has_expert()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CoreIntegration::has_expert </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>expert_id</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Check if an expert is registered. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expert_id</td><td>Unique identifier of the expert. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if expert exists, false otherwise. </dd></dl>
+
+</div>
+</div>
+<a id="aa7da5760ef5eefc3c3cbc016cdaac670" name="aa7da5760ef5eefc3c3cbc016cdaac670"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7da5760ef5eefc3c3cbc016cdaac670">&#9670;&#160;</a></span>initialize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CoreIntegration::initialize </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>base_model_path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initialize the complete Alyssa AI system. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">base_model_path</td><td>Path to the base model configuration file. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if initialization succeeded, false otherwise.</dd></dl>
+<p>Loads models, initializes experts, memory system, and fusion engine. </p>
+
+</div>
+</div>
+<a id="a0f50243d938c7252ac2548a5ccc66773" name="a0f50243d938c7252ac2548a5ccc66773"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f50243d938c7252ac2548a5ccc66773">&#9670;&#160;</a></span>log_source_awareness()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CoreIntegration::log_source_awareness </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>source</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>message</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Log source awareness information. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">source</td><td>Source identifier (expert ID). </td></tr>
+    <tr><td class="paramname">message</td><td>Message to log. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a1a599210624a99886ef7f03c4b8e0622" name="a1a599210624a99886ef7f03c4b8e0622"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a599210624a99886ef7f03c4b8e0622">&#9670;&#160;</a></span>register_expert()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CoreIntegration::register_expert </td>
+          <td>(</td>
+          <td class="paramtype">std::unique_ptr&lt; <a class="el" href="classalyssa__experts_1_1IExpert.html">alyssa_experts::IExpert</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>expert</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Register a new expert model with the system. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expert</td><td>Unique pointer to the expert implementation.</td></tr>
+    <tr><td class="paramname">expert</td><td>Unique pointer to the expert implementation.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Adds expert to internal maps and initializes empty history. </p>
+
+</div>
+</div>
+<a id="a6125b948e70ad850161d9f45d8bb2adc" name="a6125b948e70ad850161d9f45d8bb2adc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6125b948e70ad850161d9f45d8bb2adc">&#9670;&#160;</a></span>remove_expert()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CoreIntegration::remove_expert </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>expert_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove an expert from the system. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expert_id</td><td>Unique identifier of the expert to remove.</td></tr>
+    <tr><td class="paramname">expert_id</td><td>Unique identifier of the expert to remove.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Removes expert from both expert and history maps. </p>
+
+</div>
+</div>
+<a id="a6a079a27eab5048e494503d25513a701" name="a6a079a27eab5048e494503d25513a701"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6a079a27eab5048e494503d25513a701">&#9670;&#160;</a></span>run_interactive_loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CoreIntegration::run_interactive_loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run interactive command-line interface. </p>
+<p>Continuously processes user input until exit command. </p>
+
+</div>
+</div>
+<a id="a7f59d33becbba44981cd1d9c78215233" name="a7f59d33becbba44981cd1d9c78215233"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7f59d33becbba44981cd1d9c78215233">&#9670;&#160;</a></span>set_user_name()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CoreIntegration::set_user_name </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the user's name for personalized interactions. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>The user's name to be stored in memory. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="adf6f49f41b4605623b13938e0351b463" name="adf6f49f41b4605623b13938e0351b463"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf6f49f41b4605623b13938e0351b463">&#9670;&#160;</a></span>should_store_in_memory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CoreIntegration::should_store_in_memory </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>response</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Determine if interaction should be stored in long-term memory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>User's input text. </td></tr>
+    <tr><td class="paramname">response</td><td>System's response text. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if worth storing in memory, false for small talk/noise. </dd></dl>
+
+</div>
+</div>
+<a id="a4aeb9de0e6a186bf9d1d66372986ba85" name="a4aeb9de0e6a186bf9d1d66372986ba85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4aeb9de0e6a186bf9d1d66372986ba85">&#9670;&#160;</a></span>think()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CoreIntegration::think </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>tts</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Process user input using standard MoE architecture. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>User's text input. </td></tr>
+    <tr><td class="paramname">tts</td><td><a class="el" href="classElevenLabsTTS.html" title="Class for text-to-speech synthesis using ElevenLabs API.">ElevenLabsTTS</a> instance for voice synthesis. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Response generated by the AI system.</dd></dl>
+<p>Uses emotional analysis, memory retrieval, and Alyssa model for final response. </p>
+
+</div>
+</div>
+<a id="a1e437e88997c796d82c3a48163942537" name="a1e437e88997c796d82c3a48163942537"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e437e88997c796d82c3a48163942537">&#9670;&#160;</a></span>think_with_fusion()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CoreIntegration::think_with_fusion </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classElevenLabsTTS.html">ElevenLabsTTS</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>tts</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Process user input with weighted fusion and TTS. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>User's text input. </td></tr>
+    <tr><td class="paramname">tts</td><td><a class="el" href="classElevenLabsTTS.html" title="Class for text-to-speech synthesis using ElevenLabs API.">ElevenLabsTTS</a> instance for voice synthesis. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Fused response from multiple experts.</dd></dl>
+<p>Runs expert committee, applies weighted fusion, and generates voice output. </p>
+
+</div>
+</div>
+<a id="a4c111fd7f6302718cfdab7e035a03e07" name="a4c111fd7f6302718cfdab7e035a03e07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c111fd7f6302718cfdab7e035a03e07">&#9670;&#160;</a></span>think_with_fusion_ttsless()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CoreIntegration::think_with_fusion_ttsless </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>input</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Process user input with weighted fusion without TTS. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>User's text input. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Fused response from multiple experts.</dd></dl>
+<p>Same as think_with_fusion but without voice synthesis. </p>
+
+</div>
+</div>
+<a id="a60addb560ac6020b02fada2e7b7b8d65" name="a60addb560ac6020b02fada2e7b7b8d65"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60addb560ac6020b02fada2e7b7b8d65">&#9670;&#160;</a></span>validate_context_size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CoreIntegration::validate_context_size </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>prompt</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>expert_id</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validate if input fits within expert's context window. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">prompt</td><td>Input text to validate. </td></tr>
+    <tr><td class="paramname">expert_id</td><td>Expert identifier. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if context size is sufficient, false otherwise. </dd></dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="CoreLLM_8hpp_source.html">CoreLLM.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaNet.cpp</b></li>

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: Intention Struct Reference</title>
+<title>Alyssa Docs: Intention Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -92,36 +92,81 @@ $(function(){initNavTree('structIntention.html','','structIntention-members'); }
 </div><!--header-->
 <div class="contents">
 
-<p>Estrutura para representar intenções do sistema.  
+<p>Structure for representing system intentions.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a25dbce3c86f2f4b0940a7f80cfa99e9b" id="r_a25dbce3c86f2f4b0940a7f80cfa99e9b"><td class="memItemLeft" align="right" valign="top"><a id="a25dbce3c86f2f4b0940a7f80cfa99e9b" name="a25dbce3c86f2f4b0940a7f80cfa99e9b"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Intention</b> (const std::string &amp;desc, const std::string &amp;t, const std::string &amp;trig=&quot;&quot;)</td></tr>
+<tr class="memitem:a25dbce3c86f2f4b0940a7f80cfa99e9b" id="r_a25dbce3c86f2f4b0940a7f80cfa99e9b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25dbce3c86f2f4b0940a7f80cfa99e9b">Intention</a> (const std::string &amp;desc, const std::string &amp;t, const std::string &amp;trig=&quot;&quot;)</td></tr>
+<tr class="memdesc:a25dbce3c86f2f4b0940a7f80cfa99e9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a>.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:af72a8724295bb45d7a64d0b4dcaf3dde" id="r_af72a8724295bb45d7a64d0b4dcaf3dde"><td class="memItemLeft" align="right" valign="top"><a id="af72a8724295bb45d7a64d0b4dcaf3dde" name="af72a8724295bb45d7a64d0b4dcaf3dde"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>id</b></td></tr>
+<tr class="memdesc:af72a8724295bb45d7a64d0b4dcaf3dde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unique identifier for the intention. <br /></td></tr>
 <tr class="memitem:af335bede24deb53ca6e1cd2a139226f2" id="r_af335bede24deb53ca6e1cd2a139226f2"><td class="memItemLeft" align="right" valign="top"><a id="af335bede24deb53ca6e1cd2a139226f2" name="af335bede24deb53ca6e1cd2a139226f2"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>description</b></td></tr>
+<tr class="memdesc:af335bede24deb53ca6e1cd2a139226f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Text description of the intention. <br /></td></tr>
 <tr class="memitem:a9e22a5caddde94001f2441c7035e2b3f" id="r_a9e22a5caddde94001f2441c7035e2b3f"><td class="memItemLeft" align="right" valign="top"><a id="a9e22a5caddde94001f2441c7035e2b3f" name="a9e22a5caddde94001f2441c7035e2b3f"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>type</b></td></tr>
+<tr class="memdesc:a9e22a5caddde94001f2441c7035e2b3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type/category of intention. <br /></td></tr>
 <tr class="memitem:a66567871093d81fa9bc8e4a924ded064" id="r_a66567871093d81fa9bc8e4a924ded064"><td class="memItemLeft" align="right" valign="top"><a id="a66567871093d81fa9bc8e4a924ded064" name="a66567871093d81fa9bc8e4a924ded064"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>trigger</b></td></tr>
+<tr class="memdesc:a66567871093d81fa9bc8e4a924ded064"><td class="mdescLeft">&#160;</td><td class="mdescRight">What triggered this intention. <br /></td></tr>
 <tr class="memitem:ae3edc101739302d0cb3fc69d44a13505" id="r_ae3edc101739302d0cb3fc69d44a13505"><td class="memItemLeft" align="right" valign="top"><a id="ae3edc101739302d0cb3fc69d44a13505" name="ae3edc101739302d0cb3fc69d44a13505"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b></td></tr>
+<tr class="memdesc:ae3edc101739302d0cb3fc69d44a13505"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the intention is currently active. <br /></td></tr>
 <tr class="memitem:a05291df8d7250412c59ee83ed435b077" id="r_a05291df8d7250412c59ee83ed435b077"><td class="memItemLeft" align="right" valign="top"><a id="a05291df8d7250412c59ee83ed435b077" name="a05291df8d7250412c59ee83ed435b077"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>motivation</b></td></tr>
+<tr class="memdesc:a05291df8d7250412c59ee83ed435b077"><td class="mdescLeft">&#160;</td><td class="mdescRight">Motivation level (0.0-1.0). <br /></td></tr>
 <tr class="memitem:a8e2fb70a26febb06b13a38aa858b17e8" id="r_a8e2fb70a26febb06b13a38aa858b17e8"><td class="memItemLeft" align="right" valign="top"><a id="a8e2fb70a26febb06b13a38aa858b17e8" name="a8e2fb70a26febb06b13a38aa858b17e8"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>created_at</b></td></tr>
+<tr class="memdesc:a8e2fb70a26febb06b13a38aa858b17e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Timestamp of creation. <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Estrutura para representar intenções do sistema. </p>
-</div><hr/>The documentation for this struct was generated from the following files:<ul>
+<div class="textblock"><p>Structure for representing system intentions. </p>
+<p>Represents goals or purposes that guide the AI's behavior. </p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a25dbce3c86f2f4b0940a7f80cfa99e9b" name="a25dbce3c86f2f4b0940a7f80cfa99e9b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25dbce3c86f2f4b0940a7f80cfa99e9b">&#9670;&#160;</a></span>Intention()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Intention::Intention </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>desc</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>t</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>trig</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Constructor for <a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">desc</td><td>Description text </td></tr>
+    <tr><td class="paramname">t</td><td>Type/category </td></tr>
+    <tr><td class="paramname">trig</td><td>Trigger text (optional) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaMemoryHandler.cpp</b></li>
 </ul>

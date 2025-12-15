@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['temperature_0',['temperature',['../structSimpleModelParameters.html#a039312edbf297a123b51c3abc595a7fb',1,'SimpleModelParameters']]],
-  ['top_5fp_1',['top_p',['../structSimpleModelParameters.html#aae2cc2a8d6ae9b1d6b133bbb1d5e6aa3',1,'SimpleModelParameters']]]
+  ['params_0',['params',['../structSimpleModelConfig.html#a4683354dfebbfd3ab9338439e138b813',1,'SimpleModelConfig']]],
+  ['period_5ffrustation_5fboost_1',['period_frustation_boost',['../structEmotionalAnalyzerConfig.html#a0b1a8e644785c19ef09665468fd0d70d',1,'EmotionalAnalyzerConfig']]]
 ];

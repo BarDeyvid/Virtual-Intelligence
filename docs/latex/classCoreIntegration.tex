@@ -1,62 +1,381 @@
 \doxysection{Core\+Integration Class Reference}
 \hypertarget{classCoreIntegration}{}\label{classCoreIntegration}\index{CoreIntegration@{CoreIntegration}}
+
+
+Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.  
+
+
+
+
+{\ttfamily \#include $<$Core\+LLM.\+hpp$>$}
+
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233}\label{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233} 
-void {\bfseries set\+\_\+user\+\_\+name} (const std\+::string \&name)
-\item 
-\Hypertarget{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670}\label{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670} 
-bool {\bfseries initialize} (const std\+::string \&base\+\_\+model\+\_\+path)
-\item 
-\Hypertarget{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85}\label{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85} 
-std\+::string {\bfseries think} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
-\item 
-\Hypertarget{classCoreIntegration_a1e437e88997c796d82c3a48163942537}\label{classCoreIntegration_a1e437e88997c796d82c3a48163942537} 
-std\+::string {\bfseries think\+\_\+with\+\_\+fusion} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
-\item 
-\Hypertarget{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07}\label{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07} 
-std\+::string {\bfseries think\+\_\+with\+\_\+fusion\+\_\+ttsless} (const std\+::string \&input)
-\item 
-\Hypertarget{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622}\label{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622} 
-void {\bfseries register\+\_\+expert} (std\+::unique\+\_\+ptr$<$ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}} $>$ expert)
-\item 
-\Hypertarget{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc}\label{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc} 
-void {\bfseries remove\+\_\+expert} (const std\+::string \&expert\+\_\+id)
-\item 
-\Hypertarget{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825}\label{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825} 
-bool {\bfseries has\+\_\+expert} (const std\+::string \&expert\+\_\+id) const
-\item 
-\Hypertarget{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65}\label{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65} 
-bool {\bfseries validate\+\_\+context\+\_\+size} (const std\+::string \&prompt, const std\+::string \&expert\+\_\+id)
-\item 
-\Hypertarget{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57}\label{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57} 
-std\+::string {\bfseries detect\+\_\+emotion\+\_\+with\+\_\+heuristics} (const std\+::string \&input)
-\item 
-\Hypertarget{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d}\label{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d} 
-float {\bfseries calculate\+\_\+committee\+\_\+coherence} (const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions)
-\item 
-\Hypertarget{classCoreIntegration_adf6f49f41b4605623b13938e0351b463}\label{classCoreIntegration_adf6f49f41b4605623b13938e0351b463} 
-bool {\bfseries should\+\_\+store\+\_\+in\+\_\+memory} (const std\+::string \&input, const std\+::string \&response)
-\item 
-\Hypertarget{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee}\label{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee} 
-std\+::string {\bfseries generate\+\_\+fused\+\_\+input} (const std\+::string \&original\+\_\+input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions, const std\+::string \&emotion)
-\item 
-\Hypertarget{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773}\label{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773} 
-void {\bfseries log\+\_\+source\+\_\+awareness} (const std\+::string \&source, const std\+::string \&message)
-\item 
+\mbox{\hyperlink{classCoreIntegration_a8dea14e6ebb67536e4346d0aa366bd42}{Core\+Integration}} ()
+\begin{DoxyCompactList}\small\item\em Default constructor. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classCoreIntegration_a0ce069b1eb54149e13b45e59231e88d1}{\texorpdfstring{$\sim$}{\string~}\+Core\+Integration}} ()
+\begin{DoxyCompactList}\small\item\em Destructor. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233}{set\+\_\+user\+\_\+name}} (const std\+::string \&name)
+\begin{DoxyCompactList}\small\item\em Set the user\textquotesingle{}s name for personalized interactions. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670}{initialize}} (const std\+::string \&base\+\_\+model\+\_\+path)
+\begin{DoxyCompactList}\small\item\em Initialize the complete Alyssa AI system. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85}{think}} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
+\begin{DoxyCompactList}\small\item\em Process user input using standard MoE architecture. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classCoreIntegration_a1e437e88997c796d82c3a48163942537}{think\+\_\+with\+\_\+fusion}} (const std\+::string \&input, \mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&tts)
+\begin{DoxyCompactList}\small\item\em Process user input with weighted fusion and TTS. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07}{think\+\_\+with\+\_\+fusion\+\_\+ttsless}} (const std\+::string \&input)
+\begin{DoxyCompactList}\small\item\em Process user input with weighted fusion without TTS. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622}{register\+\_\+expert}} (std\+::unique\+\_\+ptr$<$ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}} $>$ expert)
+\begin{DoxyCompactList}\small\item\em Register a new expert model with the system. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc}{remove\+\_\+expert}} (const std\+::string \&expert\+\_\+id)
+\begin{DoxyCompactList}\small\item\em Remove an expert from the system. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825}{has\+\_\+expert}} (const std\+::string \&expert\+\_\+id) const
+\begin{DoxyCompactList}\small\item\em Check if an expert is registered. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65}{validate\+\_\+context\+\_\+size}} (const std\+::string \&prompt, const std\+::string \&expert\+\_\+id)
+\begin{DoxyCompactList}\small\item\em Validate if input fits within expert\textquotesingle{}s context window. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57}{detect\+\_\+emotion\+\_\+with\+\_\+heuristics}} (const std\+::string \&input)
+\begin{DoxyCompactList}\small\item\em Detect emotional content in input using heuristics. \end{DoxyCompactList}\item 
+float \mbox{\hyperlink{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d}{calculate\+\_\+committee\+\_\+coherence}} (const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions)
+\begin{DoxyCompactList}\small\item\em Calculate coherence metric for expert committee responses. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classCoreIntegration_adf6f49f41b4605623b13938e0351b463}{should\+\_\+store\+\_\+in\+\_\+memory}} (const std\+::string \&input, const std\+::string \&response)
+\begin{DoxyCompactList}\small\item\em Determine if interaction should be stored in long-\/term memory. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee}{generate\+\_\+fused\+\_\+input}} (const std\+::string \&original\+\_\+input, const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&contributions, const std\+::string \&emotion)
+\begin{DoxyCompactList}\small\item\em Generate fused input for Alyssa model from expert contributions. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773}{log\+\_\+source\+\_\+awareness}} (const std\+::string \&source, const std\+::string \&message)
+\begin{DoxyCompactList}\small\item\em Log source awareness information. \end{DoxyCompactList}\item 
 \Hypertarget{classCoreIntegration_af59090e676d2b27556e20b85b88b0883}\label{classCoreIntegration_af59090e676d2b27556e20b85b88b0883} 
 void {\bfseries clear\+\_\+all\+\_\+cache} ()
-\item 
-\Hypertarget{classCoreIntegration_a6a079a27eab5048e494503d25513a701}\label{classCoreIntegration_a6a079a27eab5048e494503d25513a701} 
-void {\bfseries run\+\_\+interactive\+\_\+loop} ()
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Clear all caches including KV cache and expert histories. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classCoreIntegration_a6a079a27eab5048e494503d25513a701}{run\+\_\+interactive\+\_\+loop}} ()
+\begin{DoxyCompactList}\small\item\em Run interactive command-\/line interface. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Public Attributes}
 \begin{DoxyCompactItemize}
 \item 
 \Hypertarget{classCoreIntegration_a5c22b97061386dadc44daafbfc8575b2}\label{classCoreIntegration_a5c22b97061386dadc44daafbfc8575b2} 
 std\+::string {\bfseries user\+\_\+name} = "{}"{}
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Current user\textquotesingle{}s name for personalization. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture. 
+
+This class integrates multiple specialized AI models (experts) with weighted fusion capabilities, memory management, and text-\/to-\/speech functionality. It serves as the central controller for processing user inputs through different expert models and generating coherent responses.
+
+Key features\+:
+\begin{DoxyItemize}
+\item Mixture of Experts (MoE) architecture with specialized models
+\item Weighted fusion of expert contributions
+\item Long-\/term memory integration
+\item Context switching between experts
+\item TTS (Text-\/to-\/\+Speech) integration
+\item Dynamic history management 
+\end{DoxyItemize}
+
+\label{doc-constructors}
+\Hypertarget{classCoreIntegration_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classCoreIntegration_a8dea14e6ebb67536e4346d0aa366bd42}\index{CoreIntegration@{CoreIntegration}!CoreIntegration@{CoreIntegration}}
+\index{CoreIntegration@{CoreIntegration}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{CoreIntegration()}{CoreIntegration()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a8dea14e6ebb67536e4346d0aa366bd42} 
+Core\+Integration\+::\+Core\+Integration (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Default constructor. 
+
+Default constructor for \doxylink{classCoreIntegration}{Core\+Integration}.
+
+Initializes the \doxylink{classCoreIntegration}{Core\+Integration} system with default values.
+
+Initializes with default values and logs construction. \Hypertarget{classCoreIntegration_a0ce069b1eb54149e13b45e59231e88d1}\index{CoreIntegration@{CoreIntegration}!````~CoreIntegration@{\texorpdfstring{$\sim$}{\string~}CoreIntegration}}
+\index{````~CoreIntegration@{\texorpdfstring{$\sim$}{\string~}CoreIntegration}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}CoreIntegration()}{\string~CoreIntegration()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a0ce069b1eb54149e13b45e59231e88d1} 
+Core\+Integration\+::\texorpdfstring{$\sim$}{\string~}\+Core\+Integration (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Destructor. 
+
+Destructor for \doxylink{classCoreIntegration}{Core\+Integration}.
+
+Cleans up all allocated resources and expert histories.
+
+Cleans up expert histories and logs destruction. 
+
+\label{doc-func-members}
+\Hypertarget{classCoreIntegration_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d}\index{CoreIntegration@{CoreIntegration}!calculate\_committee\_coherence@{calculate\_committee\_coherence}}
+\index{calculate\_committee\_coherence@{calculate\_committee\_coherence}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{calculate\_committee\_coherence()}{calculate\_committee\_coherence()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_af7d8f4e2b769482f138a2a5e8604d54d} 
+float Core\+Integration\+::calculate\+\_\+committee\+\_\+coherence (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&}]{contributions}{}\end{DoxyParamCaption})}
+
+
+
+Calculate coherence metric for expert committee responses. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em contributions} & Vector of contributions from different experts. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Coherence score between 0.\+0 (incoherent) and 1.\+0 (fully coherent). 
+\end{DoxyReturn}
+\Hypertarget{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57}\index{CoreIntegration@{CoreIntegration}!detect\_emotion\_with\_heuristics@{detect\_emotion\_with\_heuristics}}
+\index{detect\_emotion\_with\_heuristics@{detect\_emotion\_with\_heuristics}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{detect\_emotion\_with\_heuristics()}{detect\_emotion\_with\_heuristics()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_ac94a5f34c9eeda658273c4aab9a9eb57} 
+std\+::string Core\+Integration\+::detect\+\_\+emotion\+\_\+with\+\_\+heuristics (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{}\end{DoxyParamCaption})}
+
+
+
+Detect emotional content in input using heuristics. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & Text to analyze for emotional content. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Detected emotion as string (e.\+g., "{}neutralidade"{}, "{}curiosidade"{}). 
+\end{DoxyReturn}
+\Hypertarget{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee}\index{CoreIntegration@{CoreIntegration}!generate\_fused\_input@{generate\_fused\_input}}
+\index{generate\_fused\_input@{generate\_fused\_input}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{generate\_fused\_input()}{generate\_fused\_input()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a2ca9b431832480a5181b9fd923b9d3ee} 
+std\+::string Core\+Integration\+::generate\+\_\+fused\+\_\+input (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{original\+\_\+input}{, }\item[{const std\+::vector$<$ \mbox{\hyperlink{structalyssa__fusion_1_1ExpertContribution}{alyssa\+\_\+fusion\+::\+Expert\+Contribution}} $>$ \&}]{contributions}{, }\item[{const std\+::string \&}]{emotion}{}\end{DoxyParamCaption})}
+
+
+
+Generate fused input for Alyssa model from expert contributions. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em original\+\_\+input} & Original user input. \\
+\hline
+{\em contributions} & Vector of expert contributions. \\
+\hline
+{\em emotion} & Detected emotion for context. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Formatted prompt with expert thoughts and memory context. 
+\end{DoxyReturn}
+\Hypertarget{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825}\index{CoreIntegration@{CoreIntegration}!has\_expert@{has\_expert}}
+\index{has\_expert@{has\_expert}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{has\_expert()}{has\_expert()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_aff2510b0122ee6a9a5a385e183433825} 
+bool Core\+Integration\+::has\+\_\+expert (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{expert\+\_\+id}{}\end{DoxyParamCaption}) const}
+
+
+
+Check if an expert is registered. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em expert\+\_\+id} & Unique identifier of the expert. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if expert exists, false otherwise. 
+\end{DoxyReturn}
+\Hypertarget{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670}\index{CoreIntegration@{CoreIntegration}!initialize@{initialize}}
+\index{initialize@{initialize}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_aa7da5760ef5eefc3c3cbc016cdaac670} 
+bool Core\+Integration\+::initialize (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{base\+\_\+model\+\_\+path}{}\end{DoxyParamCaption})}
+
+
+
+Initialize the complete Alyssa AI system. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em base\+\_\+model\+\_\+path} & Path to the base model configuration file. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if initialization succeeded, false otherwise.
+\end{DoxyReturn}
+Loads models, initializes experts, memory system, and fusion engine. \Hypertarget{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773}\index{CoreIntegration@{CoreIntegration}!log\_source\_awareness@{log\_source\_awareness}}
+\index{log\_source\_awareness@{log\_source\_awareness}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{log\_source\_awareness()}{log\_source\_awareness()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a0f50243d938c7252ac2548a5ccc66773} 
+void Core\+Integration\+::log\+\_\+source\+\_\+awareness (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{source}{, }\item[{const std\+::string \&}]{message}{}\end{DoxyParamCaption})}
+
+
+
+Log source awareness information. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em source} & Source identifier (expert ID). \\
+\hline
+{\em message} & Message to log. \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622}\index{CoreIntegration@{CoreIntegration}!register\_expert@{register\_expert}}
+\index{register\_expert@{register\_expert}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{register\_expert()}{register\_expert()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a1a599210624a99886ef7f03c4b8e0622} 
+void Core\+Integration\+::register\+\_\+expert (\begin{DoxyParamCaption}\item[{std\+::unique\+\_\+ptr$<$ \mbox{\hyperlink{classalyssa__experts_1_1IExpert}{alyssa\+\_\+experts\+::\+IExpert}} $>$}]{expert}{}\end{DoxyParamCaption})}
+
+
+
+Register a new expert model with the system. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em expert} & Unique pointer to the expert implementation.\\
+\hline
+{\em expert} & Unique pointer to the expert implementation.\\
+\hline
+\end{DoxyParams}
+Adds expert to internal maps and initializes empty history. \Hypertarget{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc}\index{CoreIntegration@{CoreIntegration}!remove\_expert@{remove\_expert}}
+\index{remove\_expert@{remove\_expert}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{remove\_expert()}{remove\_expert()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a6125b948e70ad850161d9f45d8bb2adc} 
+void Core\+Integration\+::remove\+\_\+expert (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{expert\+\_\+id}{}\end{DoxyParamCaption})}
+
+
+
+Remove an expert from the system. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em expert\+\_\+id} & Unique identifier of the expert to remove.\\
+\hline
+{\em expert\+\_\+id} & Unique identifier of the expert to remove.\\
+\hline
+\end{DoxyParams}
+Removes expert from both expert and history maps. \Hypertarget{classCoreIntegration_a6a079a27eab5048e494503d25513a701}\index{CoreIntegration@{CoreIntegration}!run\_interactive\_loop@{run\_interactive\_loop}}
+\index{run\_interactive\_loop@{run\_interactive\_loop}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{run\_interactive\_loop()}{run\_interactive\_loop()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a6a079a27eab5048e494503d25513a701} 
+void Core\+Integration\+::run\+\_\+interactive\+\_\+loop (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Run interactive command-\/line interface. 
+
+Continuously processes user input until exit command. \Hypertarget{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233}\index{CoreIntegration@{CoreIntegration}!set\_user\_name@{set\_user\_name}}
+\index{set\_user\_name@{set\_user\_name}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{set\_user\_name()}{set\_user\_name()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a7f59d33becbba44981cd1d9c78215233} 
+void Core\+Integration\+::set\+\_\+user\+\_\+name (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{}\end{DoxyParamCaption})}
+
+
+
+Set the user\textquotesingle{}s name for personalized interactions. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em name} & The user\textquotesingle{}s name to be stored in memory. \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classCoreIntegration_adf6f49f41b4605623b13938e0351b463}\index{CoreIntegration@{CoreIntegration}!should\_store\_in\_memory@{should\_store\_in\_memory}}
+\index{should\_store\_in\_memory@{should\_store\_in\_memory}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{should\_store\_in\_memory()}{should\_store\_in\_memory()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_adf6f49f41b4605623b13938e0351b463} 
+bool Core\+Integration\+::should\+\_\+store\+\_\+in\+\_\+memory (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{const std\+::string \&}]{response}{}\end{DoxyParamCaption})}
+
+
+
+Determine if interaction should be stored in long-\/term memory. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & User\textquotesingle{}s input text. \\
+\hline
+{\em response} & System\textquotesingle{}s response text. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if worth storing in memory, false for small talk/noise. 
+\end{DoxyReturn}
+\Hypertarget{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85}\index{CoreIntegration@{CoreIntegration}!think@{think}}
+\index{think@{think}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{think()}{think()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a4aeb9de0e6a186bf9d1d66372986ba85} 
+std\+::string Core\+Integration\+::think (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{\mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&}]{tts}{}\end{DoxyParamCaption})}
+
+
+
+Process user input using standard MoE architecture. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & User\textquotesingle{}s text input. \\
+\hline
+{\em tts} & \doxylink{classElevenLabsTTS}{Eleven\+Labs\+TTS} instance for voice synthesis. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Response generated by the AI system.
+\end{DoxyReturn}
+Uses emotional analysis, memory retrieval, and Alyssa model for final response. \Hypertarget{classCoreIntegration_a1e437e88997c796d82c3a48163942537}\index{CoreIntegration@{CoreIntegration}!think\_with\_fusion@{think\_with\_fusion}}
+\index{think\_with\_fusion@{think\_with\_fusion}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{think\_with\_fusion()}{think\_with\_fusion()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a1e437e88997c796d82c3a48163942537} 
+std\+::string Core\+Integration\+::think\+\_\+with\+\_\+fusion (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{, }\item[{\mbox{\hyperlink{classElevenLabsTTS}{Eleven\+Labs\+TTS}} \&}]{tts}{}\end{DoxyParamCaption})}
+
+
+
+Process user input with weighted fusion and TTS. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & User\textquotesingle{}s text input. \\
+\hline
+{\em tts} & \doxylink{classElevenLabsTTS}{Eleven\+Labs\+TTS} instance for voice synthesis. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Fused response from multiple experts.
+\end{DoxyReturn}
+Runs expert committee, applies weighted fusion, and generates voice output. \Hypertarget{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07}\index{CoreIntegration@{CoreIntegration}!think\_with\_fusion\_ttsless@{think\_with\_fusion\_ttsless}}
+\index{think\_with\_fusion\_ttsless@{think\_with\_fusion\_ttsless}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{think\_with\_fusion\_ttsless()}{think\_with\_fusion\_ttsless()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a4c111fd7f6302718cfdab7e035a03e07} 
+std\+::string Core\+Integration\+::think\+\_\+with\+\_\+fusion\+\_\+ttsless (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{input}{}\end{DoxyParamCaption})}
+
+
+
+Process user input with weighted fusion without TTS. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em input} & User\textquotesingle{}s text input. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Fused response from multiple experts.
+\end{DoxyReturn}
+Same as think\+\_\+with\+\_\+fusion but without voice synthesis. \Hypertarget{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65}\index{CoreIntegration@{CoreIntegration}!validate\_context\_size@{validate\_context\_size}}
+\index{validate\_context\_size@{validate\_context\_size}!CoreIntegration@{CoreIntegration}}
+\doxysubsubsection{\texorpdfstring{validate\_context\_size()}{validate\_context\_size()}}
+{\footnotesize\ttfamily \label{classCoreIntegration_a60addb560ac6020b02fada2e7b7b8d65} 
+bool Core\+Integration\+::validate\+\_\+context\+\_\+size (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{prompt}{, }\item[{const std\+::string \&}]{expert\+\_\+id}{}\end{DoxyParamCaption})}
+
+
+
+Validate if input fits within expert\textquotesingle{}s context window. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em prompt} & Input text to validate. \\
+\hline
+{\em expert\+\_\+id} & Expert identifier. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if context size is sufficient, false otherwise. 
+\end{DoxyReturn}
 
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}

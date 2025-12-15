@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: alyssa_memory::AdvancedMemorySystem Class Reference</title>
+<title>Alyssa Docs: alyssa_memory::AdvancedMemorySystem Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -92,7 +92,7 @@ $(function(){initNavTree('classalyssa__memory_1_1AdvancedMemorySystem.html','','
 </div><!--header-->
 <div class="contents">
 
-<p>Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional.  
+<p>Advanced memory system with vector embeddings and emotional analysis.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
@@ -100,61 +100,658 @@ $(function(){initNavTree('classalyssa__memory_1_1AdvancedMemorySystem.html','','
 <tr class="heading"><td colspan="2"><h2 id="header-nested-classes" class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:ContextualMemory" id="r_ContextualMemory"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html">ContextualMemory</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result structure for contextual memory search.  <a href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html#details">More...</a><br /></td></tr>
 <tr class="memitem:SemanticMemory" id="r_SemanticMemory"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">SemanticMemory</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result structure for semantic memory search.  <a href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html#details">More...</a><br /></td></tr>
 <tr class="memitem:HybridMemoryResult" id="r_HybridMemoryResult"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html">HybridMemoryResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result structure for hybrid (text + semantic) search.  <a href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html#details">More...</a><br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab67d2cc92fce9b624a07d1d036d87fa0" id="r_ab67d2cc92fce9b624a07d1d036d87fa0"><td class="memItemLeft" align="right" valign="top"><a id="ab67d2cc92fce9b624a07d1d036d87fa0" name="ab67d2cc92fce9b624a07d1d036d87fa0"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>AdvancedMemorySystem</b> (const std::string &amp;db_path, std::shared_ptr&lt; <a class="el" href="classEmbedder.html">Embedder</a> &gt; embedder_ref)</td></tr>
-<tr class="memitem:a30a442d414faf39043087933cd2b5f22" id="r_a30a442d414faf39043087933cd2b5f22"><td class="memItemLeft" align="right" valign="top"><a id="a30a442d414faf39043087933cd2b5f22" name="a30a442d414faf39043087933cd2b5f22"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setEmotionalState</b> (const std::string &amp;emotion, double intensity)</td></tr>
-<tr class="memitem:ace61c75af0ee176935578c7dbedbc324" id="r_ace61c75af0ee176935578c7dbedbc324"><td class="memItemLeft" align="right" valign="top"><a id="ace61c75af0ee176935578c7dbedbc324" name="ace61c75af0ee176935578c7dbedbc324"></a>
-<a class="el" href="structEmotionalState.html">EmotionalState</a>&#160;</td><td class="memItemRight" valign="bottom"><b>getCurrentEmotionalState</b> () const</td></tr>
-<tr class="memitem:a4c9c5cfba447db7e44ff58a4deeaf81e" id="r_a4c9c5cfba447db7e44ff58a4deeaf81e"><td class="memItemLeft" align="right" valign="top"><a id="a4c9c5cfba447db7e44ff58a4deeaf81e" name="a4c9c5cfba447db7e44ff58a4deeaf81e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>linkMemoryToIntention</b> (int memory_id, int intention_id)</td></tr>
-<tr class="memitem:ad606b4a9dae8a7f1873469bbf868f349" id="r_ad606b4a9dae8a7f1873469bbf868f349"><td class="memItemLeft" align="right" valign="top"><a id="ad606b4a9dae8a7f1873469bbf868f349" name="ad606b4a9dae8a7f1873469bbf868f349"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>storeMemoryWithEmotionalAnalysis</b> (const std::string &amp;content, const std::string &amp;context=&quot;&quot;)</td></tr>
+<tr class="memitem:ab67d2cc92fce9b624a07d1d036d87fa0" id="r_ab67d2cc92fce9b624a07d1d036d87fa0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab67d2cc92fce9b624a07d1d036d87fa0">AdvancedMemorySystem</a> (const std::string &amp;db_path, std::shared_ptr&lt; <a class="el" href="classEmbedder.html">Embedder</a> &gt; embedder_ref)</td></tr>
+<tr class="memdesc:ab67d2cc92fce9b624a07d1d036d87fa0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="classalyssa__memory_1_1AdvancedMemorySystem.html" title="Advanced memory system with vector embeddings and emotional analysis.">AdvancedMemorySystem</a>.  <br /></td></tr>
+<tr class="memitem:a31878dd070cb59ff3d7b0a91ab398884" id="r_a31878dd070cb59ff3d7b0a91ab398884"><td class="memItemLeft" align="right" valign="top"><a id="a31878dd070cb59ff3d7b0a91ab398884" name="a31878dd070cb59ff3d7b0a91ab398884"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>~AdvancedMemorySystem</b> ()</td></tr>
+<tr class="memdesc:a31878dd070cb59ff3d7b0a91ab398884"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructor - saves state and closes database. <br /></td></tr>
+<tr class="memitem:a30a442d414faf39043087933cd2b5f22" id="r_a30a442d414faf39043087933cd2b5f22"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30a442d414faf39043087933cd2b5f22">setEmotionalState</a> (const std::string &amp;emotion, double intensity)</td></tr>
+<tr class="memdesc:a30a442d414faf39043087933cd2b5f22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set current emotional state.  <br /></td></tr>
+<tr class="memitem:ace61c75af0ee176935578c7dbedbc324" id="r_ace61c75af0ee176935578c7dbedbc324"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structEmotionalState.html">EmotionalState</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace61c75af0ee176935578c7dbedbc324">getCurrentEmotionalState</a> () const</td></tr>
+<tr class="memdesc:ace61c75af0ee176935578c7dbedbc324"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current emotional state.  <br /></td></tr>
+<tr class="memitem:a4c9c5cfba447db7e44ff58a4deeaf81e" id="r_a4c9c5cfba447db7e44ff58a4deeaf81e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c9c5cfba447db7e44ff58a4deeaf81e">linkMemoryToIntention</a> (int memory_id, int intention_id)</td></tr>
+<tr class="memdesc:a4c9c5cfba447db7e44ff58a4deeaf81e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Link memory to intention.  <br /></td></tr>
+<tr class="memitem:ad606b4a9dae8a7f1873469bbf868f349" id="r_ad606b4a9dae8a7f1873469bbf868f349"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad606b4a9dae8a7f1873469bbf868f349">storeMemoryWithEmotionalAnalysis</a> (const std::string &amp;content, const std::string &amp;context=&quot;&quot;)</td></tr>
+<tr class="memdesc:ad606b4a9dae8a7f1873469bbf868f349"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store memory with automatic emotional analysis.  <br /></td></tr>
 <tr class="memitem:aa96e532d50c25f589039ace27a71aad2" id="r_aa96e532d50c25f589039ace27a71aad2"><td class="memItemLeft" align="right" valign="top"><a id="aa96e532d50c25f589039ace27a71aad2" name="aa96e532d50c25f589039ace27a71aad2"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>applyMemoryDecay</b> ()</td></tr>
-<tr class="memitem:a63bb84bca57cb092ce048e82c9544416" id="r_a63bb84bca57cb092ce048e82c9544416"><td class="memItemLeft" align="right" valign="top"><a id="a63bb84bca57cb092ce048e82c9544416" name="a63bb84bca57cb092ce048e82c9544416"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>activateIntention</b> (const std::string &amp;description, const std::string &amp;type, const std::string &amp;trigger=&quot;&quot;, double motivation_boost=0.0)</td></tr>
-<tr class="memitem:abebdddf421bfcca722072c2c34bb1dbf" id="r_abebdddf421bfcca722072c2c34bb1dbf"><td class="memItemLeft" align="right" valign="top"><a id="abebdddf421bfcca722072c2c34bb1dbf" name="abebdddf421bfcca722072c2c34bb1dbf"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>deactivateIntention</b> (int intention_id)</td></tr>
-<tr class="memitem:ab19b7ed96da40af47a6da6d4ece2860b" id="r_ab19b7ed96da40af47a6da6d4ece2860b"><td class="memItemLeft" align="right" valign="top"><a id="ab19b7ed96da40af47a6da6d4ece2860b" name="ab19b7ed96da40af47a6da6d4ece2860b"></a>
-std::vector&lt; <a class="el" href="structIntention.html">Intention</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>getActiveIntentions</b> () const</td></tr>
+<tr class="memdesc:aa96e532d50c25f589039ace27a71aad2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply memory decay over time. <br /></td></tr>
+<tr class="memitem:a63bb84bca57cb092ce048e82c9544416" id="r_a63bb84bca57cb092ce048e82c9544416"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63bb84bca57cb092ce048e82c9544416">activateIntention</a> (const std::string &amp;description, const std::string &amp;type, const std::string &amp;trigger=&quot;&quot;, double motivation_boost=0.0)</td></tr>
+<tr class="memdesc:a63bb84bca57cb092ce048e82c9544416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activate new intention.  <br /></td></tr>
+<tr class="memitem:abebdddf421bfcca722072c2c34bb1dbf" id="r_abebdddf421bfcca722072c2c34bb1dbf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abebdddf421bfcca722072c2c34bb1dbf">deactivateIntention</a> (int intention_id)</td></tr>
+<tr class="memdesc:abebdddf421bfcca722072c2c34bb1dbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deactivate intention by ID.  <br /></td></tr>
+<tr class="memitem:ab19b7ed96da40af47a6da6d4ece2860b" id="r_ab19b7ed96da40af47a6da6d4ece2860b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structIntention.html">Intention</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab19b7ed96da40af47a6da6d4ece2860b">getActiveIntentions</a> () const</td></tr>
+<tr class="memdesc:ab19b7ed96da40af47a6da6d4ece2860b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get active intentions.  <br /></td></tr>
 <tr class="memitem:aa24a03c7e83706a92ac90b13ad3ba872" id="r_aa24a03c7e83706a92ac90b13ad3ba872"><td class="memItemLeft" align="right" valign="top"><a id="aa24a03c7e83706a92ac90b13ad3ba872" name="aa24a03c7e83706a92ac90b13ad3ba872"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>generateReflections</b> ()</td></tr>
-<tr class="memitem:ad4f858b2c8c6943cae4ea3c6272a43f3" id="r_ad4f858b2c8c6943cae4ea3c6272a43f3"><td class="memItemLeft" align="right" valign="top"><a id="ad4f858b2c8c6943cae4ea3c6272a43f3" name="ad4f858b2c8c6943cae4ea3c6272a43f3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>createMemoryLink</b> (<a class="el" href="structMemoryId.html">MemoryId</a> source_id, <a class="el" href="structMemoryId.html">MemoryId</a> target_id, double weight=1.0, const std::string &amp;link_type=&quot;association&quot;)</td></tr>
-<tr class="memitem:a6254ffa6ecdd2d18e250374f02e9b8ea" id="r_a6254ffa6ecdd2d18e250374f02e9b8ea"><td class="memItemLeft" align="right" valign="top"><a id="a6254ffa6ecdd2d18e250374f02e9b8ea" name="a6254ffa6ecdd2d18e250374f02e9b8ea"></a>
-std::vector&lt; <a class="el" href="structMemoryLink.html">MemoryLink</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>getMemoryLinks</b> (<a class="el" href="structMemoryId.html">MemoryId</a> memory_id)</td></tr>
-<tr class="memitem:a6de450731d78b477e631d4368f09b5b0" id="r_a6de450731d78b477e631d4368f09b5b0"><td class="memItemLeft" align="right" valign="top"><a id="a6de450731d78b477e631d4368f09b5b0" name="a6de450731d78b477e631d4368f09b5b0"></a>
-std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html">ContextualMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>searchContextualMemories</b> (const std::string &amp;query, int top_k=5)</td></tr>
-<tr class="memitem:a24e054d355be5ce6bbaaab4305645509" id="r_a24e054d355be5ce6bbaaab4305645509"><td class="memItemLeft" align="right" valign="top"><a id="a24e054d355be5ce6bbaaab4305645509" name="a24e054d355be5ce6bbaaab4305645509"></a>
-std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">SemanticMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>semanticSearch</b> (const std::string &amp;query, int top_k=5)</td></tr>
-<tr class="memitem:a64e80d220f00428a3a863829257c6553" id="r_a64e80d220f00428a3a863829257c6553"><td class="memItemLeft" align="right" valign="top"><a id="a64e80d220f00428a3a863829257c6553" name="a64e80d220f00428a3a863829257c6553"></a>
-std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">SemanticMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>semanticSearchWithEmbedding</b> (const std::vector&lt; float &gt; &amp;query_embedding, int top_k=5)</td></tr>
-<tr class="memitem:af758d021af2c7da892b0da4c163e635c" id="r_af758d021af2c7da892b0da4c163e635c"><td class="memItemLeft" align="right" valign="top"><a id="af758d021af2c7da892b0da4c163e635c" name="af758d021af2c7da892b0da4c163e635c"></a>
-std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html">HybridMemoryResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>hybridSearch</b> (const std::string &amp;query, int top_k=5)</td></tr>
-<tr class="memitem:aa3a562b0f5bd7148653580f90d383d09" id="r_aa3a562b0f5bd7148653580f90d383d09"><td class="memItemLeft" align="right" valign="top"><a id="aa3a562b0f5bd7148653580f90d383d09" name="aa3a562b0f5bd7148653580f90d383d09"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>hasEmbedder</b> () const</td></tr>
-<tr class="memitem:aef7cac313113b2bac3a0f6ab7a0b594b" id="r_aef7cac313113b2bac3a0f6ab7a0b594b"><td class="memItemLeft" align="right" valign="top"><a id="aef7cac313113b2bac3a0f6ab7a0b594b" name="aef7cac313113b2bac3a0f6ab7a0b594b"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>generateAndStoreEmbedding</b> (int memory_id, const std::string &amp;content)</td></tr>
-<tr class="memitem:a615e8823acb324e9969652a2f7ec4588" id="r_a615e8823acb324e9969652a2f7ec4588"><td class="memItemLeft" align="right" valign="top"><a id="a615e8823acb324e9969652a2f7ec4588" name="a615e8823acb324e9969652a2f7ec4588"></a>
-<a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><b>analyzeEmotionalContent</b> (const std::string &amp;text)</td></tr>
-<tr class="memitem:ad4ba1ef7b814237d9e7638d324a4138d" id="r_ad4ba1ef7b814237d9e7638d324a4138d"><td class="memItemLeft" align="right" valign="top"><a id="ad4ba1ef7b814237d9e7638d324a4138d" name="ad4ba1ef7b814237d9e7638d324a4138d"></a>
-<a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><b>analyzeConversationEmotions</b> (const std::string &amp;user_input, const std::string &amp;ai_response)</td></tr>
-<tr class="memitem:af4dc106047024356b952103bf9ccf284" id="r_af4dc106047024356b952103bf9ccf284"><td class="memItemLeft" align="right" valign="top"><a id="af4dc106047024356b952103bf9ccf284" name="af4dc106047024356b952103bf9ccf284"></a>
-std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>getAutoEmotionalVector</b> (const std::string &amp;text)</td></tr>
+<tr class="memdesc:aa24a03c7e83706a92ac90b13ad3ba872"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate reflections based on recent memories. <br /></td></tr>
+<tr class="memitem:ad4f858b2c8c6943cae4ea3c6272a43f3" id="r_ad4f858b2c8c6943cae4ea3c6272a43f3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4f858b2c8c6943cae4ea3c6272a43f3">createMemoryLink</a> (<a class="el" href="structMemoryId.html">MemoryId</a> source_id, <a class="el" href="structMemoryId.html">MemoryId</a> target_id, double weight=1.0, const std::string &amp;link_type=&quot;association&quot;)</td></tr>
+<tr class="memdesc:ad4f858b2c8c6943cae4ea3c6272a43f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create link between memories.  <br /></td></tr>
+<tr class="memitem:a6254ffa6ecdd2d18e250374f02e9b8ea" id="r_a6254ffa6ecdd2d18e250374f02e9b8ea"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structMemoryLink.html">MemoryLink</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6254ffa6ecdd2d18e250374f02e9b8ea">getMemoryLinks</a> (<a class="el" href="structMemoryId.html">MemoryId</a> memory_id)</td></tr>
+<tr class="memdesc:a6254ffa6ecdd2d18e250374f02e9b8ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get links associated with memory.  <br /></td></tr>
+<tr class="memitem:a6de450731d78b477e631d4368f09b5b0" id="r_a6de450731d78b477e631d4368f09b5b0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html">ContextualMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6de450731d78b477e631d4368f09b5b0">searchContextualMemories</a> (const std::string &amp;query, int top_k=5)</td></tr>
+<tr class="memdesc:a6de450731d78b477e631d4368f09b5b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Search memories contextually (text-based).  <br /></td></tr>
+<tr class="memitem:a24e054d355be5ce6bbaaab4305645509" id="r_a24e054d355be5ce6bbaaab4305645509"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">SemanticMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24e054d355be5ce6bbaaab4305645509">semanticSearch</a> (const std::string &amp;query, int top_k=5)</td></tr>
+<tr class="memdesc:a24e054d355be5ce6bbaaab4305645509"><td class="mdescLeft">&#160;</td><td class="mdescRight">Search memories semantically (embedding-based).  <br /></td></tr>
+<tr class="memitem:a64e80d220f00428a3a863829257c6553" id="r_a64e80d220f00428a3a863829257c6553"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">SemanticMemory</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64e80d220f00428a3a863829257c6553">semanticSearchWithEmbedding</a> (const std::vector&lt; float &gt; &amp;query_embedding, int top_k=5)</td></tr>
+<tr class="memdesc:a64e80d220f00428a3a863829257c6553"><td class="mdescLeft">&#160;</td><td class="mdescRight">Search memories with pre-computed embedding.  <br /></td></tr>
+<tr class="memitem:af758d021af2c7da892b0da4c163e635c" id="r_af758d021af2c7da892b0da4c163e635c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html">HybridMemoryResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af758d021af2c7da892b0da4c163e635c">hybridSearch</a> (const std::string &amp;query, int top_k=5)</td></tr>
+<tr class="memdesc:af758d021af2c7da892b0da4c163e635c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hybrid search (text + semantic).  <br /></td></tr>
+<tr class="memitem:aa3a562b0f5bd7148653580f90d383d09" id="r_aa3a562b0f5bd7148653580f90d383d09"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa3a562b0f5bd7148653580f90d383d09">hasEmbedder</a> () const</td></tr>
+<tr class="memdesc:aa3a562b0f5bd7148653580f90d383d09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if embedder is available.  <br /></td></tr>
+<tr class="memitem:aef7cac313113b2bac3a0f6ab7a0b594b" id="r_aef7cac313113b2bac3a0f6ab7a0b594b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef7cac313113b2bac3a0f6ab7a0b594b">generateAndStoreEmbedding</a> (int memory_id, const std::string &amp;content)</td></tr>
+<tr class="memdesc:aef7cac313113b2bac3a0f6ab7a0b594b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate and store embedding for memory.  <br /></td></tr>
+<tr class="memitem:a615e8823acb324e9969652a2f7ec4588" id="r_a615e8823acb324e9969652a2f7ec4588"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a615e8823acb324e9969652a2f7ec4588">analyzeEmotionalContent</a> (const std::string &amp;text)</td></tr>
+<tr class="memdesc:a615e8823acb324e9969652a2f7ec4588"><td class="mdescLeft">&#160;</td><td class="mdescRight">Analyze emotional content of text.  <br /></td></tr>
+<tr class="memitem:ad4ba1ef7b814237d9e7638d324a4138d" id="r_ad4ba1ef7b814237d9e7638d324a4138d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4ba1ef7b814237d9e7638d324a4138d">analyzeConversationEmotions</a> (const std::string &amp;user_input, const std::string &amp;ai_response)</td></tr>
+<tr class="memdesc:ad4ba1ef7b814237d9e7638d324a4138d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Analyze emotions in conversation.  <br /></td></tr>
+<tr class="memitem:af4dc106047024356b952103bf9ccf284" id="r_af4dc106047024356b952103bf9ccf284"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af4dc106047024356b952103bf9ccf284">getAutoEmotionalVector</a> (const std::string &amp;text)</td></tr>
+<tr class="memdesc:af4dc106047024356b952103bf9ccf284"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get automatic emotional vector for text.  <br /></td></tr>
 <tr class="memitem:a7c827b4b752435720996bbb52b9b3f31" id="r_a7c827b4b752435720996bbb52b9b3f31"><td class="memItemLeft" align="right" valign="top"><a id="a7c827b4b752435720996bbb52b9b3f31" name="a7c827b4b752435720996bbb52b9b3f31"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>printSystemStatus</b> ()</td></tr>
-<tr class="memitem:ab8d194949351c84e93c58a5249f1fd63" id="r_ab8d194949351c84e93c58a5249f1fd63"><td class="memItemLeft" align="right" valign="top"><a id="ab8d194949351c84e93c58a5249f1fd63" name="ab8d194949351c84e93c58a5249f1fd63"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>demonstrateSemanticSearch</b> (const std::string &amp;query)</td></tr>
+<tr class="memdesc:a7c827b4b752435720996bbb52b9b3f31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print system status to console. <br /></td></tr>
+<tr class="memitem:ab8d194949351c84e93c58a5249f1fd63" id="r_ab8d194949351c84e93c58a5249f1fd63"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab8d194949351c84e93c58a5249f1fd63">demonstrateSemanticSearch</a> (const std::string &amp;query)</td></tr>
+<tr class="memdesc:ab8d194949351c84e93c58a5249f1fd63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Demonstrate semantic search with debug output.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Sistema avançado de memória com suporte a embeddings vetoriais e análise emocional. </p>
-</div><hr/>The documentation for this class was generated from the following files:<ul>
+<div class="textblock"><p>Advanced memory system with vector embeddings and emotional analysis. </p>
+<p>Core system for storing, retrieving, and analyzing memories with emotional context and semantic search capabilities. </p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="ab67d2cc92fce9b624a07d1d036d87fa0" name="ab67d2cc92fce9b624a07d1d036d87fa0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab67d2cc92fce9b624a07d1d036d87fa0">&#9670;&#160;</a></span>AdvancedMemorySystem()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AdvancedMemorySystem::AdvancedMemorySystem </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>db_path</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classEmbedder.html">Embedder</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>embedder_ref</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Constructor for <a class="el" href="classalyssa__memory_1_1AdvancedMemorySystem.html" title="Advanced memory system with vector embeddings and emotional analysis.">AdvancedMemorySystem</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">db_path</td><td>Path to SQLite database file </td></tr>
+    <tr><td class="paramname">embedder_ref</td><td>Shared pointer to <a class="el" href="classEmbedder.html" title="Main class for generating text embeddings using llama.cpp models.">Embedder</a> instance </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="exception"><dt>Exceptions</dt><dd>
+  <table class="exception">
+    <tr><td class="paramname">std::runtime_error</td><td>if database cannot be opened </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a63bb84bca57cb092ce048e82c9544416" name="a63bb84bca57cb092ce048e82c9544416"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63bb84bca57cb092ce048e82c9544416">&#9670;&#160;</a></span>activateIntention()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::activateIntention </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>description</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>type</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>trigger</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>motivation_boost</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.0</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Activate new intention. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">description</td><td><a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a> description </td></tr>
+    <tr><td class="paramname">type</td><td><a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a> type/category </td></tr>
+    <tr><td class="paramname">trigger</td><td>Trigger text (optional) </td></tr>
+    <tr><td class="paramname">motivation_boost</td><td>Additional motivation boost (optional) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad4ba1ef7b814237d9e7638d324a4138d" name="ad4ba1ef7b814237d9e7638d324a4138d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4ba1ef7b814237d9e7638d324a4138d">&#9670;&#160;</a></span>analyzeConversationEmotions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a> AdvancedMemorySystem::analyzeConversationEmotions </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>user_input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>ai_response</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Analyze emotions in conversation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">user_input</td><td>User input text </td></tr>
+    <tr><td class="paramname">ai_response</td><td>AI response text </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Combined emotional analysis </dd></dl>
+
+</div>
+</div>
+<a id="a615e8823acb324e9969652a2f7ec4588" name="a615e8823acb324e9969652a2f7ec4588"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a615e8823acb324e9969652a2f7ec4588">&#9670;&#160;</a></span>analyzeEmotionalContent()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structEmotionalAnalysis.html">EmotionalAnalysis</a> AdvancedMemorySystem::analyzeEmotionalContent </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>text</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Analyze emotional content of text. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">text</td><td>Text to analyze </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="structEmotionalAnalysis.html" title="Structure for emotional analysis results of text.">EmotionalAnalysis</a> structure with results </dd></dl>
+
+</div>
+</div>
+<a id="ad4f858b2c8c6943cae4ea3c6272a43f3" name="ad4f858b2c8c6943cae4ea3c6272a43f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4f858b2c8c6943cae4ea3c6272a43f3">&#9670;&#160;</a></span>createMemoryLink()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::createMemoryLink </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structMemoryId.html">MemoryId</a></td>          <td class="paramname"><span class="paramname"><em>source_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structMemoryId.html">MemoryId</a></td>          <td class="paramname"><span class="paramname"><em>target_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>weight</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>link_type</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;association&quot;</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Create link between memories. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">source_id</td><td>Source memory ID </td></tr>
+    <tr><td class="paramname">target_id</td><td>Target memory ID </td></tr>
+    <tr><td class="paramname">weight</td><td>Link weight (default: 1.0) </td></tr>
+    <tr><td class="paramname">link_type</td><td>Link type (default: "association") </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="abebdddf421bfcca722072c2c34bb1dbf" name="abebdddf421bfcca722072c2c34bb1dbf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abebdddf421bfcca722072c2c34bb1dbf">&#9670;&#160;</a></span>deactivateIntention()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::deactivateIntention </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>intention_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Deactivate intention by ID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">intention_id</td><td><a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a> ID to deactivate </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ab8d194949351c84e93c58a5249f1fd63" name="ab8d194949351c84e93c58a5249f1fd63"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8d194949351c84e93c58a5249f1fd63">&#9670;&#160;</a></span>demonstrateSemanticSearch()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::demonstrateSemanticSearch </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>query</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Demonstrate semantic search with debug output. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">query</td><td>Search query for demonstration </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aef7cac313113b2bac3a0f6ab7a0b594b" name="aef7cac313113b2bac3a0f6ab7a0b594b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef7cac313113b2bac3a0f6ab7a0b594b">&#9670;&#160;</a></span>generateAndStoreEmbedding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AdvancedMemorySystem::generateAndStoreEmbedding </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>memory_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>content</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Generate and store embedding for memory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">memory_id</td><td>Memory ID </td></tr>
+    <tr><td class="paramname">content</td><td>Memory content to embed </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if successful, false otherwise </dd></dl>
+
+</div>
+</div>
+<a id="ab19b7ed96da40af47a6da6d4ece2860b" name="ab19b7ed96da40af47a6da6d4ece2860b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab19b7ed96da40af47a6da6d4ece2860b">&#9670;&#160;</a></span>getActiveIntentions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structIntention.html">Intention</a> &gt; AdvancedMemorySystem::getActiveIntentions </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get active intentions. </p>
+<dl class="section return"><dt>Returns</dt><dd>Vector of active <a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a> structures </dd></dl>
+
+</div>
+</div>
+<a id="af4dc106047024356b952103bf9ccf284" name="af4dc106047024356b952103bf9ccf284"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4dc106047024356b952103bf9ccf284">&#9670;&#160;</a></span>getAutoEmotionalVector()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; AdvancedMemorySystem::getAutoEmotionalVector </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>text</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get automatic emotional vector for text. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">text</td><td>Text to analyze </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Emotional vector (normalized) </dd></dl>
+
+</div>
+</div>
+<a id="ace61c75af0ee176935578c7dbedbc324" name="ace61c75af0ee176935578c7dbedbc324"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace61c75af0ee176935578c7dbedbc324">&#9670;&#160;</a></span>getCurrentEmotionalState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structEmotionalState.html">EmotionalState</a> AdvancedMemorySystem::getCurrentEmotionalState </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get current emotional state. </p>
+<dl class="section return"><dt>Returns</dt><dd>Current <a class="el" href="structEmotionalState.html" title="Structure for representing emotional state with timestamp.">EmotionalState</a> structure </dd></dl>
+
+</div>
+</div>
+<a id="a6254ffa6ecdd2d18e250374f02e9b8ea" name="a6254ffa6ecdd2d18e250374f02e9b8ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6254ffa6ecdd2d18e250374f02e9b8ea">&#9670;&#160;</a></span>getMemoryLinks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structMemoryLink.html">MemoryLink</a> &gt; AdvancedMemorySystem::getMemoryLinks </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structMemoryId.html">MemoryId</a></td>          <td class="paramname"><span class="paramname"><em>memory_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get links associated with memory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">memory_id</td><td>Memory ID </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of <a class="el" href="structMemoryLink.html" title="Structure for links between memories.">MemoryLink</a> structures </dd></dl>
+
+</div>
+</div>
+<a id="aa3a562b0f5bd7148653580f90d383d09" name="aa3a562b0f5bd7148653580f90d383d09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3a562b0f5bd7148653580f90d383d09">&#9670;&#160;</a></span>hasEmbedder()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AdvancedMemorySystem::hasEmbedder </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Check if embedder is available. </p>
+<dl class="section return"><dt>Returns</dt><dd>true if embedder is initialized and ready </dd></dl>
+
+</div>
+</div>
+<a id="af758d021af2c7da892b0da4c163e635c" name="af758d021af2c7da892b0da4c163e635c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af758d021af2c7da892b0da4c163e635c">&#9670;&#160;</a></span>hybridSearch()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html">AdvancedMemorySystem::HybridMemoryResult</a> &gt; AdvancedMemorySystem::hybridSearch </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>query</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>top_k</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Hybrid search (text + semantic). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">query</td><td>Search query text </td></tr>
+    <tr><td class="paramname">top_k</td><td>Number of results to return (default: 5) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult.html" title="Result structure for hybrid (text + semantic) search.">HybridMemoryResult</a> structures </dd></dl>
+
+</div>
+</div>
+<a id="a4c9c5cfba447db7e44ff58a4deeaf81e" name="a4c9c5cfba447db7e44ff58a4deeaf81e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c9c5cfba447db7e44ff58a4deeaf81e">&#9670;&#160;</a></span>linkMemoryToIntention()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::linkMemoryToIntention </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>memory_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>intention_id</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Link memory to intention. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">memory_id</td><td>Memory ID </td></tr>
+    <tr><td class="paramname">intention_id</td><td><a class="el" href="structIntention.html" title="Structure for representing system intentions.">Intention</a> ID </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a6de450731d78b477e631d4368f09b5b0" name="a6de450731d78b477e631d4368f09b5b0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6de450731d78b477e631d4368f09b5b0">&#9670;&#160;</a></span>searchContextualMemories()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html">AdvancedMemorySystem::ContextualMemory</a> &gt; AdvancedMemorySystem::searchContextualMemories </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>query</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>top_k</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Search memories contextually (text-based). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">query</td><td>Search query text </td></tr>
+    <tr><td class="paramname">top_k</td><td>Number of results to return (default: 5) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html" title="Result structure for contextual memory search.">ContextualMemory</a> results </dd></dl>
+
+</div>
+</div>
+<a id="a24e054d355be5ce6bbaaab4305645509" name="a24e054d355be5ce6bbaaab4305645509"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24e054d355be5ce6bbaaab4305645509">&#9670;&#160;</a></span>semanticSearch()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">AdvancedMemorySystem::SemanticMemory</a> &gt; AdvancedMemorySystem::semanticSearch </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>query</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>top_k</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Search memories semantically (embedding-based). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">query</td><td>Search query text </td></tr>
+    <tr><td class="paramname">top_k</td><td>Number of results to return (default: 5) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html" title="Result structure for semantic memory search.">SemanticMemory</a> results </dd></dl>
+
+</div>
+</div>
+<a id="a64e80d220f00428a3a863829257c6553" name="a64e80d220f00428a3a863829257c6553"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64e80d220f00428a3a863829257c6553">&#9670;&#160;</a></span>semanticSearchWithEmbedding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html">AdvancedMemorySystem::SemanticMemory</a> &gt; AdvancedMemorySystem::semanticSearchWithEmbedding </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>query_embedding</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>top_k</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Search memories with pre-computed embedding. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">query_embedding</td><td>Query embedding vector </td></tr>
+    <tr><td class="paramname">top_k</td><td>Number of results to return (default: 5) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of <a class="el" href="structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory.html" title="Result structure for semantic memory search.">SemanticMemory</a> results </dd></dl>
+
+</div>
+</div>
+<a id="a30a442d414faf39043087933cd2b5f22" name="a30a442d414faf39043087933cd2b5f22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30a442d414faf39043087933cd2b5f22">&#9670;&#160;</a></span>setEmotionalState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AdvancedMemorySystem::setEmotionalState </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>emotion</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>intensity</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set current emotional state. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">emotion</td><td>Emotion name </td></tr>
+    <tr><td class="paramname">intensity</td><td>Emotion intensity (0.0-1.0) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad606b4a9dae8a7f1873469bbf868f349" name="ad606b4a9dae8a7f1873469bbf868f349"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad606b4a9dae8a7f1873469bbf868f349">&#9670;&#160;</a></span>storeMemoryWithEmotionalAnalysis()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int AdvancedMemorySystem::storeMemoryWithEmotionalAnalysis </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>content</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>context</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Store memory with automatic emotional analysis. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">content</td><td>Memory content </td></tr>
+    <tr><td class="paramname">context</td><td>Memory context (optional) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Memory ID if successful, -1 on error </dd></dl>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaMemoryHandler.cpp</b></li>
 </ul>

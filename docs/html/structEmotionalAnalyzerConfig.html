@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: EmotionalAnalyzerConfig Struct Reference</title>
+<title>Alyssa Docs: EmotionalAnalyzerConfig Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -91,10 +91,16 @@ $(function(){initNavTree('structEmotionalAnalyzerConfig.html','','structEmotiona
   <div class="headertitle"><div class="title">EmotionalAnalyzerConfig Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Configuration structure for emotional analyzer settings.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-nested-classes" class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:EmotionWeight" id="r_EmotionWeight"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structEmotionalAnalyzerConfig_1_1EmotionWeight.html">EmotionWeight</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pair structure for emotion-weight combinations.  <a href="structEmotionalAnalyzerConfig_1_1EmotionWeight.html#details">More...</a><br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -102,24 +108,36 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ac381238c93b0d2bc47cd3079d5b4e66c" id="r_ac381238c93b0d2bc47cd3079d5b4e66c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac381238c93b0d2bc47cd3079d5b4e66c">emotion_categories</a></td></tr>
 <tr class="memitem:a45fa533807ab65ce433dd072649a8556" id="r_a45fa533807ab65ce433dd072649a8556"><td class="memItemLeft" align="right" valign="top"><a id="a45fa533807ab65ce433dd072649a8556" name="a45fa533807ab65ce433dd072649a8556"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>lexicon_word_weight</b> = 0.1</td></tr>
+<tr class="memdesc:a45fa533807ab65ce433dd072649a8556"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for lexicon-based word matching. <br /></td></tr>
 <tr class="memitem:a44b6612294eff390c75129d6466a71a7" id="r_a44b6612294eff390c75129d6466a71a7"><td class="memItemLeft" align="right" valign="top"><a id="a44b6612294eff390c75129d6466a71a7" name="a44b6612294eff390c75129d6466a71a7"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>intesifier_boost</b> = 0.15</td></tr>
+<tr class="memdesc:a44b6612294eff390c75129d6466a71a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost value for intensifier words. <br /></td></tr>
 <tr class="memitem:a0132953b4a7c171d47006d5a5d5191ea" id="r_a0132953b4a7c171d47006d5a5d5191ea"><td class="memItemLeft" align="right" valign="top"><a id="a0132953b4a7c171d47006d5a5d5191ea" name="a0132953b4a7c171d47006d5a5d5191ea"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>negation_penalty</b> = 0.1</td></tr>
+<tr class="memdesc:a0132953b4a7c171d47006d5a5d5191ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Penalty for negation words. <br /></td></tr>
 <tr class="memitem:a30770ce6ded01446d599deb2162f4f2a" id="r_a30770ce6ded01446d599deb2162f4f2a"><td class="memItemLeft" align="right" valign="top"><a id="a30770ce6ded01446d599deb2162f4f2a" name="a30770ce6ded01446d599deb2162f4f2a"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>exclamation_boost</b> = 0.05</td></tr>
+<tr class="memdesc:a30770ce6ded01446d599deb2162f4f2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost for exclamation marks. <br /></td></tr>
 <tr class="memitem:acabf13cdd4d75a5f6a1a230a166af27f" id="r_acabf13cdd4d75a5f6a1a230a166af27f"><td class="memItemLeft" align="right" valign="top"><a id="acabf13cdd4d75a5f6a1a230a166af27f" name="acabf13cdd4d75a5f6a1a230a166af27f"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>question_boost</b> = 0.08</td></tr>
+<tr class="memdesc:acabf13cdd4d75a5f6a1a230a166af27f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost for question marks. <br /></td></tr>
 <tr class="memitem:a0b1a8e644785c19ef09665468fd0d70d" id="r_a0b1a8e644785c19ef09665468fd0d70d"><td class="memItemLeft" align="right" valign="top"><a id="a0b1a8e644785c19ef09665468fd0d70d" name="a0b1a8e644785c19ef09665468fd0d70d"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>period_frustation_boost</b> = 0.05</td></tr>
+<tr class="memdesc:a0b1a8e644785c19ef09665468fd0d70d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost for multiple periods (frustration). <br /></td></tr>
 <tr class="memitem:a4c6763fcafe8ecef3d013d71c6cf6321" id="r_a4c6763fcafe8ecef3d013d71c6cf6321"><td class="memItemLeft" align="right" valign="top"><a id="a4c6763fcafe8ecef3d013d71c6cf6321" name="a4c6763fcafe8ecef3d013d71c6cf6321"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>min_confidence_threshold</b> = 0.1</td></tr>
+<tr class="memdesc:a4c6763fcafe8ecef3d013d71c6cf6321"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum confidence threshold for emotion detection. <br /></td></tr>
 <tr class="memitem:a59ef0879235b1ac2e3ae47b49ea9535d" id="r_a59ef0879235b1ac2e3ae47b49ea9535d"><td class="memItemLeft" align="right" valign="top"><a id="a59ef0879235b1ac2e3ae47b49ea9535d" name="a59ef0879235b1ac2e3ae47b49ea9535d"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>user_input_weight</b> = 0.7</td></tr>
+<tr class="memdesc:a59ef0879235b1ac2e3ae47b49ea9535d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for user input in conversation analysis. <br /></td></tr>
 <tr class="memitem:a7ba60cba3455147ab950e9eda1d6bfab" id="r_a7ba60cba3455147ab950e9eda1d6bfab"><td class="memItemLeft" align="right" valign="top"><a id="a7ba60cba3455147ab950e9eda1d6bfab" name="a7ba60cba3455147ab950e9eda1d6bfab"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>ai_response_weight</b> = 0.3</td></tr>
+<tr class="memdesc:a7ba60cba3455147ab950e9eda1d6bfab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for AI response in conversation analysis. <br /></td></tr>
 </table>
-<a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Configuration structure for emotional analyzer settings. </p>
+<p>This struct contains configuration parameters for the emotional analysis system, including emotion weights, scoring parameters, and conversation weighting. </p>
+</div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="a180d66289539269b5027ee5f652de9ed" name="a180d66289539269b5027ee5f652de9ed"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a180d66289539269b5027ee5f652de9ed">&#9670;&#160;</a></span>default_weights</h2>
 
@@ -131,7 +149,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>ai_response_weight<
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<b>Initial value:</b><div class="fragment"><div class="line">= {  </div>
 <div class="line">        {<span class="stringliteral">&quot;alegria&quot;</span>, 1.0}, {<span class="stringliteral">&quot;tristeza&quot;</span>, 1.0}, {<span class="stringliteral">&quot;raiva&quot;</span>, 1.0}, </div>
 <div class="line">        {<span class="stringliteral">&quot;medo&quot;</span>, 1.0}, {<span class="stringliteral">&quot;surpresa&quot;</span>, 0.8}, {<span class="stringliteral">&quot;confiança&quot;</span>, 0.9},</div>
 <div class="line">        {<span class="stringliteral">&quot;antecipacao&quot;</span>, 0.7}, {<span class="stringliteral">&quot;desgosto&quot;</span>, 0.9}</div>
@@ -150,7 +168,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>ai_response_weight<
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<b>Initial value:</b><div class="fragment"><div class="line">= {  </div>
 <div class="line">        <span class="stringliteral">&quot;alegria&quot;</span>, <span class="stringliteral">&quot;tristeza&quot;</span>, <span class="stringliteral">&quot;raiva&quot;</span>, <span class="stringliteral">&quot;medo&quot;</span>, </div>
 <div class="line">        <span class="stringliteral">&quot;surpresa&quot;</span>, <span class="stringliteral">&quot;confiança&quot;</span>, <span class="stringliteral">&quot;antecipacao&quot;</span>, <span class="stringliteral">&quot;desgosto&quot;</span></div>
 <div class="line">    }</div>

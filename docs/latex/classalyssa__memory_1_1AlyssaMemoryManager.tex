@@ -2,7 +2,7 @@
 \hypertarget{classalyssa__memory_1_1AlyssaMemoryManager}{}\label{classalyssa__memory_1_1AlyssaMemoryManager}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
 
 
-Gerenciador de alto nível para integração com sistemas de IA conversacional.  
+High-\/level manager for conversational AI memory integration.  
 
 
 
@@ -12,52 +12,286 @@ Gerenciador de alto nível para integração com sistemas de IA conversacional.
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a3f9d1f5e2f3999390c8f10eca3764551}\label{classalyssa__memory_1_1AlyssaMemoryManager_a3f9d1f5e2f3999390c8f10eca3764551} 
-void {\bfseries set\+Search\+Config} (const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \&config)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a385dd2785c5d36c7edf7dc4328262380}\label{classalyssa__memory_1_1AlyssaMemoryManager_a385dd2785c5d36c7edf7dc4328262380} 
-const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \& {\bfseries get\+Search\+Config} () const
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a94e3ac313e37f74b5690be40a0ded8fb}\label{classalyssa__memory_1_1AlyssaMemoryManager_a94e3ac313e37f74b5690be40a0ded8fb} 
-{\bfseries Alyssa\+Memory\+Manager} (const std\+::string \&db\+\_\+path, std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$ embedder\+\_\+ref)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_adaa16de974434e76cddd353eb465f1bf}\label{classalyssa__memory_1_1AlyssaMemoryManager_adaa16de974434e76cddd353eb465f1bf} 
-void {\bfseries process\+Interaction} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a6ecb59e5c25864006580ada5f785ffe1}\label{classalyssa__memory_1_1AlyssaMemoryManager_a6ecb59e5c25864006580ada5f785ffe1} 
-void {\bfseries process\+Interaction} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response, const std\+::vector$<$ float $>$ \&emotional\+\_\+vector)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_abbe573cfad50da4fbbc4f797ac024822}\label{classalyssa__memory_1_1AlyssaMemoryManager_abbe573cfad50da4fbbc4f797ac024822} 
-std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{Advanced\+Memory\+System\+::\+Contextual\+Memory}} $>$ {\bfseries get\+Relevant\+Memories} (const std\+::string \&context)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a603dbfcdf8c37b9709f60f7353b6af2b}\label{classalyssa__memory_1_1AlyssaMemoryManager_a603dbfcdf8c37b9709f60f7353b6af2b} 
-std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Advanced\+Memory\+System\+::\+Semantic\+Memory}} $>$ {\bfseries get\+Semantic\+Memories} (const std\+::string \&context)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a28f9fcd2e543637698ff6388cfa2e9c1}\label{classalyssa__memory_1_1AlyssaMemoryManager_a28f9fcd2e543637698ff6388cfa2e9c1} 
-std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{Advanced\+Memory\+System\+::\+Hybrid\+Memory\+Result}} $>$ {\bfseries get\+Hybrid\+Memories} (const std\+::string \&context)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a85acf1d2cff515169c1955a883d226f5}\label{classalyssa__memory_1_1AlyssaMemoryManager_a85acf1d2cff515169c1955a883d226f5} 
-\mbox{\hyperlink{structEmotionalState}{Emotional\+State}} {\bfseries get\+Current\+Emotional\+State} () const
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_acc406fe086c40bae905a70d0d6306df0}\label{classalyssa__memory_1_1AlyssaMemoryManager_acc406fe086c40bae905a70d0d6306df0} 
-std\+::vector$<$ \mbox{\hyperlink{structIntention}{Intention}} $>$ {\bfseries get\+Active\+Intentions} () const
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_aeefca1846b7c9672b30efc040a7f8d29}\label{classalyssa__memory_1_1AlyssaMemoryManager_aeefca1846b7c9672b30efc040a7f8d29} 
-int {\bfseries store\+Memory\+With\+Emotional\+Analysis} (const std\+::string \&content, const std\+::string \&context)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a27bdce4db6f02562a670a3bf7dc31c62}\label{classalyssa__memory_1_1AlyssaMemoryManager_a27bdce4db6f02562a670a3bf7dc31c62} 
-void {\bfseries link\+Memory\+To\+Intention} (int memory\+\_\+id, int intention\+\_\+id)
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_af28610fbbf1acc768399053d104915fa}\label{classalyssa__memory_1_1AlyssaMemoryManager_af28610fbbf1acc768399053d104915fa} 
-void {\bfseries set\+Current\+Goal} (const std\+::string \&goal, const std\+::string \&type="{}learning"{})
-\item 
-\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_ad5a41c281322b3bb202422fe9fe8e44d}\label{classalyssa__memory_1_1AlyssaMemoryManager_ad5a41c281322b3bb202422fe9fe8e44d} 
-void {\bfseries process\+Identity\+Fact} (const std\+::string \&fact\+\_\+value, const std\+::string \&fact\+\_\+type)
-\end{DoxyCompactItemize}
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a3f9d1f5e2f3999390c8f10eca3764551}{set\+Search\+Config}} (const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \&config)
+\begin{DoxyCompactList}\small\item\em Set search configuration. \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \& \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a385dd2785c5d36c7edf7dc4328262380}{get\+Search\+Config}} () const
+\begin{DoxyCompactList}\small\item\em Get current search configuration. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a94e3ac313e37f74b5690be40a0ded8fb}{Alyssa\+Memory\+Manager}} (const std\+::string \&db\+\_\+path, std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$ embedder\+\_\+ref)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{classalyssa__memory_1_1AlyssaMemoryManager}{Alyssa\+Memory\+Manager}. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_adaa16de974434e76cddd353eb465f1bf}{process\+Interaction}} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response)
+\begin{DoxyCompactList}\small\item\em Process interaction with automatic emotional analysis. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a6ecb59e5c25864006580ada5f785ffe1}{process\+Interaction}} (const std\+::string \&user\+\_\+input, const std\+::string \&ai\+\_\+response, const std\+::vector$<$ float $>$ \&emotional\+\_\+vector)
+\begin{DoxyCompactList}\small\item\em Process interaction with provided emotional vector (legacy). \end{DoxyCompactList}\item 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{Advanced\+Memory\+System\+::\+Contextual\+Memory}} $>$ \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_abbe573cfad50da4fbbc4f797ac024822}{get\+Relevant\+Memories}} (const std\+::string \&context)
+\begin{DoxyCompactList}\small\item\em Get relevant memories for context. \end{DoxyCompactList}\item 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Advanced\+Memory\+System\+::\+Semantic\+Memory}} $>$ \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a603dbfcdf8c37b9709f60f7353b6af2b}{get\+Semantic\+Memories}} (const std\+::string \&context)
+\begin{DoxyCompactList}\small\item\em Get semantic memories for context. \end{DoxyCompactList}\item 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{Advanced\+Memory\+System\+::\+Hybrid\+Memory\+Result}} $>$ \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a28f9fcd2e543637698ff6388cfa2e9c1}{get\+Hybrid\+Memories}} (const std\+::string \&context)
+\begin{DoxyCompactList}\small\item\em Get hybrid search results for context. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{structEmotionalState}{Emotional\+State}} \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a85acf1d2cff515169c1955a883d226f5}{get\+Current\+Emotional\+State}} () const
+\begin{DoxyCompactList}\small\item\em Get current emotional state. \end{DoxyCompactList}\item 
+std\+::vector$<$ \mbox{\hyperlink{structIntention}{Intention}} $>$ \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_acc406fe086c40bae905a70d0d6306df0}{get\+Active\+Intentions}} () const
+\begin{DoxyCompactList}\small\item\em Get active intentions. \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_aeefca1846b7c9672b30efc040a7f8d29}{store\+Memory\+With\+Emotional\+Analysis}} (const std\+::string \&content, const std\+::string \&context)
+\begin{DoxyCompactList}\small\item\em Store memory with emotional analysis. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_a27bdce4db6f02562a670a3bf7dc31c62}{link\+Memory\+To\+Intention}} (int memory\+\_\+id, int intention\+\_\+id)
+\begin{DoxyCompactList}\small\item\em Link memory to intention. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_af28610fbbf1acc768399053d104915fa}{set\+Current\+Goal}} (const std\+::string \&goal, const std\+::string \&type="{}learning"{})
+\begin{DoxyCompactList}\small\item\em Set current goal/intention. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classalyssa__memory_1_1AlyssaMemoryManager_ad5a41c281322b3bb202422fe9fe8e44d}{process\+Identity\+Fact}} (const std\+::string \&fact\+\_\+value, const std\+::string \&fact\+\_\+type)
+\begin{DoxyCompactList}\small\item\em Process identity fact for user modeling. \end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \doxysubsection{Detailed Description}
-Gerenciador de alto nível para integração com sistemas de IA conversacional. 
+High-\/level manager for conversational AI memory integration. 
+
+Provides simplified interface for integrating memory system with conversational AI, handling emotional analysis, intention management, and memory retrieval. 
+
+\label{doc-constructors}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a94e3ac313e37f74b5690be40a0ded8fb}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!AlyssaMemoryManager@{AlyssaMemoryManager}}
+\index{AlyssaMemoryManager@{AlyssaMemoryManager}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{AlyssaMemoryManager()}{AlyssaMemoryManager()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a94e3ac313e37f74b5690be40a0ded8fb} 
+Alyssa\+Memory\+Manager\+::\+Alyssa\+Memory\+Manager (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{db\+\_\+path}{, }\item[{std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{classEmbedder}{Embedder}} $>$}]{embedder\+\_\+ref}{}\end{DoxyParamCaption})}
+
+
+
+Constructor for \doxylink{classalyssa__memory_1_1AlyssaMemoryManager}{Alyssa\+Memory\+Manager}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em db\+\_\+path} & Path to SQLite database file \\
+\hline
+{\em embedder\+\_\+ref} & Shared pointer to \doxylink{classEmbedder}{Embedder} instance \\
+\hline
+\end{DoxyParams}
+
+
+\label{doc-func-members}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_acc406fe086c40bae905a70d0d6306df0}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getActiveIntentions@{getActiveIntentions}}
+\index{getActiveIntentions@{getActiveIntentions}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getActiveIntentions()}{getActiveIntentions()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_acc406fe086c40bae905a70d0d6306df0} 
+std\+::vector$<$ \mbox{\hyperlink{structIntention}{Intention}} $>$ Alyssa\+Memory\+Manager\+::get\+Active\+Intentions (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+
+
+Get active intentions. 
+
+\begin{DoxyReturn}{Returns}
+Vector of active \doxylink{structIntention}{Intention} structures 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a85acf1d2cff515169c1955a883d226f5}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getCurrentEmotionalState@{getCurrentEmotionalState}}
+\index{getCurrentEmotionalState@{getCurrentEmotionalState}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getCurrentEmotionalState()}{getCurrentEmotionalState()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a85acf1d2cff515169c1955a883d226f5} 
+\mbox{\hyperlink{structEmotionalState}{Emotional\+State}} Alyssa\+Memory\+Manager\+::get\+Current\+Emotional\+State (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+
+
+Get current emotional state. 
+
+\begin{DoxyReturn}{Returns}
+Current \doxylink{structEmotionalState}{Emotional\+State} structure 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a28f9fcd2e543637698ff6388cfa2e9c1}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getHybridMemories@{getHybridMemories}}
+\index{getHybridMemories@{getHybridMemories}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getHybridMemories()}{getHybridMemories()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a28f9fcd2e543637698ff6388cfa2e9c1} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1HybridMemoryResult}{Advanced\+Memory\+System\+::\+Hybrid\+Memory\+Result}} $>$ Alyssa\+Memory\+Manager\+::get\+Hybrid\+Memories (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{context}{}\end{DoxyParamCaption})}
+
+
+
+Get hybrid search results for context. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Context string for search \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of Hybrid\+Memory\+Result structures 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_abbe573cfad50da4fbbc4f797ac024822}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getRelevantMemories@{getRelevantMemories}}
+\index{getRelevantMemories@{getRelevantMemories}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getRelevantMemories()}{getRelevantMemories()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_abbe573cfad50da4fbbc4f797ac024822} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory}{Advanced\+Memory\+System\+::\+Contextual\+Memory}} $>$ Alyssa\+Memory\+Manager\+::get\+Relevant\+Memories (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{context}{}\end{DoxyParamCaption})}
+
+
+
+Get relevant memories for context. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Context string for search \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of Contextual\+Memory results 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a385dd2785c5d36c7edf7dc4328262380}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getSearchConfig@{getSearchConfig}}
+\index{getSearchConfig@{getSearchConfig}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getSearchConfig()}{getSearchConfig()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a385dd2785c5d36c7edf7dc4328262380} 
+const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \& alyssa\+\_\+memory\+::\+Alyssa\+Memory\+Manager\+::get\+Search\+Config (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get current search configuration. 
+
+\begin{DoxyReturn}{Returns}
+Current \doxylink{structMemorySearchConfig}{Memory\+Search\+Config} 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a603dbfcdf8c37b9709f60f7353b6af2b}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!getSemanticMemories@{getSemanticMemories}}
+\index{getSemanticMemories@{getSemanticMemories}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{getSemanticMemories()}{getSemanticMemories()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a603dbfcdf8c37b9709f60f7353b6af2b} 
+std\+::vector$<$ \mbox{\hyperlink{structalyssa__memory_1_1AdvancedMemorySystem_1_1SemanticMemory}{Advanced\+Memory\+System\+::\+Semantic\+Memory}} $>$ Alyssa\+Memory\+Manager\+::get\+Semantic\+Memories (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{context}{}\end{DoxyParamCaption})}
+
+
+
+Get semantic memories for context. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Context string for search \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Vector of Semantic\+Memory results 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a27bdce4db6f02562a670a3bf7dc31c62}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!linkMemoryToIntention@{linkMemoryToIntention}}
+\index{linkMemoryToIntention@{linkMemoryToIntention}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{linkMemoryToIntention()}{linkMemoryToIntention()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a27bdce4db6f02562a670a3bf7dc31c62} 
+void Alyssa\+Memory\+Manager\+::link\+Memory\+To\+Intention (\begin{DoxyParamCaption}\item[{int}]{memory\+\_\+id}{, }\item[{int}]{intention\+\_\+id}{}\end{DoxyParamCaption})}
+
+
+
+Link memory to intention. 
+
+Link memory to intention (\doxylink{classalyssa__memory_1_1AlyssaMemoryManager}{Alyssa\+Memory\+Manager} wrapper).
+
+
+\begin{DoxyParams}{Parameters}
+{\em memory\+\_\+id} & Memory ID \\
+\hline
+{\em intention\+\_\+id} & \doxylink{structIntention}{Intention} ID \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_ad5a41c281322b3bb202422fe9fe8e44d}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!processIdentityFact@{processIdentityFact}}
+\index{processIdentityFact@{processIdentityFact}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{processIdentityFact()}{processIdentityFact()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_ad5a41c281322b3bb202422fe9fe8e44d} 
+void Alyssa\+Memory\+Manager\+::process\+Identity\+Fact (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{fact\+\_\+value}{, }\item[{const std\+::string \&}]{fact\+\_\+type}{}\end{DoxyParamCaption})}
+
+
+
+Process identity fact for user modeling. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em fact\+\_\+value} & Fact value \\
+\hline
+{\em fact\+\_\+type} & Fact type/category \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_adaa16de974434e76cddd353eb465f1bf}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!processInteraction@{processInteraction}}
+\index{processInteraction@{processInteraction}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{processInteraction()}{processInteraction()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_adaa16de974434e76cddd353eb465f1bf} 
+void Alyssa\+Memory\+Manager\+::process\+Interaction (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{user\+\_\+input}{, }\item[{const std\+::string \&}]{ai\+\_\+response}{}\end{DoxyParamCaption})}
+
+
+
+Process interaction with automatic emotional analysis. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em user\+\_\+input} & User input text \\
+\hline
+{\em ai\+\_\+response} & AI response text \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a6ecb59e5c25864006580ada5f785ffe1}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!processInteraction@{processInteraction}}
+\index{processInteraction@{processInteraction}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{processInteraction()}{processInteraction()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a6ecb59e5c25864006580ada5f785ffe1} 
+void Alyssa\+Memory\+Manager\+::process\+Interaction (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{user\+\_\+input}{, }\item[{const std\+::string \&}]{ai\+\_\+response}{, }\item[{const std\+::vector$<$ float $>$ \&}]{emotional\+\_\+vector}{}\end{DoxyParamCaption})}
+
+
+
+Process interaction with provided emotional vector (legacy). 
+
+
+\begin{DoxyParams}{Parameters}
+{\em user\+\_\+input} & User input text \\
+\hline
+{\em ai\+\_\+response} & AI response text \\
+\hline
+{\em emotional\+\_\+vector} & Pre-\/computed emotional vector \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_af28610fbbf1acc768399053d104915fa}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!setCurrentGoal@{setCurrentGoal}}
+\index{setCurrentGoal@{setCurrentGoal}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{setCurrentGoal()}{setCurrentGoal()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_af28610fbbf1acc768399053d104915fa} 
+void Alyssa\+Memory\+Manager\+::set\+Current\+Goal (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{goal}{, }\item[{const std\+::string \&}]{type}{ = {\ttfamily "{}learning"{}}}\end{DoxyParamCaption})}
+
+
+
+Set current goal/intention. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em goal} & Goal description \\
+\hline
+{\em type} & Goal type (default\+: "{}learning"{}) \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_a3f9d1f5e2f3999390c8f10eca3764551}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!setSearchConfig@{setSearchConfig}}
+\index{setSearchConfig@{setSearchConfig}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{setSearchConfig()}{setSearchConfig()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_a3f9d1f5e2f3999390c8f10eca3764551} 
+void alyssa\+\_\+memory\+::\+Alyssa\+Memory\+Manager\+::set\+Search\+Config (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{structMemorySearchConfig}{Memory\+Search\+Config}} \&}]{config}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set search configuration. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em config} & \doxylink{structMemorySearchConfig}{Memory\+Search\+Config} structure \\
+\hline
+\end{DoxyParams}
+\Hypertarget{classalyssa__memory_1_1AlyssaMemoryManager_aeefca1846b7c9672b30efc040a7f8d29}\index{alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}!storeMemoryWithEmotionalAnalysis@{storeMemoryWithEmotionalAnalysis}}
+\index{storeMemoryWithEmotionalAnalysis@{storeMemoryWithEmotionalAnalysis}!alyssa\_memory::AlyssaMemoryManager@{alyssa\_memory::AlyssaMemoryManager}}
+\doxysubsubsection{\texorpdfstring{storeMemoryWithEmotionalAnalysis()}{storeMemoryWithEmotionalAnalysis()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1AlyssaMemoryManager_aeefca1846b7c9672b30efc040a7f8d29} 
+int Alyssa\+Memory\+Manager\+::store\+Memory\+With\+Emotional\+Analysis (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{content}{, }\item[{const std\+::string \&}]{context}{}\end{DoxyParamCaption})}
+
+
+
+Store memory with emotional analysis. 
+
+Store memory with emotional analysis (\doxylink{classalyssa__memory_1_1AlyssaMemoryManager}{Alyssa\+Memory\+Manager} wrapper).
+
+
+\begin{DoxyParams}{Parameters}
+{\em content} & Memory content \\
+\hline
+{\em context} & Memory context \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Memory ID if successful, -\/1 on error 
+\end{DoxyReturn}
+
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
 \item 

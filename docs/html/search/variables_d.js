@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['vad_5fmin_5fduration_5fms_0',['vad_min_duration_ms',['../structVoicePipeline_1_1Options.html#a67ec4db22e8963308459ef531f7e15cc',1,'VoicePipeline::Options']]],
-  ['vad_5frms_5fthreshold_1',['vad_rms_threshold',['../structVoicePipeline_1_1Options.html#a5ac7be6b71f25ebf8b1feb0acd35ff58',1,'VoicePipeline::Options']]],
-  ['vad_5fsilence_5fms_2',['vad_silence_ms',['../structVoicePipeline_1_1Options.html#a4ee7398c140acc42dafb1ab19cbf11af',1,'VoicePipeline::Options']]]
+  ['recent_5fmemory_5fboost_0',['recent_memory_boost',['../structMemorySearchConfig_1_1BoostConfig.html#a58344fbbd3dc3ccc23bea4ee828e94e3',1,'MemorySearchConfig::BoostConfig']]],
+  ['relevance_5fscore_1',['relevance_score',['../structalyssa__memory_1_1AdvancedMemorySystem_1_1ContextualMemory.html#a3bdaa60c17c6ee8c1d066f5e8f95944c',1,'alyssa_memory::AdvancedMemorySystem::ContextualMemory']]],
+  ['response_2',['response',['../structalyssa__fusion_1_1ExpertContribution.html#a2ead8518fff301c22a8257124de6df82',1,'alyssa_fusion::ExpertContribution']]],
+  ['role_5finstruction_3',['role_instruction',['../structSimpleModelConfig.html#a4d60a67b03784f5e3e1785ac2d4e3267',1,'SimpleModelConfig']]]
 ];

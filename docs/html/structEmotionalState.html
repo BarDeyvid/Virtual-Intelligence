@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: EmotionalState Struct Reference</title>
+<title>Alyssa Docs: EmotionalState Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -92,28 +92,63 @@ $(function(){initNavTree('structEmotionalState.html','','structEmotionalState-me
 </div><!--header-->
 <div class="contents">
 
-<p>Estrutura para representar estado emocional.  
+<p>Structure for representing emotional state with timestamp.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a7e7c2c865ed00253642d4839c8f33cde" id="r_a7e7c2c865ed00253642d4839c8f33cde"><td class="memItemLeft" align="right" valign="top"><a id="a7e7c2c865ed00253642d4839c8f33cde" name="a7e7c2c865ed00253642d4839c8f33cde"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>EmotionalState</b> (const std::string &amp;n=&quot;neutral&quot;, double i=0.5)</td></tr>
+<tr class="memitem:a7e7c2c865ed00253642d4839c8f33cde" id="r_a7e7c2c865ed00253642d4839c8f33cde"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e7c2c865ed00253642d4839c8f33cde">EmotionalState</a> (const std::string &amp;n=&quot;neutral&quot;, double i=0.5)</td></tr>
+<tr class="memdesc:a7e7c2c865ed00253642d4839c8f33cde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="structEmotionalState.html" title="Structure for representing emotional state with timestamp.">EmotionalState</a>.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a413955f65202a238b52a9cf022b5f040" id="r_a413955f65202a238b52a9cf022b5f040"><td class="memItemLeft" align="right" valign="top"><a id="a413955f65202a238b52a9cf022b5f040" name="a413955f65202a238b52a9cf022b5f040"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>name</b></td></tr>
+<tr class="memdesc:a413955f65202a238b52a9cf022b5f040"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of the emotional state. <br /></td></tr>
 <tr class="memitem:afcd23a7e73a1842899b58a5f0e20e1c6" id="r_afcd23a7e73a1842899b58a5f0e20e1c6"><td class="memItemLeft" align="right" valign="top"><a id="afcd23a7e73a1842899b58a5f0e20e1c6" name="afcd23a7e73a1842899b58a5f0e20e1c6"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>intensity</b></td></tr>
+<tr class="memdesc:afcd23a7e73a1842899b58a5f0e20e1c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Intensity of the emotion (0.0-1.0). <br /></td></tr>
 <tr class="memitem:aecce9f22e8d95c0a0cbebe85fe149aca" id="r_aecce9f22e8d95c0a0cbebe85fe149aca"><td class="memItemLeft" align="right" valign="top"><a id="aecce9f22e8d95c0a0cbebe85fe149aca" name="aecce9f22e8d95c0a0cbebe85fe149aca"></a>
 uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>timestamp</b></td></tr>
+<tr class="memdesc:aecce9f22e8d95c0a0cbebe85fe149aca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Timestamp of when this state was recorded. <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Estrutura para representar estado emocional. </p>
-</div><hr/>The documentation for this struct was generated from the following files:<ul>
+<div class="textblock"><p>Structure for representing emotional state with timestamp. </p>
+<p>Tracks current emotional state with intensity and timestamp. </p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a7e7c2c865ed00253642d4839c8f33cde" name="a7e7c2c865ed00253642d4839c8f33cde"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e7c2c865ed00253642d4839c8f33cde">&#9670;&#160;</a></span>EmotionalState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">EmotionalState::EmotionalState </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>n</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;neutral&quot;</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>i</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.5</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Constructor for <a class="el" href="structEmotionalState.html" title="Structure for representing emotional state with timestamp.">EmotionalState</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">n</td><td>Emotion name (default: "neutral") </td></tr>
+    <tr><td class="paramname">i</td><td>Emotion intensity (default: 0.5) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following files:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 <li>/home/deyvid/Virtual-Intelligence/includes/<b>AlyssaMemoryHandler.cpp</b></li>
 </ul>

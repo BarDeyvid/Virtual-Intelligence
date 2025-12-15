@@ -1,5 +1,14 @@
 \doxysection{Lexicon\+Score\+Calculator Class Reference}
 \hypertarget{classLexiconScoreCalculator}{}\label{classLexiconScoreCalculator}\index{LexiconScoreCalculator@{LexiconScoreCalculator}}
+
+
+Lexicon-\/based emotion score calculator.  
+
+
+
+
+{\ttfamily \#include $<$Alyssa\+Memory\+Handler.\+hpp$>$}
+
 Inheritance diagram for Lexicon\+Score\+Calculator\+:\begin{figure}[H]
 \begin{center}
 \leavevmode
@@ -9,11 +18,42 @@ Inheritance diagram for Lexicon\+Score\+Calculator\+:\begin{figure}[H]
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classLexiconScoreCalculator_aee631356c8be354dc3d7df09867dabef}\label{classLexiconScoreCalculator_aee631356c8be354dc3d7df09867dabef} 
-{\bfseries Lexicon\+Score\+Calculator} (const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&lexicons, const std\+::unordered\+\_\+map$<$ std\+::string, double $>$ \&weights)
-\item 
+\mbox{\hyperlink{classLexiconScoreCalculator_aee631356c8be354dc3d7df09867dabef}{Lexicon\+Score\+Calculator}} (const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&lexicons, const std\+::unordered\+\_\+map$<$ std\+::string, double $>$ \&weights)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{classLexiconScoreCalculator}{Lexicon\+Score\+Calculator}. \end{DoxyCompactList}\item 
 void \mbox{\hyperlink{classLexiconScoreCalculator_a39bca8477426dbafce8e04ebc59857a2}{calculate}} (const std\+::string \&text, std\+::unordered\+\_\+map$<$ std\+::string, double $>$ \&scores) override
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Calculate emotion scores using lexicon matching. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classIScoreCalculator}{IScore\+Calculator}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual {\bfseries \texorpdfstring{$\sim$}{\string~}\+IScore\+Calculator} ()=default
+\begin{DoxyCompactList}\small\item\em Virtual destructor for proper polymorphism. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Lexicon-\/based emotion score calculator. 
+
+Calculates emotion scores based on word matching against emotion lexicons. 
+
+\label{doc-constructors}
+\Hypertarget{classLexiconScoreCalculator_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classLexiconScoreCalculator_aee631356c8be354dc3d7df09867dabef}\index{LexiconScoreCalculator@{LexiconScoreCalculator}!LexiconScoreCalculator@{LexiconScoreCalculator}}
+\index{LexiconScoreCalculator@{LexiconScoreCalculator}!LexiconScoreCalculator@{LexiconScoreCalculator}}
+\doxysubsubsection{\texorpdfstring{LexiconScoreCalculator()}{LexiconScoreCalculator()}}
+{\footnotesize\ttfamily \label{classLexiconScoreCalculator_aee631356c8be354dc3d7df09867dabef} 
+Lexicon\+Score\+Calculator\+::\+Lexicon\+Score\+Calculator (\begin{DoxyParamCaption}\item[{const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&}]{lexicons}{, }\item[{const std\+::unordered\+\_\+map$<$ std\+::string, double $>$ \&}]{weights}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Constructor for \doxylink{classLexiconScoreCalculator}{Lexicon\+Score\+Calculator}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em lexicons} & Reference to emotion lexicons \\
+\hline
+{\em weights} & Reference to emotion weights \\
+\hline
+\end{DoxyParams}
 
 
 \label{doc-func-members}
@@ -27,7 +67,18 @@ void Lexicon\+Score\+Calculator\+::calculate (\begin{DoxyParamCaption}\item[{con
 
 
 
-Implements \mbox{\hyperlink{classIScoreCalculator}{IScore\+Calculator}}.
+Calculate emotion scores using lexicon matching. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em text} & Input text to analyze \\
+\hline
+{\em scores} & Output map of emotion scores (will be filled) \\
+\hline
+\end{DoxyParams}
+
+
+Implements \mbox{\hyperlink{classIScoreCalculator_a0c300ce15b760ca1709997c533190f14}{IScore\+Calculator}}.
 
 
 

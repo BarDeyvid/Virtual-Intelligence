@@ -2,7 +2,7 @@
 \hypertarget{structMemoryLink}{}\label{structMemoryLink}\index{MemoryLink@{MemoryLink}}
 
 
-Estrutura para vínculos entre memórias.  
+Structure for links between memories.  
 
 
 
@@ -12,28 +12,55 @@ Estrutura para vínculos entre memórias.
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{structMemoryLink_abdbb94a611d22afada74104062d20167}\label{structMemoryLink_abdbb94a611d22afada74104062d20167} 
-{\bfseries Memory\+Link} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} src, \mbox{\hyperlink{structMemoryId}{Memory\+Id}} tgt, double w=1.\+0, const std\+::string \&t="{}association"{})
-\end{DoxyCompactItemize}
+\mbox{\hyperlink{structMemoryLink_abdbb94a611d22afada74104062d20167}{Memory\+Link}} (\mbox{\hyperlink{structMemoryId}{Memory\+Id}} src, \mbox{\hyperlink{structMemoryId}{Memory\+Id}} tgt, double w=1.\+0, const std\+::string \&t="{}association"{})
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{structMemoryLink}{Memory\+Link}. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Public Attributes}
 \begin{DoxyCompactItemize}
 \item 
 \Hypertarget{structMemoryLink_aae7ca7c8d7e9c2f945acfd432f3c314c}\label{structMemoryLink_aae7ca7c8d7e9c2f945acfd432f3c314c} 
 \mbox{\hyperlink{structMemoryId}{Memory\+Id}} {\bfseries source\+\_\+id}
-\item 
+\begin{DoxyCompactList}\small\item\em Source memory ID. \end{DoxyCompactList}\item 
 \Hypertarget{structMemoryLink_a2f977b9e231f7a2fd5bcf74c128bcb9f}\label{structMemoryLink_a2f977b9e231f7a2fd5bcf74c128bcb9f} 
 \mbox{\hyperlink{structMemoryId}{Memory\+Id}} {\bfseries target\+\_\+id}
-\item 
+\begin{DoxyCompactList}\small\item\em Target memory ID. \end{DoxyCompactList}\item 
 \Hypertarget{structMemoryLink_a5ded4357c75178069075c35e645a2d9d}\label{structMemoryLink_a5ded4357c75178069075c35e645a2d9d} 
 double {\bfseries weight}
-\item 
+\begin{DoxyCompactList}\small\item\em Strength of the connection (0.\+0-\/1.\+0). \end{DoxyCompactList}\item 
 \Hypertarget{structMemoryLink_a413015e5f8b28e249358ce02c91aa555}\label{structMemoryLink_a413015e5f8b28e249358ce02c91aa555} 
 std\+::string {\bfseries type}
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Type of link (e.\+g., "{}association"{}). \end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \doxysubsection{Detailed Description}
-Estrutura para vínculos entre memórias. 
+Structure for links between memories. 
+
+Represents associative connections between different memories. 
+
+\label{doc-constructors}
+\Hypertarget{structMemoryLink_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{structMemoryLink_abdbb94a611d22afada74104062d20167}\index{MemoryLink@{MemoryLink}!MemoryLink@{MemoryLink}}
+\index{MemoryLink@{MemoryLink}!MemoryLink@{MemoryLink}}
+\doxysubsubsection{\texorpdfstring{MemoryLink()}{MemoryLink()}}
+{\footnotesize\ttfamily \label{structMemoryLink_abdbb94a611d22afada74104062d20167} 
+Memory\+Link\+::\+Memory\+Link (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structMemoryId}{Memory\+Id}}}]{src}{, }\item[{\mbox{\hyperlink{structMemoryId}{Memory\+Id}}}]{tgt}{, }\item[{double}]{w}{ = {\ttfamily 1.0}, }\item[{const std\+::string \&}]{t}{ = {\ttfamily "{}association"{}}}\end{DoxyParamCaption})}
+
+
+
+Constructor for \doxylink{structMemoryLink}{Memory\+Link}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em src} & Source memory ID \\
+\hline
+{\em tgt} & Target memory ID \\
+\hline
+{\em w} & Link weight (default\+: 1.\+0) \\
+\hline
+{\em t} & Link type (default\+: "{}association"{}) \\
+\hline
+\end{DoxyParams}
+
 
 The documentation for this struct was generated from the following files\+:\begin{DoxyCompactItemize}
 \item 

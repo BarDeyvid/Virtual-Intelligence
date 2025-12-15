@@ -1,23 +1,87 @@
 \doxysection{alyssa\+\_\+memory\+::Emotion\+Lexicon\+Loader Class Reference}
 \hypertarget{classalyssa__memory_1_1EmotionLexiconLoader}{}\label{classalyssa__memory_1_1EmotionLexiconLoader}\index{alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}}
+
+
+Handles loading and saving of emotion lexicons from/to JSON files.  
+
+
+
+
+{\ttfamily \#include $<$Emotion\+Lexicon\+Loader.\+hpp$>$}
+
 \doxysubsubsection*{Static Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_a3431c0f7bdec1e2c7da4825f4e6c1c78}\label{classalyssa__memory_1_1EmotionLexiconLoader_a3431c0f7bdec1e2c7da4825f4e6c1c78} 
-static std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ {\bfseries load\+Default\+Portuguese\+Lexicon} ()
-\item 
-\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_af315cb23efd36e6fb29a1c8ab6521cb0}\label{classalyssa__memory_1_1EmotionLexiconLoader_af315cb23efd36e6fb29a1c8ab6521cb0} 
-static std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ {\bfseries load\+Lexicon\+From\+File} (const std\+::string \&filepath)
-\item 
-\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_a056110647baf85af4215d6b8d40721e1}\label{classalyssa__memory_1_1EmotionLexiconLoader_a056110647baf85af4215d6b8d40721e1} 
-static void {\bfseries save\+Lexicon\+To\+File} (const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&lexicon, const std\+::string \&filepath)
-\end{DoxyCompactItemize}
+static std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \mbox{\hyperlink{classalyssa__memory_1_1EmotionLexiconLoader_a3431c0f7bdec1e2c7da4825f4e6c1c78}{load\+Default\+Portuguese\+Lexicon}} ()
+\begin{DoxyCompactList}\small\item\em Loads the default Portuguese lexicon from the default file path. \end{DoxyCompactList}\item 
+static std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \mbox{\hyperlink{classalyssa__memory_1_1EmotionLexiconLoader_af315cb23efd36e6fb29a1c8ab6521cb0}{load\+Lexicon\+From\+File}} (const std\+::string \&filepath)
+\begin{DoxyCompactList}\small\item\em Loads an emotion lexicon from a specified JSON file. \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{classalyssa__memory_1_1EmotionLexiconLoader_a056110647baf85af4215d6b8d40721e1}{save\+Lexicon\+To\+File}} (const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&lexicon, const std\+::string \&filepath)
+\begin{DoxyCompactList}\small\item\em Saves an emotion lexicon to a JSON file. \end{DoxyCompactList}\end{DoxyCompactItemize}
 \doxysubsubsection*{Static Public Attributes}
 \begin{DoxyCompactItemize}
 \item 
 \Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_a6c02a94ffe6655c50589c60878bb0a63}\label{classalyssa__memory_1_1EmotionLexiconLoader_a6c02a94ffe6655c50589c60878bb0a63} 
 static const std\+::string {\bfseries DEFAULT\+\_\+\+LEXICON\+\_\+\+PATH} = "{}config/Lexicon\+Portuguese.\+json"{}
-\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Default path to the Portuguese lexicon JSON file. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Handles loading and saving of emotion lexicons from/to JSON files. 
+
+This class provides static methods to load emotion lexicons from JSON files, save lexicons to files, and access the default Portuguese lexicon. Lexicons are stored as a map where emotions are keys and word lists are values. 
+
+\label{doc-func-members}
+\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_a3431c0f7bdec1e2c7da4825f4e6c1c78}\index{alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}!loadDefaultPortugueseLexicon@{loadDefaultPortugueseLexicon}}
+\index{loadDefaultPortugueseLexicon@{loadDefaultPortugueseLexicon}!alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}}
+\doxysubsubsection{\texorpdfstring{loadDefaultPortugueseLexicon()}{loadDefaultPortugueseLexicon()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1EmotionLexiconLoader_a3431c0f7bdec1e2c7da4825f4e6c1c78} 
+std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ alyssa\+\_\+memory\+::\+Emotion\+Lexicon\+Loader\+::load\+Default\+Portuguese\+Lexicon (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Loads the default Portuguese lexicon from the default file path. 
+
+\begin{DoxyReturn}{Returns}
+std\+::unordered\+\_\+map$<$std\+::string, std\+::vector$<$std\+::string$>$$>$ A map containing emotions as keys and vectors of associated words as values. Returns an empty map if loading fails. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_af315cb23efd36e6fb29a1c8ab6521cb0}\index{alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}!loadLexiconFromFile@{loadLexiconFromFile}}
+\index{loadLexiconFromFile@{loadLexiconFromFile}!alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}}
+\doxysubsubsection{\texorpdfstring{loadLexiconFromFile()}{loadLexiconFromFile()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1EmotionLexiconLoader_af315cb23efd36e6fb29a1c8ab6521cb0} 
+std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ alyssa\+\_\+memory\+::\+Emotion\+Lexicon\+Loader\+::load\+Lexicon\+From\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{filepath}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Loads an emotion lexicon from a specified JSON file. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em filepath} & Path to the JSON lexicon file. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+std\+::unordered\+\_\+map$<$std\+::string, std\+::vector$<$std\+::string$>$$>$ A map containing emotions as keys and vectors of associated words as values. Returns an empty map if the file cannot be opened or parsed. 
+\end{DoxyReturn}
+\Hypertarget{classalyssa__memory_1_1EmotionLexiconLoader_a056110647baf85af4215d6b8d40721e1}\index{alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}!saveLexiconToFile@{saveLexiconToFile}}
+\index{saveLexiconToFile@{saveLexiconToFile}!alyssa\_memory::EmotionLexiconLoader@{alyssa\_memory::EmotionLexiconLoader}}
+\doxysubsubsection{\texorpdfstring{saveLexiconToFile()}{saveLexiconToFile()}}
+{\footnotesize\ttfamily \label{classalyssa__memory_1_1EmotionLexiconLoader_a056110647baf85af4215d6b8d40721e1} 
+void alyssa\+\_\+memory\+::\+Emotion\+Lexicon\+Loader\+::save\+Lexicon\+To\+File (\begin{DoxyParamCaption}\item[{const std\+::unordered\+\_\+map$<$ std\+::string, std\+::vector$<$ std\+::string $>$ $>$ \&}]{lexicon}{, }\item[{const std\+::string \&}]{filepath}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Saves an emotion lexicon to a JSON file. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em lexicon} & The lexicon map to save. \\
+\hline
+{\em filepath} & Path where the JSON file will be created/overwritten. \\
+\hline
+\end{DoxyParams}
 
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}

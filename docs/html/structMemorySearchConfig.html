@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.15.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>My Project: MemorySearchConfig Struct Reference</title>
+<title>Alyssa Docs: MemorySearchConfig Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">My Project
+   <div id="projectname">Alyssa Docs
    </div>
   </td>
  </tr>
@@ -91,29 +91,44 @@ $(function(){initNavTree('structMemorySearchConfig.html','','structMemorySearchC
   <div class="headertitle"><div class="title">MemorySearchConfig Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Configuration structure for memory search settings.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-nested-classes" class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:BoostConfig" id="r_BoostConfig"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMemorySearchConfig_1_1BoostConfig.html">BoostConfig</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Nested structure for boosting configuration.  <a href="structMemorySearchConfig_1_1BoostConfig.html#details">More...</a><br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:ac6b6ab1e14c93b52f4107c689bad6458" id="r_ac6b6ab1e14c93b52f4107c689bad6458"><td class="memItemLeft" align="right" valign="top"><a id="ac6b6ab1e14c93b52f4107c689bad6458" name="ac6b6ab1e14c93b52f4107c689bad6458"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>default_top_k</b> = 5</td></tr>
+<tr class="memdesc:ac6b6ab1e14c93b52f4107c689bad6458"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default number of top results to return. <br /></td></tr>
 <tr class="memitem:ac1102f3f00fb61e3e610ca02f5c9afda" id="r_ac1102f3f00fb61e3e610ca02f5c9afda"><td class="memItemLeft" align="right" valign="top"><a id="ac1102f3f00fb61e3e610ca02f5c9afda" name="ac1102f3f00fb61e3e610ca02f5c9afda"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>text_weight</b> = 0.4</td></tr>
+<tr class="memdesc:ac1102f3f00fb61e3e610ca02f5c9afda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for textual similarity in hybrid search. <br /></td></tr>
 <tr class="memitem:a9d4a27295fccbc7a9714fef9d891dc8e" id="r_a9d4a27295fccbc7a9714fef9d891dc8e"><td class="memItemLeft" align="right" valign="top"><a id="a9d4a27295fccbc7a9714fef9d891dc8e" name="a9d4a27295fccbc7a9714fef9d891dc8e"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>semantic_weight</b> = 0.6</td></tr>
+<tr class="memdesc:a9d4a27295fccbc7a9714fef9d891dc8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for semantic similarity in hybrid search. <br /></td></tr>
 <tr class="memitem:ab3d3bca364a82cab9f79f8eaa4b6f8b6" id="r_ab3d3bca364a82cab9f79f8eaa4b6f8b6"><td class="memItemLeft" align="right" valign="top"><a id="ab3d3bca364a82cab9f79f8eaa4b6f8b6" name="ab3d3bca364a82cab9f79f8eaa4b6f8b6"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>intention_boost_weight</b> = 0.3</td></tr>
+<tr class="memdesc:ab3d3bca364a82cab9f79f8eaa4b6f8b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost weight for intention matching. <br /></td></tr>
 <tr class="memitem:a061e03294291e65fd9380ecfd5acd716" id="r_a061e03294291e65fd9380ecfd5acd716"><td class="memItemLeft" align="right" valign="top"><a id="a061e03294291e65fd9380ecfd5acd716" name="a061e03294291e65fd9380ecfd5acd716"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>emotional_boost_weight</b> = 0.2</td></tr>
+<tr class="memdesc:a061e03294291e65fd9380ecfd5acd716"><td class="mdescLeft">&#160;</td><td class="mdescRight">Boost weight for emotional matching. <br /></td></tr>
 <tr class="memitem:adf739bab85810f8c0b92f841b8593c8d" id="r_adf739bab85810f8c0b92f841b8593c8d"><td class="memItemLeft" align="right" valign="top"><a id="adf739bab85810f8c0b92f841b8593c8d" name="adf739bab85810f8c0b92f841b8593c8d"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>min_similarity_score</b> = 0.1</td></tr>
+<tr class="memdesc:adf739bab85810f8c0b92f841b8593c8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum similarity score threshold. <br /></td></tr>
 <tr class="memitem:a796408158e0510af245326ba02c1a155" id="r_a796408158e0510af245326ba02c1a155"><td class="memItemLeft" align="right" valign="top"><a id="a796408158e0510af245326ba02c1a155" name="a796408158e0510af245326ba02c1a155"></a>
 struct <a class="el" href="structMemorySearchConfig_1_1BoostConfig.html">MemorySearchConfig::BoostConfig</a>&#160;</td><td class="memItemRight" valign="bottom"><b>boost_config</b></td></tr>
 </table>
-<hr/>The documentation for this struct was generated from the following file:<ul>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Configuration structure for memory search settings. </p>
+<p>Contains parameters for hybrid search (text + semantic) and result boosting. </p>
+</div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>/home/deyvid/Virtual-Intelligence/includes/<a class="el" href="AlyssaMemoryHandler_8hpp_source.html">AlyssaMemoryHandler.hpp</a></li>
 </ul>
 </div><!-- contents -->

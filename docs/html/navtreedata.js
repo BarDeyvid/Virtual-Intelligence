@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "My Project", "index.html", [
+  [ "Alyssa Docs", "index.html", [
     [ "📋 <b>Commit Categories</b>", "md_TODO.html", null ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
@@ -39,8 +39,8 @@ var NAVTREE =
       [ "Class Index", "classes.html", null ],
       [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
-        [ "All", "functions.html", null ],
-        [ "Functions", "functions_func.html", null ],
+        [ "All", "functions.html", "functions_dup" ],
+        [ "Functions", "functions_func.html", "functions_func" ],
         [ "Variables", "functions_vars.html", null ],
         [ "Enumerations", "functions_enum.html", null ],
         [ "Related Symbols", "functions_rela.html", null ]
@@ -59,9 +59,9 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "AlyssaCore_8hpp.html",
-"classdetail_1_1lexer__base.html#add65fa7a85aa15052963809fbcc04540a9a9ffd53b6869d4eca271b1ed5b57fe8",
-"structdetail_1_1has__to__json.html",
-"structsqlite3__vtab__cursor.html"
+"classdetail_1_1iter__impl.html#a57b4e1eee4a3cdb3c0683cf64979da8d",
+"md_TODO.html",
+"structdetail_1_1is__comparable.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

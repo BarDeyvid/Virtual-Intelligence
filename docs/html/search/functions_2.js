@@ -1,12 +1,22 @@
 var searchData=
 [
-  ['calculate_5ffeature_5fbased_5fweights_0',['calculate_feature_based_weights',['../classalyssa__fusion_1_1WeightedFusion.html#ac0e4cf05792e298de145de37926b7909',1,'alyssa_fusion::WeightedFusion']]],
-  ['calculate_5fneural_5fweights_1',['calculate_neural_weights',['../classalyssa__fusion_1_1WeightedFusion.html#ae6e0726904d4ddd2a148ae785f2720b6',1,'alyssa_fusion::WeightedFusion']]],
-  ['calculate_5frule_5fbased_5fweights_2',['calculate_rule_based_weights',['../classalyssa__fusion_1_1WeightedFusion.html#af6f444c44486a0b8001ba75ba30428b4',1,'alyssa_fusion::WeightedFusion']]],
-  ['calculate_5fsemantic_5fsimilarity_3',['calculate_semantic_similarity',['../classalyssa__fusion_1_1WeightedFusion.html#acaae4b9ac014b49a7443fa983a2a37f7',1,'alyssa_fusion::WeightedFusion']]],
-  ['clear_5fembedding_5fcache_4',['clear_embedding_cache',['../classEmbedder.html#a2baaa0db730b77236b0e8e414c0a344c',1,'Embedder']]],
-  ['clear_5fsubtype_5',['clear_subtype',['../classbyte__container__with__subtype.html#ad18f6a7557a2bfce28f1ed8d4d10607c',1,'byte_container_with_subtype']]],
-  ['compute_5fboundaries_6',['compute_boundaries',['../namespacedetail_1_1dtoa__impl.html#a6a5ccf11847aab7a0f42f587b33935df',1,'detail::dtoa_impl']]],
-  ['cosine_5fsimilarity_7',['cosine_similarity',['../classEmbedder.html#af6afade55aff593379dff4a24b635789',1,'Embedder']]],
-  ['create_8',['create',['../classdetail_1_1parse__error.html#a07046ea9f33d28f120af188ed674d6df',1,'detail::parse_error']]]
+  ['calculate_0',['calculate',['../classIScoreCalculator.html#a0c300ce15b760ca1709997c533190f14',1,'IScoreCalculator::calculate()'],['../classLexiconScoreCalculator.html#a39bca8477426dbafce8e04ebc59857a2',1,'LexiconScoreCalculator::calculate()']]],
+  ['calculate_5fcommittee_5fcoherence_1',['calculate_committee_coherence',['../classCoreIntegration.html#af7d8f4e2b769482f138a2a5e8604d54d',1,'CoreIntegration']]],
+  ['calculate_5ffeature_5fbased_5fweights_2',['calculate_feature_based_weights',['../classalyssa__fusion_1_1WeightedFusion.html#ac0e4cf05792e298de145de37926b7909',1,'alyssa_fusion::WeightedFusion']]],
+  ['calculate_5fneural_5fweights_3',['calculate_neural_weights',['../classalyssa__fusion_1_1WeightedFusion.html#ae6e0726904d4ddd2a148ae785f2720b6',1,'alyssa_fusion::WeightedFusion']]],
+  ['calculate_5frule_5fbased_5fweights_4',['calculate_rule_based_weights',['../classalyssa__fusion_1_1WeightedFusion.html#af6f444c44486a0b8001ba75ba30428b4',1,'alyssa_fusion::WeightedFusion']]],
+  ['calculate_5fsemantic_5fsimilarity_5',['calculate_semantic_similarity',['../classalyssa__fusion_1_1WeightedFusion.html#acaae4b9ac014b49a7443fa983a2a37f7',1,'alyssa_fusion::WeightedFusion']]],
+  ['clear_5fall_5fcache_6',['clear_all_cache',['../classCoreIntegration.html#af59090e676d2b27556e20b85b88b0883',1,'CoreIntegration']]],
+  ['clear_5fembedding_5fcache_7',['clear_embedding_cache',['../classEmbedder.html#a2baaa0db730b77236b0e8e414c0a344c',1,'Embedder']]],
+  ['clear_5fhistory_8',['clear_history',['../classalyssa__experts_1_1ExpertBase.html#af38ecc722ffd3e83f1fb15044f9227b5',1,'alyssa_experts::ExpertBase::clear_history()'],['../classalyssa__experts_1_1IExpert.html#ae18f129b36e3bae7095884e4babff26f',1,'alyssa_experts::IExpert::clear_history()']]],
+  ['clear_5fsubtype_9',['clear_subtype',['../classbyte__container__with__subtype.html#ad18f6a7557a2bfce28f1ed8d4d10607c',1,'byte_container_with_subtype']]],
+  ['compute_5fboundaries_10',['compute_boundaries',['../namespacedetail_1_1dtoa__impl.html#a6a5ccf11847aab7a0f42f587b33935df',1,'detail::dtoa_impl']]],
+  ['coreintegration_11',['CoreIntegration',['../classCoreIntegration.html#a8dea14e6ebb67536e4346d0aa366bd42',1,'CoreIntegration']]],
+  ['cosine_5fsimilarity_12',['cosine_similarity',['../classEmbedder.html#af6afade55aff593379dff4a24b635789',1,'Embedder']]],
+  ['create_13',['create',['../classdetail_1_1parse__error.html#a07046ea9f33d28f120af188ed674d6df',1,'detail::parse_error']]],
+  ['createcontextualsearchquery_14',['createContextualSearchQuery',['../classSQLStatementBuilder.html#a659ae805f2dff1344a515659cf4313ef',1,'SQLStatementBuilder']]],
+  ['createembeddinginsert_15',['createEmbeddingInsert',['../classSQLStatementBuilder.html#ab7a10c7ee0d357d45fd557e81c557a0a',1,'SQLStatementBuilder']]],
+  ['creatememoryinsert_16',['createMemoryInsert',['../classSQLStatementBuilder.html#afb33c572a50b8221d78f23d0f8ce62bc',1,'SQLStatementBuilder']]],
+  ['creatememorylink_17',['createMemoryLink',['../classalyssa__memory_1_1AdvancedMemorySystem.html#ad4f858b2c8c6943cae4ea3c6272a43f3',1,'alyssa_memory::AdvancedMemorySystem']]],
+  ['createsemanticsearchquery_18',['createSemanticSearchQuery',['../classSQLStatementBuilder.html#a6ee81a7da273c2f816c04085b7349415',1,'SQLStatementBuilder']]]
 ];
