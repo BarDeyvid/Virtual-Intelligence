@@ -1,8 +1,17 @@
 #include "EmotionLexiconLoader.hpp"
 
 namespace alyssa_memory {
+    /**
+     * @brief Default path to the Portuguese lexicon JSON file.
+     */
     const std::string EmotionLexiconLoader::DEFAULT_LEXICON_PATH = "config/LexiconPortuguese.json";
 
+    /**
+     * @brief Loads the default Portuguese lexicon from the default file path.
+     * @return std::unordered_map<std::string, std::vector<std::string>> 
+     *         A map containing emotions as keys and vectors of associated words as values.
+     *         Returns an empty map if loading fails.
+     */
     std::unordered_map<std::string, std::vector<std::string>> EmotionLexiconLoader::loadDefaultPortugueseLexicon() {        
         std::cout << "Tentando carregar o lexicon padrao do caminho: " << DEFAULT_LEXICON_PATH << std::endl;
         
@@ -15,6 +24,13 @@ namespace alyssa_memory {
         return emotion_lexicons;
     }
 
+    /**
+     * @brief Loads an emotion lexicon from a specified JSON file.
+     * @param filepath Path to the JSON lexicon file.
+     * @return std::unordered_map<std::string, std::vector<std::string>> 
+     *         A map containing emotions as keys and vectors of associated words as values.
+     *         Returns an empty map if the file cannot be opened or parsed.
+     */
     std::unordered_map<std::string, std::vector<std::string>> EmotionLexiconLoader::loadLexiconFromFile(const std::string& filepath) {
         std::unordered_map<std::string, std::vector<std::string>> lexicon;
         std::ifstream file(filepath);
@@ -47,6 +63,11 @@ namespace alyssa_memory {
         return lexicon;
     }
 
+    /**
+     * @brief Saves an emotion lexicon to a JSON file.
+     * @param lexicon The lexicon map to save.
+     * @param filepath Path where the JSON file will be created/overwritten.
+     */
     void EmotionLexiconLoader::saveLexiconToFile(
         const std::unordered_map<std::string, std::vector<std::string>>& lexicon,
         const std::string& filepath) {
