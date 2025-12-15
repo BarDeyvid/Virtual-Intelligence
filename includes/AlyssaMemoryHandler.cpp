@@ -8,28 +8,57 @@ using namespace alyssa_memory;
 // Implementações das Estruturas
 // ============================================================================
 
+/**
+ * @brief Constructor for EmotionalState
+ * @param n Emotion name (default: "neutral")
+ * @param i Emotion intensity (default: 0.5)
+ */
 EmotionalState::EmotionalState(const std::string& n, double i) 
     : name(n), intensity(i) {
     timestamp = std::chrono::system_clock::to_time_t(
         std::chrono::system_clock::now());
 }
 
+/**
+ * @brief Constructor for Intention
+ * @param desc Description text
+ * @param t Type/category
+ * @param trig Trigger text (optional)
+ */
 Intention::Intention(const std::string& desc, const std::string& t, const std::string& trig)
     : description(desc), type(t), trigger(trig), active(true), motivation(0.5) {
     created_at = Utils::getCurrentISOTime();
 }
 
+/**
+ * @brief Constructor for MemoryLink
+ * @param src Source memory ID
+ * @param tgt Target memory ID
+ * @param w Link weight (default: 1.0)
+ * @param t Link type (default: "association")
+ */
 MemoryLink::MemoryLink(MemoryId src, MemoryId tgt, double w, const std::string& t)
     : source_id(src), target_id(tgt), weight(w), type(t) {}
 
+/**
+ * @brief Constructor for Reflection
+ * @param mem_id Memory ID
+ * @param t Reflection type
+ * @param c Reflection content
+ */
 Reflection::Reflection(MemoryId mem_id, const std::string& t, const std::string& c)
     : memory_id(mem_id), type(t), content(c) {
     created_at = Utils::getCurrentISOTime();
 }
+
 // ============================================================================
 // Implementação de EmotionalAnalyzer
 // ============================================================================
 
+/**
+ * @brief Constructor for EmotionalAnalyzer
+ * @param config Configuration settings (optional)
+ */
 EmotionalAnalyzer::EmotionalAnalyzer(const EmotionalAnalyzerConfig& config) : config_(config) {
     // Inicializar categorias de emoções
     emotion_categories = config_.emotion_categories;
@@ -42,11 +71,20 @@ EmotionalAnalyzer::EmotionalAnalyzer(const EmotionalAnalyzerConfig& config) : co
     initializeEmotionLexicons();
 }
 
-// TODO: Again, Make an Neural Network for this part too
+/**
+ * @brief Initialize emotion lexicons from default Portuguese lexicon
+ * 
+ * TODO: Replace with Neural Network for better accuracy
+ */
 void EmotionalAnalyzer::initializeEmotionLexicons() {
     emotion_lexicons = EmotionLexiconLoader::loadDefaultPortugueseLexicon();
 }
 
+/**
+ * @brief Analyze emotional content of text
+ * @param text Input text to analyze
+ * @return EmotionalAnalysis structure with results
+ */
 EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
     EmotionalAnalysis result;
     std::unordered_map<std::string, double> scores;
@@ -77,6 +115,12 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeText(const std::string& text) {
     return result;
 }
 
+/**
+ * @brief Analyze emotional content of conversation
+ * @param user_input User input text
+ * @param ai_response AI response text
+ * @return Combined emotional analysis
+ */
 EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user_input, const std::string& ai_response) {
     // Combinar análise do input do usuário e resposta da IA
     auto user_analysis = analyzeText(user_input);
@@ -99,6 +143,11 @@ EmotionalAnalysis EmotionalAnalyzer::analyzeConversation(const std::string& user
     return combined;
 }
 
+/**
+ * @brief Analyze text using lexicon matching
+ * @param text Input text to analyze
+ * @param scores Output scores (will be modified)
+ */
 void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unordered_map<std::string, double>& scores) const {
     for (const auto& [emotion, words] : emotion_lexicons) {
         // Obter peso base da emocao
@@ -117,7 +166,13 @@ void EmotionalAnalyzer::analyzeWithLexicon(const std::string& text, std::unorder
     }
 }
 
-// TODO: Create Categorize Neural Network model for this one
+/**
+ * @brief Analyze patterns like intensifiers and negations
+ * @param text Input text to analyze
+ * @param scores Output scores (will be modified)
+ * 
+ * TODO: Replace with Neural Network model for better accuracy
+ */
 void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_map<std::string, double>& scores) const{
     // Detectar intensificadores
     std::vector<std::string> intensifiers = {"muito", "extremamente", "totalmente", "completamente", 
@@ -157,7 +212,13 @@ void EmotionalAnalyzer::analyzePatterns(const std::string& text, std::unordered_
     }
 }
 
-// TODO: Create Categorize Neural Network model for this one too
+/**
+ * @brief Analyze punctuation for emotional cues
+ * @param text Input text to analyze
+ * @param scores Output scores (will be modified)
+ * 
+ * TODO: Replace with Neural Network model for better accuracy
+ */
 void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unordered_map<std::string, double>& scores) const {
     // Contar exclamações (aumenta intensidade emocional)
     int exclamation_count = std::count(text.begin(), text.end(), '!');
@@ -182,6 +243,11 @@ void EmotionalAnalyzer::analyzePunctuation(const std::string& text, std::unorder
     }
 }
 
+/**
+ * @brief Normalize emotion scores to vector format
+ * @param scores Raw emotion scores
+ * @return Normalized vector of emotion scores
+ */
 std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<std::string, double>& scores) const {
     std::vector<float> vector;
     double max_score = 0.0;
@@ -200,6 +266,11 @@ std::vector<float> EmotionalAnalyzer::normalizeScores(const std::unordered_map<s
     return vector;
 }
 
+/**
+ * @brief Find dominant emotion from scores
+ * @param scores Emotion scores
+ * @return Name of dominant emotion
+ */
 std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std::string, double>& scores) const {
     std::string dominant = "neutral";
     double max_score = 0.0;
@@ -214,6 +285,11 @@ std::string EmotionalAnalyzer::findDominantEmotion(const std::unordered_map<std:
     return max_score > config_.min_confidence_threshold ? dominant : "neutral";
 }
 
+/**
+ * @brief Calculate confidence score for analysis
+ * @param scores Emotion scores
+ * @return Confidence value (0.0-1.0)
+ */
 double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::string, double>& scores) const {
     double sum = 0.0;
     for (const auto& [emotion, score] : scores) {
@@ -228,6 +304,10 @@ double EmotionalAnalyzer::calculateConfidence(const std::unordered_map<std::stri
 // Implementação de Utils
 // ============================================================================
 
+/**
+ * @brief Get timestamp as cyclical vector (for time encoding)
+ * @return Vector with sine/cosine representation of current hour
+ */
 std::vector<float> Utils::getTimeStamp() {
     auto now = std::chrono::system_clock::now();
     auto ts = std::chrono::duration_cast<std::chrono::seconds>(
@@ -242,6 +322,10 @@ std::vector<float> Utils::getTimeStamp() {
     };
 }
 
+/**
+ * @brief Get current time in ISO 8601 format
+ * @return ISO timestamp string
+ */
 std::string Utils::getCurrentISOTime() {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
@@ -252,10 +336,20 @@ std::string Utils::getCurrentISOTime() {
     return std::string(buffer);
 }
 
+/**
+ * @brief Sigmoid activation function
+ * @param x Input value
+ * @return Sigmoid of x
+ */
 double Utils::sigmoid(double x) {
     return 1.0 / (1.0 + std::exp(-x));
 }
 
+/**
+ * @brief Normalize importance score to [0, 1] range
+ * @param raw_importance Raw importance value
+ * @return Normalized importance (clamped to 0.0-1.0)
+ */
 double Utils::normalizeImportance(double raw_importance) {
     return std::max(0.0, std::min(1.0, raw_importance));
 }
@@ -264,6 +358,11 @@ double Utils::normalizeImportance(double raw_importance) {
 // Implementação de LexiconScoreCalculator
 // ============================================================================
 
+/**
+ * @brief Calculate emotion scores using lexicon matching
+ * @param text Input text to analyze
+ * @param scores Output map of emotion scores (will be filled)
+ */
 void LexiconScoreCalculator::calculate(const std::string& text,
                                        std::unordered_map<std::string, double>& scores) {
     std::vector<std::string> words = TextNormalizer::extractWords(text);
@@ -286,6 +385,11 @@ void LexiconScoreCalculator::calculate(const std::string& text,
 // Initialize the static map (Best effort for single-byte, but we will use a string map for UTF-8 in the function)
 const std::unordered_map<char, char> TextNormalizer::accent_map = {}; 
 
+/**
+ * @brief Convert text to lowercase
+ * @param text Input text
+ * @return Lowercase version of text
+ */
 std::string TextNormalizer::toLowerCase(const std::string& text) {
     std::string result = text;
     std::transform(result.begin(), result.end(), result.begin(),
@@ -293,7 +397,11 @@ std::string TextNormalizer::toLowerCase(const std::string& text) {
     return result;
 }
 
-
+/**
+ * @brief Remove extra whitespace from text
+ * @param text Input text
+ * @return Text with single spaces between words
+ */
 std::string TextNormalizer::removeExtraSpaces(const std::string& text) {
     std::string result;
     bool space_found = false;
@@ -317,6 +425,11 @@ std::string TextNormalizer::removeExtraSpaces(const std::string& text) {
     return result.substr(first, (last - first + 1));
 }
 
+/**
+ * @brief Normalize punctuation spacing
+ * @param text Input text
+ * @return Text with normalized punctuation spacing
+ */
 std::string TextNormalizer::normalizePunctuation(const std::string& text) {
     std::string result = text;
     // Add spaces around punctuation to assist tokenization, except for common abbreviations if needed
@@ -326,6 +439,11 @@ std::string TextNormalizer::normalizePunctuation(const std::string& text) {
     return removeExtraSpaces(result);
 }
 
+/**
+ * @brief Remove Portuguese accents from text
+ * @param text Input text
+ * @return Text with accents converted to base characters
+ */
 std::string TextNormalizer::normalizePortugueseAccents(const std::string& text) {
     std::string result = text;
     
@@ -356,6 +474,11 @@ std::string TextNormalizer::normalizePortugueseAccents(const std::string& text) 
     return result;
 }
 
+/**
+ * @brief Extract words from text with normalization
+ * @param text Input text
+ * @return Vector of extracted words
+ */
 std::vector<std::string> TextNormalizer::extractWords(const std::string& text) {
     std::vector<std::string> words;
     std::string normalized = normalizePunctuation(text);
@@ -380,6 +503,11 @@ std::vector<std::string> TextNormalizer::extractWords(const std::string& text) {
 // Implementação de SQLStatementBuilder
 // ============================================================================
 
+/**
+ * @brief Escape SQL string to prevent injection
+ * @param input Input string
+ * @return Escaped SQL string
+ */
 std::string SQLStatementBuilder::escapeSQLString(const std::string& input) {
     std::string output = input;
     size_t pos = 0;
@@ -390,6 +518,16 @@ std::string SQLStatementBuilder::escapeSQLString(const std::string& input) {
     return output;
 }
 
+/**
+ * @brief Create SQL INSERT statement for memories
+ * @param content Memory content
+ * @param context Memory context
+ * @param emotion Detected emotion
+ * @param importance Importance score
+ * @param timestamp Unix timestamp
+ * @param vtime Vector time representation
+ * @return SQL INSERT statement string
+ */
 std::string SQLStatementBuilder::createMemoryInsert(const std::string& content, 
                                      const std::string& context,
                                      const std::string& emotion,
@@ -403,6 +541,13 @@ std::string SQLStatementBuilder::createMemoryInsert(const std::string& content,
     )";
 }
 
+/**
+ * @brief Create SQL INSERT statement for embeddings
+ * @param memory_id Memory ID
+ * @param embedding Vector embedding
+ * @param created_at Creation timestamp
+ * @return SQL INSERT statement string
+ */
 std::string SQLStatementBuilder::createEmbeddingInsert(MemoryId memory_id,
                                         const std::vector<float>& embedding,
                                         const std::string& created_at) {
@@ -414,6 +559,10 @@ std::string SQLStatementBuilder::createEmbeddingInsert(MemoryId memory_id,
     )";
 }
 
+/**
+ * @brief Create SQL query for semantic search
+ * @return SQL SELECT statement for semantic search
+ */
 std::string SQLStatementBuilder::createSemanticSearchQuery() {
     // Selects all embeddings to compute cosine similarity in C++
     return R"(
@@ -424,6 +573,12 @@ std::string SQLStatementBuilder::createSemanticSearchQuery() {
     )";
 }
 
+/**
+ * @brief Create SQL query for contextual search
+ * @param pattern Search pattern for LIKE operator
+ * @param limit Result limit
+ * @return SQL SELECT statement for contextual search
+ */
 std::string SQLStatementBuilder::createContextualSearchQuery(const std::string& pattern, int limit) {
     return R"(
         SELECT id, conteudo, emocao, importancia 
@@ -438,6 +593,12 @@ std::string SQLStatementBuilder::createContextualSearchQuery(const std::string& 
 // Implementação de AdvancedMemorySystem
 // ============================================================================
 
+/**
+ * @brief Constructor for AdvancedMemorySystem
+ * @param db_path Path to SQLite database file
+ * @param embedder_ref Shared pointer to Embedder instance
+ * @throws std::runtime_error if database cannot be opened
+ */
 AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref) 
     : db(nullptr), embedder(embedder_ref) // <-- Recebe e armazena o embedder na lista de inicialização
 {
@@ -465,6 +626,9 @@ AdvancedMemorySystem::AdvancedMemorySystem(const std::string& db_path, std::shar
     std::cout << "Sistema de Memória Avançado Inicializado\n";
 }
 
+/**
+ * @brief Destructor - saves state and closes database
+ */
 AdvancedMemorySystem::~AdvancedMemorySystem() {
     if (db) {
         saveCurrentState();
@@ -472,6 +636,10 @@ AdvancedMemorySystem::~AdvancedMemorySystem() {
     }
 }
 
+/**
+ * @brief Initialize database tables
+ * @throws std::runtime_error if table creation fails
+ */
 void AdvancedMemorySystem::initializeDatabase() {
     const char* tables[] = {
         // Tabela de estados emocionais
@@ -577,6 +745,9 @@ void AdvancedMemorySystem::initializeDatabase() {
     }
 }
 
+/**
+ * @brief Load current emotional state from database
+ */
 void AdvancedMemorySystem::loadCurrentState() {
     const char* sql = "SELECT name, intensity FROM emotional_states ORDER BY timestamp DESC LIMIT 1";
     sqlite3_stmt* stmt;
@@ -592,6 +763,9 @@ void AdvancedMemorySystem::loadCurrentState() {
     loadActiveIntentions();
 }
 
+/**
+ * @brief Save current emotional state to database
+ */
 void AdvancedMemorySystem::saveCurrentState() {
     const char* sql = "INSERT INTO emotional_states (name, intensity, timestamp) VALUES (?, ?, ?)";
     sqlite3_stmt* stmt;
@@ -605,6 +779,9 @@ void AdvancedMemorySystem::saveCurrentState() {
     }
 }
 
+/**
+ * @brief Load active intentions from database
+ */
 void AdvancedMemorySystem::loadActiveIntentions() {
     active_intentions.clear();
     const char* sql = "SELECT id, description, type, trigger, motivation, created_at FROM intentions WHERE active = 1";
@@ -626,21 +803,38 @@ void AdvancedMemorySystem::loadActiveIntentions() {
     }
 }
 
+/**
+ * @brief Get current emotional state
+ * @return Current EmotionalState structure
+ */
 EmotionalState AlyssaMemoryManager::getCurrentEmotionalState() const {
     return memory_system->getCurrentEmotionalState();
 }
 
+/**
+ * @brief Get active intentions
+ * @return Vector of active Intention structures
+ */
 std::vector<Intention> AlyssaMemoryManager::getActiveIntentions() const {
     return memory_system->getActiveIntentions();
 }
 
 // === MÉTODOS DE EMBEDDING E BUSCA SEMÂNTICA ===
 
+/**
+ * @brief Check if embedder is available
+ * @return true if embedder is initialized and ready
+ */
 bool AdvancedMemorySystem::hasEmbedder() const {
     return embedder != nullptr && embedder->is_initialized();
 }
 
-// Gerar embedding para texto e salvar no banco
+/**
+ * @brief Generate and store embedding for memory
+ * @param memory_id Memory ID
+ * @param content Memory content to embed
+ * @return true if successful, false otherwise
+ */
 bool AdvancedMemorySystem::generateAndStoreEmbedding(int memory_id, const std::string& content) {
     if (!hasEmbedder()) {
         return false;
@@ -658,7 +852,12 @@ bool AdvancedMemorySystem::generateAndStoreEmbedding(int memory_id, const std::s
     }
 }
 
-
+/**
+ * @brief Search memories semantically (embedding-based)
+ * @param query Search query text
+ * @param top_k Number of results to return (default: 5)
+ * @return Vector of SemanticMemory results
+ */
 std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semanticSearch(const std::string& query, int top_k) {
     std::vector<SemanticMemory> results;
     
@@ -676,6 +875,12 @@ std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semantic
     }
 }
 
+/**
+ * @brief Search memories with pre-computed embedding
+ * @param query_embedding Query embedding vector
+ * @param top_k Number of results to return (default: 5)
+ * @return Vector of SemanticMemory results
+ */
 std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semanticSearchWithEmbedding(const std::vector<float>& query_embedding, int top_k) {
     std::vector<SemanticMemory> results;
     
@@ -726,6 +931,12 @@ std::vector<AdvancedMemorySystem::SemanticMemory> AdvancedMemorySystem::semantic
     return results;
 }
 
+/**
+ * @brief Hybrid search (text + semantic)
+ * @param query Search query text
+ * @param top_k Number of results to return (default: 5)
+ * @return Vector of HybridMemoryResult structures
+ */
 std::vector<AdvancedMemorySystem::HybridMemoryResult> AdvancedMemorySystem::hybridSearch(const std::string& query, int top_k) {
     std::vector<HybridMemoryResult> results;
     
@@ -783,6 +994,11 @@ std::vector<AdvancedMemorySystem::HybridMemoryResult> AdvancedMemorySystem::hybr
     return results;
 }
 
+/**
+ * @brief Store embedding vector for memory
+ * @param memory_id Memory ID
+ * @param embedding Vector embedding
+ */
 void AdvancedMemorySystem::storeEmbedding(int memory_id, const std::vector<float>& embedding) {
     std::string sql_statment = SQLStatementBuilder::createEmbeddingInsert(static_cast<MemoryId>(memory_id), embedding, Utils::getCurrentISOTime());
     const char* sql = sql_statment.c_str();
@@ -802,6 +1018,11 @@ void AdvancedMemorySystem::storeEmbedding(int memory_id, const std::vector<float
 
 // === INTERFACE HIGH-LEVEL PARA INTEGRAÇÃO ===
 
+/**
+ * @brief Set current emotional state
+ * @param emotion Emotion name
+ * @param intensity Emotion intensity (0.0-1.0)
+ */
 void AdvancedMemorySystem::setEmotionalState(const std::string& emotion, double intensity) {
     current_emotional_state.name = emotion;
     current_emotional_state.intensity = Utils::normalizeImportance(intensity);
@@ -814,10 +1035,17 @@ void AdvancedMemorySystem::setEmotionalState(const std::string& emotion, double 
     checkEmotionalAutoActivation();
 }
 
+/**
+ * @brief Get current emotional state
+ * @return Current EmotionalState structure
+ */
 EmotionalState AdvancedMemorySystem::getCurrentEmotionalState() const {
     return current_emotional_state;
 }
 
+/**
+ * @brief Apply memory decay over time
+ */
 void AdvancedMemorySystem::applyMemoryDecay() {
     const char* sql = R"(
         UPDATE memory_decay 
@@ -844,6 +1072,13 @@ void AdvancedMemorySystem::applyMemoryDecay() {
     }
 }
 
+/**
+ * @brief Activate new intention
+ * @param description Intention description
+ * @param type Intention type/category
+ * @param trigger Trigger text (optional)
+ * @param motivation_boost Additional motivation boost (optional)
+ */
 void AdvancedMemorySystem::activateIntention(const std::string& description, const std::string& type, 
                       const std::string& trigger, double motivation_boost) {
     for (const auto& intention : active_intentions) {
@@ -874,6 +1109,10 @@ void AdvancedMemorySystem::activateIntention(const std::string& description, con
     }
 }
 
+/**
+ * @brief Deactivate intention by ID
+ * @param intention_id Intention ID to deactivate
+ */
 void AdvancedMemorySystem::deactivateIntention(int intention_id) {
     const char* sql = "UPDATE intentions SET active = 0 WHERE id = ?";
     sqlite3_stmt* stmt;
@@ -893,10 +1132,17 @@ void AdvancedMemorySystem::deactivateIntention(int intention_id) {
     }
 }
 
+/**
+ * @brief Get active intentions
+ * @return Vector of active Intention structures
+ */
 std::vector<Intention> AdvancedMemorySystem::getActiveIntentions() const {
     return active_intentions;
 }
 
+/**
+ * @brief Generate reflections based on recent memories
+ */
 void AdvancedMemorySystem::generateReflections() {
     const char* sql = R"(
         SELECT m.id, m.conteudo, m.emocao, m.importancia 
@@ -939,6 +1185,13 @@ void AdvancedMemorySystem::generateReflections() {
     }
 }
 
+/**
+ * @brief Create link between memories
+ * @param source_id Source memory ID
+ * @param target_id Target memory ID
+ * @param weight Link weight (default: 1.0)
+ * @param link_type Link type (default: "association")
+ */
 void AdvancedMemorySystem::createMemoryLink(MemoryId source_id, MemoryId target_id, double weight, 
                      const std::string& link_type) {
     const char* sql = R"(
@@ -961,12 +1214,22 @@ void AdvancedMemorySystem::createMemoryLink(MemoryId source_id, MemoryId target_
     }
 }
 
+/**
+ * @brief Link memory to intention
+ * @param memory_id Memory ID
+ * @param intention_id Intention ID
+ */
 void AdvancedMemorySystem::linkMemoryToIntention(int memory_id, int intention_id) {
     std::string content = "Linked explicitly to intention ID: " + std::to_string(intention_id);
     saveReflection(memory_id, "intention_link", content);
     std::cout << "🔗 Memória " << memory_id << " vinculada à intenção " << intention_id << "\n";
 }
 
+/**
+ * @brief Get links associated with memory
+ * @param memory_id Memory ID
+ * @return Vector of MemoryLink structures
+ */
 std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(MemoryId memory_id) {
     std::vector<MemoryLink> links;
     const char* sql = R"(
@@ -994,6 +1257,12 @@ std::vector<MemoryLink> AdvancedMemorySystem::getMemoryLinks(MemoryId memory_id)
     return links;
 }
 
+/**
+ * @brief Search memories contextually (text-based)
+ * @param query Search query text
+ * @param top_k Number of results to return (default: 5)
+ * @return Vector of ContextualMemory results
+ */
 std::vector<AdvancedMemorySystem::ContextualMemory> AdvancedMemorySystem::searchContextualMemories(const std::string& query, 
                                                       int top_k) {
     std::vector<ContextualMemory> results;
@@ -1040,17 +1309,31 @@ std::vector<AdvancedMemorySystem::ContextualMemory> AdvancedMemorySystem::search
     return results;
 }
 
-// --- NOVOS MÉTODOS PARA ANÁLISE EMOCIONAL AUTOMÁTICA --- (ADICIONADOS)
-
+/**
+ * @brief Analyze emotional content of text
+ * @param text Text to analyze
+ * @return EmotionalAnalysis structure with results
+ */
 EmotionalAnalysis AdvancedMemorySystem::analyzeEmotionalContent(const std::string& text) {
     return emotional_analyzer->analyzeText(text);
 }
 
+/**
+ * @brief Analyze emotions in conversation
+ * @param user_input User input text
+ * @param ai_response AI response text
+ * @return Combined emotional analysis
+ */
 EmotionalAnalysis AdvancedMemorySystem::analyzeConversationEmotions(const std::string& user_input, const std::string& ai_response) {
     return emotional_analyzer->analyzeConversation(user_input, ai_response);
 }
 
-// Método para processar e armazenar memória com análise emocional automática
+/**
+ * @brief Store memory with automatic emotional analysis
+ * @param content Memory content
+ * @param context Memory context (optional)
+ * @return Memory ID if successful, -1 on error
+ */
 int AdvancedMemorySystem::storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context) {
     // Analisar conteúdo emocionalmente
     auto emotional_analysis = analyzeEmotionalContent(content);
@@ -1103,23 +1386,44 @@ int AdvancedMemorySystem::storeMemoryWithEmotionalAnalysis(const std::string& co
     return memory_id;
 }
 
+/**
+ * @brief Store memory with emotional analysis (AlyssaMemoryManager wrapper)
+ * @param content Memory content
+ * @param context Memory context
+ * @return Memory ID if successful, -1 on error
+ */
 int AlyssaMemoryManager::storeMemoryWithEmotionalAnalysis(const std::string& content, const std::string& context) {
     if (!memory_system) return -1;
     return memory_system->storeMemoryWithEmotionalAnalysis(content, context);
 }
 
+/**
+ * @brief Link memory to intention (AlyssaMemoryManager wrapper)
+ * @param memory_id Memory ID
+ * @param intention_id Intention ID
+ */
 void AlyssaMemoryManager::linkMemoryToIntention(int memory_id, int intention_id) {
     if (memory_system) {
         memory_system->linkMemoryToIntention(memory_id, intention_id);
     }
 }
 
-// Método para obter emotional_vector automaticamente para integração
+/**
+ * @brief Get automatic emotional vector for text
+ * @param text Text to analyze
+ * @return Emotional vector (normalized)
+ */
 std::vector<float> AdvancedMemorySystem::getAutoEmotionalVector(const std::string& text) {
     auto analysis = analyzeEmotionalContent(text);
     return analysis.emotional_vector;
 }
 
+/**
+ * @brief Calculate automatic importance score for memory
+ * @param content Memory content
+ * @param analysis Emotional analysis results
+ * @return Importance score (0.0-1.0)
+ */
 double AdvancedMemorySystem::calculateAutomaticImportance(const std::string& content, const EmotionalAnalysis& analysis) {
     double importance = 0.5; // Importância base
     
@@ -1146,6 +1450,9 @@ double AdvancedMemorySystem::calculateAutomaticImportance(const std::string& con
     return std::min(1.0, importance);
 }
 
+/**
+ * @brief Check for automatic intention activation based on emotions
+ */
 void AdvancedMemorySystem::checkEmotionalAutoActivation() {
     auto it = emotion_to_intention.find(current_emotional_state.name);
     if (it != emotion_to_intention.end() && current_emotional_state.intensity > 0.7) {
@@ -1167,6 +1474,12 @@ void AdvancedMemorySystem::checkEmotionalAutoActivation() {
     }
 }
 
+/**
+ * @brief Save reflection to database
+ * @param memory_id Memory ID being reflected upon
+ * @param type Type of reflection
+ * @param content Reflection content
+ */
 void AdvancedMemorySystem::saveReflection(int memory_id, const std::string& type, const std::string& content) {
     const char* sql = R"(
         INSERT INTO reflections (memory_id, type, content, created_at)
@@ -1184,6 +1497,11 @@ void AdvancedMemorySystem::saveReflection(int memory_id, const std::string& type
     }
 }
 
+/**
+ * @brief Calculate intention boost for memory relevance
+ * @param content Memory content
+ * @return Boost score (0.0-0.5)
+ */
 double AdvancedMemorySystem::calculateIntentionBoost(const std::string& content) {
     double boost = 0.0;
     for (const auto& intention : active_intentions) {
@@ -1194,6 +1512,11 @@ double AdvancedMemorySystem::calculateIntentionBoost(const std::string& content)
     return std::min(boost, 0.5);
 }
 
+/**
+ * @brief Calculate emotional boost for memory relevance
+ * @param memory_emotion Emotion associated with memory
+ * @return Boost score based on emotional match
+ */
 double AdvancedMemorySystem::calculateEmotionalBoost(const std::string& memory_emotion) {
     if (memory_emotion == current_emotional_state.name) {
         return 0.2 * current_emotional_state.intensity;
@@ -1203,6 +1526,9 @@ double AdvancedMemorySystem::calculateEmotionalBoost(const std::string& memory_e
 
 // === MÉTODOS DE MONITORAMENTO E DEBUG ===
 
+/**
+ * @brief Print system status to console
+ */
 void AdvancedMemorySystem::printSystemStatus() {
     std::cout << "\n=== STATUS DO SISTEMA DE MEMÓRIA ===\n";
     std::cout << "Estado Emocional: " << current_emotional_state.name 
@@ -1231,7 +1557,10 @@ void AdvancedMemorySystem::printSystemStatus() {
     std::cout << "====================================\n\n";
 }
 
-// Novo método para demonstrar busca semântica
+/**
+ * @brief Demonstrate semantic search with debug output
+ * @param query Search query for demonstration
+ */
 void AdvancedMemorySystem::demonstrateSemanticSearch(const std::string& query) {
     if (!hasEmbedder()) {
         std::cout << " Embedder não disponível para busca semântica\n";
@@ -1259,16 +1588,24 @@ void AdvancedMemorySystem::demonstrateSemanticSearch(const std::string& query) {
     std::cout << "----------------------------------------\n";
 }
 
-
 // ============================================================================
 // Implementação de AlyssaMemoryManager
 // ============================================================================
 
+/**
+ * @brief Constructor for AlyssaMemoryManager
+ * @param db_path Path to SQLite database file
+ * @param embedder_ref Shared pointer to Embedder instance
+ */
 AlyssaMemoryManager::AlyssaMemoryManager(const std::string& db_path, std::shared_ptr<Embedder> embedder_ref) {
     memory_system = std::make_unique<AdvancedMemorySystem>(db_path, embedder_ref);
 }
 
-// NOVA VERSÃO: gera emotional_vector automaticamente
+/**
+ * @brief Process interaction with automatic emotional analysis
+ * @param user_input User input text
+ * @param ai_response AI response text
+ */
 void AlyssaMemoryManager::processInteraction(const std::string& user_input, 
                       const std::string& ai_response) { // REMOVER parâmetro emotional_vector
     
@@ -1312,6 +1649,11 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
     }
 }
 
+/**
+ * @brief Process identity fact for user modeling
+ * @param fact_value Fact value
+ * @param fact_type Fact type/category
+ */
 void AlyssaMemoryManager::processIdentityFact(const std::string& fact_value, const std::string& fact_type) {
     if (memory_system) {
         memory_system->activateIntention(
@@ -1326,7 +1668,12 @@ void AlyssaMemoryManager::processIdentityFact(const std::string& fact_value, con
     }
 }
 
-// Método para compatibilidade com código legado
+/**
+ * @brief Process interaction with provided emotional vector (legacy)
+ * @param user_input User input text
+ * @param ai_response AI response text
+ * @param emotional_vector Pre-computed emotional vector
+ */
 void AlyssaMemoryManager::processInteraction(const std::string& user_input, 
                       const std::string& ai_response,
                       const std::vector<float>& emotional_vector) {
@@ -1362,22 +1709,47 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
     }
 }
 
+/**
+ * @brief Get relevant memories for context
+ * @param context Context string for search
+ * @return Vector of ContextualMemory results
+ */
 std::vector<AdvancedMemorySystem::ContextualMemory> AlyssaMemoryManager::getRelevantMemories(const std::string& context) {
     return memory_system->searchContextualMemories(context, 3);
 }
 
+/**
+ * @brief Get semantic memories for context
+ * @param context Context string for search
+ * @return Vector of SemanticMemory results
+ */
 std::vector<AdvancedMemorySystem::SemanticMemory> AlyssaMemoryManager::getSemanticMemories(const std::string& context) {
     return memory_system->semanticSearch(context, 3);
 }
 
+/**
+ * @brief Get hybrid search results for context
+ * @param context Context string for search
+ * @return Vector of HybridMemoryResult structures
+ */
 std::vector<AdvancedMemorySystem::HybridMemoryResult> AlyssaMemoryManager::getHybridMemories(const std::string& context) {
     return memory_system->hybridSearch(context, 3);
 }
 
+/**
+ * @brief Set current goal/intention
+ * @param goal Goal description
+ * @param type Goal type (default: "learning")
+ */
 void AlyssaMemoryManager::setCurrentGoal(const std::string& goal, const std::string& type) {
     memory_system->activateIntention(goal, type, "user_defined", 0.5);
 }
 
+/**
+ * @brief Print emotional analysis results to console
+ * @param analysis EmotionalAnalysis results
+ * @param text Original text analyzed
+ */
 void AlyssaMemoryManager::printEmotionalAnalysis(const EmotionalAnalysis& analysis, const std::string& text) {
     std::cout << "\n🎭 ANÁLISE EMOCIONAL AUTOMÁTICA\n";
     std::cout << "Texto: \"" << text.substr(0, 50) << "...\"\n";
@@ -1396,6 +1768,10 @@ void AlyssaMemoryManager::printEmotionalAnalysis(const EmotionalAnalysis& analys
     std::cout << "\n----------------------------------------\n";
 }
 
+/**
+ * @brief Analyze input text for intention triggers
+ * @param input User input text
+ */
 void AlyssaMemoryManager::analyzeInputForIntentions(const std::string& input) {
     std::string lower_input = input;
     std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), 
@@ -1418,7 +1794,7 @@ void AlyssaMemoryManager::analyzeInputForIntentions(const std::string& input) {
 }
 
 // ============================================================================
-// Main
+// Main (commented out example)
 // ============================================================================
 
 // int main() {
