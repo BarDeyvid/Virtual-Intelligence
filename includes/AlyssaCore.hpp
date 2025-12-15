@@ -1,5 +1,13 @@
-// AlyssaCore.hpp
+/**
+ * @file AlyssaCore.hpp
+ * @brief Header file for the AlyssaCore class.
+ *
+ * Contains the definition of the AlyssaCore class, which is responsible for loading and managing a language model,
+ * generating text based on prompts, and applying LoRA (Low-Rank Adaptation) if necessary.
+ */
+
 #pragma once
+
 #include "llama.h"
 #include <string>
 #include <iostream>
@@ -10,28 +18,46 @@
 #include <cstring>
 #include <vector>
 #include <functional>
+
 #pragma warning(disable: 4244 4267 4458)
+
 using json = nlohmann::json;
 
+/**
+ * @struct SimpleModelParameters
+ * @brief Structure to hold parameters for the model generation.
+ */
 struct SimpleModelParameters {
-    double temperature = 0.0;
-    double top_p = 0.0;
-    int max_tokens = 0;
+    double temperature = 0.0; /**< Temperature parameter for controlling randomness in text generation. */
+    double top_p = 0.0;         /**< Top-p (nucleus) sampling parameter for diverse output. */
+    int max_tokens = 0;          /**< Maximum number of tokens to generate. */
 };
 
+/**
+ * @struct SimpleModelConfig
+ * @brief Structure to hold configuration details for a simple model.
+ */
 struct SimpleModelConfig {
-    std::string id;
-    std::string model_path;
-    std::string system_prompt;
-    std::string role_instruction;
-    bool usa_LoRA;
-    std::string lora_path;
-    SimpleModelParameters params;
-    int n_ctx = 8192;
+    std::string id;             /**< Unique identifier for the model. */
+    std::string model_path;       /**< Path to the base model file. */
+    std::string system_prompt;    /**< System prompt for initializing the model context. */
+    std::string role_instruction; /**< Instruction or role assigned to the model. */
+    bool usa_LoRA;              /**< Flag indicating if LoRA adaptation should be used. */
+    std::string lora_path;        /**< Path to the LoRA file (if applicable). */
+    SimpleModelParameters params;  /**< Parameters for model generation. */
+    int n_ctx = 8192;            /**< Context size for the model. */
 };
 
 using AllModelConfigs = std::vector<SimpleModelConfig>;
 
+/**
+ * @brief Function to load model configurations from a JSON file.
+ *
+ * Reads and parses a JSON configuration file containing details about multiple models.
+ * Each model's configuration is stored in a SimpleModelConfig object and added to a vector.
+ *
+ * @return A vector of SimpleModelConfig objects representing the loaded configurations.
+ */
 inline AllModelConfigs load_config() {
     AllModelConfigs configs;
     const std::string& filepath = "config/ConfigsLLM.json";
@@ -99,17 +125,32 @@ inline AllModelConfigs load_config() {
 
 namespace alyssa_core {
 
+    /**
+     * @class AlyssaCore
+     * @brief Class to manage language models and generate text.
+     *
+     * The AlyssaCore class loads a base language model, manages its context, applies LoRA adaptation if necessary,
+     * and generates text based on given prompts. It provides methods for getting model details and generating text.
+     */
     class AlyssaCore {
     private:
-        llama_model* model;
-        const llama_vocab* vocab;
-        llama_model_params mParams;
+        llama_model* model;              /**< Pointer to the loaded base model. */
+        const llama_vocab* vocab;         /**< Pointer to the vocabulary used by the model. */
+        llama_model_params mParams;       /**< Parameters for the model loading. */
 
         // O CONTEXTO ÚNICO E COMPARTILHADO
-        llama_context* ctx;
-        int n_ctx; 
+        llama_context* ctx;              /**< Pointer to the unique shared context. */
+        int n_ctx;                        /**< Size of the context. */
 
     public:
+        /**
+         * @brief Constructor for AlyssaCore.
+         *
+         * Loads a base model from the specified path and initializes a context with the given size.
+         *
+         * @param base_model_path Path to the base model file.
+         * @param context_size Context size for the model (default is 2048).
+         */
         AlyssaCore(const std::string& base_model_path, int context_size = 2048) 
             : model(nullptr), vocab(nullptr), ctx(nullptr), n_ctx(context_size) 
         {
@@ -136,6 +177,11 @@ namespace alyssa_core {
             std::cout << "Contexto ÚNICO criado com n_ctx = " << n_ctx << std::endl;
         }
 
+        /**
+         * @brief Destructor for AlyssaCore.
+         *
+         * Frees the model and context resources.
+         */
         ~AlyssaCore() {
             // Libera TUDO
             if (ctx) llama_free(ctx);
@@ -143,13 +189,46 @@ namespace alyssa_core {
             std::cout << "Modelo BASE e Contexto ÚNICO liberados." << std::endl;
         }
 
-        // Getters para o Orquestrador
+        /**
+         * @brief Getter for the model.
+         *
+         * @return Pointer to the loaded base model.
+         */
         llama_model* get_model() { return model; }
+
+        /**
+         * @brief Getter for the vocabulary.
+         *
+         * @return Pointer to the vocabulary used by the model.
+         */
         const llama_vocab* get_vocab() { return vocab; }
+
+        /**
+         * @brief Getter for the context.
+         *
+         * @return Pointer to the unique shared context.
+         */
         llama_context* get_context() { return ctx; }
+
+        /**
+         * @brief Getter for the context size.
+         *
+         * @return Size of the context.
+         */
         int get_n_ctx() { return n_ctx; }
 
-        // Lógica de geração movida para cá
+        /**
+         * @brief Generates text based on a given prompt and parameters.
+         *
+         * Applies LoRA adaptation if necessary, creates a sampler with specified parameters, tokenizes
+         * the prompt, and generates tokens until an end-of-generation (EOG) token is encountered.
+         *
+         * @param prompt The input prompt for text generation.
+         * @param params Parameters for controlling the text generation process.
+         * @param lora Pointer to LoRA adapter (can be nullptr).
+         * @param stream_callback Callback function to stream generated tokens (optional).
+         * @return Generated text as a string.
+         */
         std::string generate_raw(
             const std::string & prompt,
             const SimpleModelParameters& params,
