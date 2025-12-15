@@ -98,35 +98,57 @@ private:
     public:
         /**
          * @brief Pushes an item into the queue and notifies waiting consumers.
-         * 
-         * @param value Item to push
+         * * @param value Item to push
          */
-        void push(T value);
+        void push(T value) {
+            std::lock_guard<std::mutex> lock(mtx);
+            q.push(std::move(value));
+            cv.notify_one();
+        }
 
         /**
          * @brief Pops an item from the queue (blocking).
-         * 
-         * Waits until an item is available or the queue is stopped.
-         * 
-         * @param value Item popped from the queue
+         * * Waits until an item is available or the queue is stopped.
+         * * @param value Item popped from the queue
          * @return true if an item was successfully obtained, false if the queue is stopped and empty
          */
-        bool pop(T& value);
+        bool pop(T& value) {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this] { return !running || !q.empty(); });
+
+            if (!running && q.empty()) {
+                return false;
+            }
+
+            value = std::move(q.front());
+            q.pop();
+            return true;
+        }
 
         /**
          * @brief Pops an item from the queue (non-blocking).
-         * 
-         * Does not wait if no items are available.
-         * 
-         * @param value Item popped from the queue
+         * * Does not wait if no items are available.
+         * * @param value Item popped from the queue
          * @return true if an item was successfully obtained, false if the queue is empty
          */
-        bool try_pop(T& value);
+        bool try_pop(T& value) {
+            std::lock_guard<std::mutex> lock(mtx);
+            if (q.empty()) {
+                return false;
+            }
+            value = std::move(q.front());
+            q.pop();
+            return true;
+        }
 
         /**
          * @brief Stops all operations and notifies waiting consumers to exit.
          */
-        void stop();
+        void stop() {
+            std::lock_guard<std::mutex> lock(mtx);
+            running = false;
+            cv.notify_all(); // Acorda todas as threads esperando em pop()
+        }
     private:
         std::queue<T> q;                 ///< Internal queue storage
         std::mutex mtx;                  ///< Mutex for thread-safe access

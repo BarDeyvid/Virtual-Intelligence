@@ -12,7 +12,7 @@ void signal_handler(int signum) {
     g_app_running = false;
 }
 
-int main(int argc, char **argv) {
+int main() {
     // Configura o handler para Ctrl+C
     signal(SIGINT, signal_handler);
     std::cout.setf(std::ios::unitbuf); // Saída não bufferizada

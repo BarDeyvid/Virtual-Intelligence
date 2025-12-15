@@ -1,4 +1,5 @@
-// AlyssaNet.cpp - Versão Refatorada
+// AlyssaNet.cpp 
+
 #include "CoreLLM.hpp"
 #include "AlyssaCore.hpp"
 #include "voice/ElevenLabsTTS.hpp"
@@ -17,15 +18,23 @@ using namespace alyssa_core;
 logging::Logger logg;
 
 // =========================================================================
-// Construtor & Destrutor
+// Constructor & Destructor
 // =========================================================================
 
+/**
+ * @brief Default constructor for CoreIntegration.
+ * @details Initializes with default values and logs construction.
+ */
 CoreIntegration::CoreIntegration() 
     : initialized(false), active_expert_in_cache("") 
 {
     logg.info("CoreIntegration constructed");
 }
 
+/**
+ * @brief Destructor for CoreIntegration.
+ * @details Cleans up expert histories and logs destruction.
+ */
 CoreIntegration::~CoreIntegration() {
     // Libera históricos dos especialistas
     for (auto& pair : expert_histories) {
@@ -37,9 +46,14 @@ CoreIntegration::~CoreIntegration() {
 }
 
 // =========================================================================
-// Gerenciamento de Especialistas
+// Expert Management
 // =========================================================================
 
+/**
+ * @brief Register a new expert model with the system.
+ * @param expert Unique pointer to the expert implementation.
+ * @details Adds expert to internal maps and initializes empty history.
+ */
 void CoreIntegration::register_expert(std::unique_ptr<alyssa_experts::IExpert> expert) {
     if (!expert) return;
     
@@ -50,6 +64,11 @@ void CoreIntegration::register_expert(std::unique_ptr<alyssa_experts::IExpert> e
     std::cout << "[Orquestrador] Especialista registrado: " << id << std::endl;
 }
 
+/**
+ * @brief Remove an expert from the system.
+ * @param expert_id Unique identifier of the expert to remove.
+ * @details Removes expert from both expert and history maps.
+ */
 void CoreIntegration::remove_expert(const std::string& expert_id) {
     if (experts.erase(expert_id)) {
         expert_histories.erase(expert_id);
@@ -57,10 +76,19 @@ void CoreIntegration::remove_expert(const std::string& expert_id) {
     }
 }
 
+/**
+ * @brief Check if an expert is registered.
+ * @param expert_id Unique identifier of the expert.
+ * @return true if expert exists, false otherwise.
+ */
 bool CoreIntegration::has_expert(const std::string& expert_id) const {
     return experts.find(expert_id) != experts.end();
 }
 
+/**
+ * @brief Set the user's name for personalized interactions.
+ * @param name The user's name to be stored in memory.
+ */
 void CoreIntegration::set_user_name(const std::string& name) {
     user_name = name;
     std::cout << "[IDENTITY] Nome do usuário definido como: " << name << std::endl;
@@ -70,9 +98,15 @@ void CoreIntegration::set_user_name(const std::string& name) {
 }
 
 // =========================================================================
-// Inicialização do Sistema
+// System Initialization
 // =========================================================================
 
+/**
+ * @brief Initialize the complete Alyssa AI system.
+ * @param base_model_path Path to the base model configuration file.
+ * @return true if initialization succeeded, false otherwise.
+ * @details Loads models, initializes experts, memory system, and fusion engine.
+ */
 bool CoreIntegration::initialize(const std::string& base_model_path) {
     if (initialized) return true;
 
@@ -174,8 +208,6 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         }
 
         // 8. Criar e registrar especialista Alyssa com modelo 4b separado
-        // IMPORTANTE: Para que a Alyssa use um modelo diferente, precisamos de uma abordagem diferente
-        // Vamos criar um novo AlyssaCore para o modelo 4b e um ExpertBase especial
         std::cout << "[INFO] Inicializando modelo separado para Alyssa (4b): " 
                   << alyssa_4b_config->model_path << std::endl;
         
@@ -264,9 +296,15 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 }
 
 // =========================================================================
-// Funções Auxiliares
+// Utility Functions
 // =========================================================================
 
+/**
+ * @brief Check if two expert signals are compatible.
+ * @param signal1 First expert signal.
+ * @param signal2 Second expert signal.
+ * @return true if signals are compatible, false if contradictory.
+ */
 bool CoreIntegration::are_signals_compatible(const std::string& signal1, const std::string& signal2) {
     // Lógica simples de compatibilidade
     // Se ambos os sinais contêm "ERRO", são incompatíveis
@@ -302,6 +340,12 @@ bool CoreIntegration::are_signals_compatible(const std::string& signal1, const s
     return true;
 };
 
+/**
+ * @brief Calculate string similarity using Jaccard index.
+ * @param str1 First string.
+ * @param str2 Second string.
+ * @return Similarity score between 0.0 (no similarity) and 1.0 (identical).
+ */
 float CoreIntegration::calculate_string_similarity(const std::string& str1, const std::string& str2) {
     // Similaridade de Jaccard simplificada
     if (str1.empty() && str2.empty()) return 1.0f;
@@ -348,6 +392,11 @@ float CoreIntegration::calculate_string_similarity(const std::string& str1, cons
     return union_size > 0 ? (float)intersection / union_size : 0.0f;
 };
 
+/**
+ * @brief Determine if input is small talk/social pleasantry.
+ * @param input Text to analyze.
+ * @return true if input is small talk, false if substantive content.
+ */
 bool CoreIntegration::is_small_talk(const std::string& input) {
     // Lista de padrões de small talk
     static const std::vector<std::string> small_talk_patterns = {
@@ -390,11 +439,14 @@ bool CoreIntegration::is_small_talk(const std::string& input) {
     return !has_content && lower_input.length() < 30;
 };
 
-
 // =========================================================================
-// Controle de Contexto e Cache
+// Context and Cache Control
 // =========================================================================
 
+/**
+ * @brief Switch active expert context in KV cache.
+ * @param new_expert_id Expert to switch to.
+ */
 void CoreIntegration::switch_expert_context(const std::string& new_expert_id) {
     if (active_expert_in_cache != new_expert_id) {
         std::cout << "\n[Orquestrador]: Trocando de '" << active_expert_in_cache 
@@ -404,6 +456,9 @@ void CoreIntegration::switch_expert_context(const std::string& new_expert_id) {
     }
 }
 
+/**
+ * @brief Clear KV cache for current expert.
+ */
 void CoreIntegration::clear_kv_cache() {
     if (core_instance) {
         llama_memory_seq_rm(llama_get_memory(core_instance->get_context()), 0, -1, -1);
@@ -413,9 +468,15 @@ void CoreIntegration::clear_kv_cache() {
 }
 
 // =========================================================================
-// Execução de Especialistas
+// Expert Execution
 // =========================================================================
 
+/**
+ * @brief Validate if input fits within expert's context window.
+ * @param prompt Input text to validate.
+ * @param expert_id Expert identifier.
+ * @return true if context size is sufficient, false otherwise.
+ */
 bool CoreIntegration::validate_context_size(const std::string& prompt, const std::string& expert_id) {
     if (!core_instance) return false;
     
@@ -438,6 +499,14 @@ bool CoreIntegration::validate_context_size(const std::string& prompt, const std
     return true;
 }
 
+/**
+ * @brief Execute a specific expert with input processing.
+ * @param expert_id Identifier of expert to run.
+ * @param input Text input for the expert.
+ * @param use_tts Enable TTS synthesis for streaming.
+ * @param tts Pointer to TTS instance (can be nullptr).
+ * @return Expert's response as string.
+ */
 std::string CoreIntegration::run_expert(
     const std::string& expert_id,
     const std::string& input,
@@ -537,9 +606,15 @@ std::string CoreIntegration::run_expert(
 }
 
 // =========================================================================
-// Comitê de Especialistas
+// Expert Committee
 // =========================================================================
 
+/**
+ * @brief Run committee of experts in parallel.
+ * @param expert_ids Vector of expert identifiers to include in committee.
+ * @param input Text input for all experts.
+ * @return Vector of contributions from each expert.
+ */
 std::vector<alyssa_fusion::ExpertContribution> 
 CoreIntegration::run_expert_committee(
     const std::vector<std::string>& expert_ids,
@@ -595,6 +670,11 @@ CoreIntegration::run_expert_committee(
     return contributions;
 }
 
+/**
+ * @brief Detect emotional content in input using heuristics.
+ * @param input Text to analyze for emotional content.
+ * @return Detected emotion as string (e.g., "neutralidade", "curiosidade").
+ */
 std::string CoreIntegration::detect_emotion_with_heuristics(const std::string& input) {
     // 1. Verificar small talk
     if (CoreIntegration::is_small_talk(input)) {
@@ -635,6 +715,13 @@ std::string CoreIntegration::detect_emotion_with_heuristics(const std::string& i
 // Weighted Fusion
 // =========================================================================
 
+/**
+ * @brief Generate fused input for Alyssa model from expert contributions.
+ * @param original_input Original user input.
+ * @param contributions Vector of expert contributions.
+ * @param emotion Detected emotion for context.
+ * @return Formatted prompt with expert thoughts and memory context.
+ */
 std::string CoreIntegration::generate_fused_input(
     const std::string& original_input,
     const std::vector<alyssa_fusion::ExpertContribution>& contributions,
@@ -699,6 +786,13 @@ std::string CoreIntegration::generate_fused_input(
     return fused_prompt;
 }
 
+/**
+ * @brief Process user input with weighted fusion and TTS.
+ * @param input User's text input.
+ * @param tts ElevenLabsTTS instance for voice synthesis.
+ * @return Fused response from multiple experts.
+ * @details Runs expert committee, applies weighted fusion, and generates voice output.
+ */
 std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
@@ -739,16 +833,24 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     
     // 3. Se coerência muito baixa, regenerar sem comitê
     if (committee_coherence < 0.3) {
-        std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
-                  << "). Gerando resposta direta." << std::endl;
-        
-        // Limpar contribuições incoerentes
-        contributions.clear();
-        
-        // Gerar resposta direta com a Alyssa
-        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
-        return run_expert("alyssa", direct_prompt, false, nullptr);
+    std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
+              << "). Gerando resposta direta." << std::endl;
+    
+    contributions.clear();
+    
+    std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
+    
+    // This executes the model AND streams the audio via the callback
+    std::string direct_response = run_expert("alyssa", direct_prompt, true, &tts);
+    
+    printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", direct_response.c_str());
+    
+    if (memory_manager && should_store_in_memory(input, direct_response)) {
+        memory_manager->processInteraction(input, direct_response);
     }
+
+    return direct_response;
+}
     
     // 4. Continuar com fusão normal se coerência aceitável
     std::string emotion = detect_emotion_with_heuristics(input);
@@ -774,6 +876,11 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     return final_response;
 }
 
+/**
+ * @brief Calculate coherence metric for expert committee responses.
+ * @param contributions Vector of contributions from different experts.
+ * @return Coherence score between 0.0 (incoherent) and 1.0 (fully coherent).
+ */
 float CoreIntegration::calculate_committee_coherence(
     const std::vector<alyssa_fusion::ExpertContribution>& contributions
 ) {
@@ -796,6 +903,12 @@ float CoreIntegration::calculate_committee_coherence(
     return total_pairs > 0 ? (float)agreeing_signals / total_pairs : 0.0f;
 };
 
+/**
+ * @brief Determine if interaction should be stored in long-term memory.
+ * @param input User's input text.
+ * @param response System's response text.
+ * @return true if worth storing in memory, false for small talk/noise.
+ */
 bool CoreIntegration::should_store_in_memory(const std::string& input, const std::string& response) {
     // Critério 1: Não armazenar small talk
     if (CoreIntegration::is_small_talk(input)) return false;
@@ -831,6 +944,12 @@ bool CoreIntegration::should_store_in_memory(const std::string& input, const std
     return has_memorable_elements;
 };
 
+/**
+ * @brief Process user input with weighted fusion without TTS.
+ * @param input User's text input.
+ * @return Fused response from multiple experts.
+ * @details Same as think_with_fusion but without voice synthesis.
+ */
 std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
@@ -918,9 +1037,16 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
 }
 
 // =========================================================================
-// Think Original (Orquestração)
+// Think Original (Orchestration)
 // =========================================================================
 
+/**
+ * @brief Process user input using standard MoE architecture.
+ * @param input User's text input.
+ * @param tts ElevenLabsTTS instance for voice synthesis.
+ * @return Response generated by the AI system.
+ * @details Uses emotional analysis, memory retrieval, and Alyssa model for final response.
+ */
 std::string CoreIntegration::think(const std::string& input, ElevenLabsTTS& tts) {
     if (!initialized || !core_instance) {
         return "Erro: O CoreIntegration não foi inicializado corretamente.";
@@ -959,9 +1085,14 @@ std::string CoreIntegration::think(const std::string& input, ElevenLabsTTS& tts)
 }
 
 // =========================================================================
-// Gerenciamento de Histórico
+// History Management
 // =========================================================================
 
+/**
+ * @brief Calculate dynamic history limit based on expert and emotional state.
+ * @param expert_id Expert identifier.
+ * @return Maximum number of messages to keep in history.
+ */
 size_t CoreIntegration::calculate_history_limit(const std::string& expert_id) {
     size_t limit = 150;
 
@@ -992,6 +1123,12 @@ size_t CoreIntegration::calculate_history_limit(const std::string& expert_id) {
     return limit;
 }
 
+/**
+ * @brief Manage expert history with dynamic size limits.
+ * @param expert_id Expert identifier.
+ * @param history Reference to expert's conversation history.
+ * @details Archives old messages to LTM when history exceeds limit.
+ */
 void CoreIntegration::manage_dynamic_history(
     const std::string& expert_id, 
     std::vector<llama_chat_message>& history
@@ -1038,23 +1175,39 @@ void CoreIntegration::manage_dynamic_history(
 }
 
 // =========================================================================
-// Métodos Auxiliares
+// Utility Methods
 // =========================================================================
 
+/**
+ * @brief Log source awareness information.
+ * @param source Source identifier (expert ID).
+ * @param message Message to log.
+ */
 void CoreIntegration::log_source_awareness(const std::string& source, const std::string& message) {
     std::cout << "[SOURCE AWARENESS] " << source << " diz: " << message << std::endl;
 }
 
+/**
+ * @brief Execute an action command.
+ * @param command Action command to execute.
+ */
 void CoreIntegration::act(const std::string& command) {
     std::cout << "[ACTION]: Comando recebido: " << command << std::endl;
     // Aqui você poderia chamar: run_expert("actionModel", command);
 }
 
+/**
+ * @brief Perform system reflection/self-analysis.
+ */
 void CoreIntegration::reflect() {
     std::cout << "[REFLECTION]: Iniciando ciclo de reflexão..." << std::endl;
     // Aqui você poderia chamar: run_expert("introspectiveModel", "Resuma o dia.");
 }
 
+/**
+ * @brief Run interactive command-line interface.
+ * @details Continuously processes user input until exit command.
+ */
 void CoreIntegration::run_interactive_loop() {
     std::cout << "Loop Interativo iniciado. Digite 'sair' para encerrar.\n";
     std::string user_input;

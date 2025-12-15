@@ -55,6 +55,7 @@ link_directories(${WHISPER_LIB_DIR})
 # --- Include Directories ---
 include_directories(
     ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/tests
     ${PROJECT_SOURCE_DIR}/includes
     ${LLAMA_INCLUDE_DIR}
     ${WHISPER_INCLUDE_DIR}
@@ -103,10 +104,22 @@ set(TEST_API_SOURCES
     includes/log.cpp
 )
 
+set(TEST_TTS
+    tests/test_elevenlabs.cpp
+    includes/voice/ElevenLabsTTS.cpp
+)
+
+set(TEST_VOICE
+    tests/test_voice.cpp
+    includes/voice/VoicePipeline.cpp
+)
+
 # --- Executables ---
 add_executable(test_main_cli ${TEST_MAIN_CLI_SOURCES})
 add_executable(test_main_whisper ${TEST_MAIN_WHISPER_SOURCES})
 add_executable(test_api ${TEST_API_SOURCES})
+add_executable(test_elevenlabs ${TEST_TTS})
+add_executable(test_voice ${TEST_VOICE})
 
 # --- Linking ---
 target_link_libraries(test_main_cli PRIVATE
@@ -118,6 +131,34 @@ target_link_libraries(test_main_cli PRIVATE
     ${PROTOBUF_LITE_LIBRARY}   
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARY}
+    ${PORTAUDIO_LIBRARY}
+    ${AVCODEC_LIBRARIES}
+    ${AVFORMAT_LIBRARIES}
+    ${AVUTIL_LIBRARIES}
+    ${SWRESAMPLE_LIBRARIES}
+    Threads::Threads
+    dl
+    stdc++fs
+)
+
+target_link_libraries(test_elevenlabs PRIVATE
+    ${PROTOBUF_LIBRARY}      
+    ${PROTOBUF_LITE_LIBRARY}  
+    ${CURL_LIBRARIES}
+    ${PORTAUDIO_LIBRARY}
+    ${AVCODEC_LIBRARIES}
+    ${AVFORMAT_LIBRARIES}
+    ${AVUTIL_LIBRARIES}
+    ${SWRESAMPLE_LIBRARIES}
+    Threads::Threads
+    dl
+    stdc++fs
+)
+
+target_link_libraries(test_voice PRIVATE
+    whisper
+    ${PROTOBUF_LIBRARY}      
+    ${PROTOBUF_LITE_LIBRARY}  
     ${PORTAUDIO_LIBRARY}
     ${AVCODEC_LIBRARIES}
     ${AVFORMAT_LIBRARIES}
