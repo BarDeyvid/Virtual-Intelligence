@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "mqtt/async_client.h"
+#include "mqtt/string_collection.h"
 
 using namespace std;
 
@@ -48,6 +49,8 @@ int main(int argc, char* argv[])
     vector<string> topics { TOPIC_TEMP, TOPIC_HUM };
     vector<int> qos { QOS, QOS };
 
+    auto topicFilters = std::make_shared<const mqtt::string_collection>(topics);
+
     try {
         // Inicia a fila de consumo (buffer de mensagens) antes de conectar.
         cli.start_consuming();
@@ -64,7 +67,9 @@ int main(int argc, char* argv[])
         // Se estiver presente (clean_session=false), o broker já deve ter as subscrições.
         if (!rsp.is_session_present()) {
             cout << "  Nenhuma sessão encontrada. Subscrevendo tópicos..." << flush;
-            cli.subscribe(topics, qos)->wait();
+            
+            // 5. Subscrição CORRETA: Usando os tipos de coleção da Paho
+            cli.subscribe(topicFilters, qos)->wait(); 
         }
 
         cout << "OK" << endl;
