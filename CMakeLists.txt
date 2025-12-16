@@ -39,6 +39,10 @@ if (NOT PROTOBUF_LIBRARY AND NOT PROTOBUF_LITE_LIBRARY)
     message(FATAL_ERROR "Could not find Protobuf libraries (libprotobuf or libprotobuf-lite). Ensure 'libprotobuf-dev' is installed.")
 endif()
 
+# 7. Eclipse Paho MQTT C/C++ (Local Build)
+add_subdirectory(paho.mqtt.cpp)
+set(PAHO_CPP_TARGET paho-mqttpp3-shared) 
+set(PAHO_C_TARGET paho-mqtt3a)
 # --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
 
@@ -62,6 +66,7 @@ include_directories(
     ${SQLITE3_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
     ${AVCODEC_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/paho.mqtt.cpp/include
 )
 
 # --- Source Files for each test ---
@@ -109,6 +114,10 @@ set(TEST_TTS
     includes/voice/ElevenLabsTTS.cpp
 )
 
+set(TEST_MQTT
+    test_mqtt.cpp
+)
+
 set(TEST_VOICE
     tests/test_voice.cpp
     includes/voice/VoicePipeline.cpp
@@ -118,6 +127,7 @@ set(TEST_VOICE
 add_executable(test_main_cli ${TEST_MAIN_CLI_SOURCES})
 add_executable(test_main_whisper ${TEST_MAIN_WHISPER_SOURCES})
 add_executable(test_api ${TEST_API_SOURCES})
+add_executable(test_mqtt ${TEST_MQTT})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
 
@@ -150,6 +160,14 @@ target_link_libraries(test_elevenlabs PRIVATE
     ${AVFORMAT_LIBRARIES}
     ${AVUTIL_LIBRARIES}
     ${SWRESAMPLE_LIBRARIES}
+    Threads::Threads
+    dl
+    stdc++fs
+)
+
+target_link_libraries(test_mqtt PRIVATE
+    ${PAHO_CPP_TARGET}
+    ${PAHO_C_TARGET}
     Threads::Threads
     dl
     stdc++fs

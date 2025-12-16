@@ -16,8 +16,8 @@ using namespace std;
 // Combine o broker e a porta no formato de URI.
 const string MQTT_BROKER_URI{"tcp://192.168.1.9:1883"};
 const string CLIENT_ID{"CppAsyncSubscriberClient"}; // ID ligeiramente alterado para C++
-// const string MQTT_USER = "alyssa_user";         // Usuário
-// const string MQTT_PASSWORD = "ESP32";           // Senha
+const string MQTT_USER = "alyssa_user";         // Usuário
+const string MQTT_PASSWORD = "ESP32";           // Senha
 
 // --- Tópicos MQTT (Adaptado de config.py) ---
 const string TOPIC_TEMP{"esp32/alyssa/quarto/temperatura"};
@@ -40,8 +40,8 @@ int main(int argc, char* argv[])
                         .keep_alive_interval(30s)
                         .clean_session(false) // Permite sessão persistente
                         .automatic_reconnect(true) // Habilita reconexão automática
-                        // .user_name(MQTT_USER)    // Descomentar se for usar autenticação
-                        // .password(MQTT_PASSWORD) // Descomentar se for usar autenticação
+                        .user_name(MQTT_USER)    
+                        .password(MQTT_PASSWORD) 
                         .finalize();
 
     // 2. Lista de Tópicos e QoS para a subscrição
@@ -63,8 +63,6 @@ int main(int argc, char* argv[])
         auto rsp = tok->get_connect_response();
 
         // 3. Subscrição
-        // Se a sessão não estiver presente no broker, subscreve os tópicos.
-        // Se estiver presente (clean_session=false), o broker já deve ter as subscrições.
         if (!rsp.is_session_present()) {
             cout << "  Nenhuma sessão encontrada. Subscrevendo tópicos..." << flush;
             
@@ -82,16 +80,13 @@ int main(int argc, char* argv[])
         while (true) {
             auto evt = cli.consume_event();
 
-            // Se for uma mensagem
             if (const auto* p = evt.get_message_if()) {
                 auto& msg = *p;
                 if (msg)
                     cout << ">>> " << msg->get_topic() << ": " << msg->to_string() << endl;
             }
-            // Se for um evento de conexão
             else if (evt.is_connected())
                 cout << "\n*** Reconectado ao Broker ***" << endl;
-            // Se for um evento de desconexão
             else if (evt.is_connection_lost())
                 cout << "*** CONEXÃO PERDIDA *** Tentando reconectar automaticamente..." << endl;
         }
