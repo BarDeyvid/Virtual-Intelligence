@@ -70,8 +70,8 @@ include_directories(
 )
 
 # --- Source Files for each test ---
-set(TEST_MAIN_CLI_SOURCES
-    test_main_cli.cpp
+set(Alyssa_CLI_SOURCES
+    Alyssa_CLI.cpp
     includes/AlyssaNet.cpp
     includes/ExpertBase.hpp
     includes/IExpert.hpp
@@ -84,8 +84,8 @@ set(TEST_MAIN_CLI_SOURCES
     includes/log.cpp
 )
 
-set(TEST_MAIN_WHISPER_SOURCES
-    test_main_whisper.cpp
+set(Alyssa_TRUE_SOURCES
+    Alyssa_TRUE.cpp
     includes/AlyssaNet.cpp
     includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
@@ -96,8 +96,8 @@ set(TEST_MAIN_WHISPER_SOURCES
     includes/log.cpp
 )
 
-set(TEST_API_SOURCES
-    test_api.cpp
+set(Alyssa_API_SOURCES
+    Alyssa_API.cpp
     includes/AlyssaNet.cpp
     includes/EmotionLexiconLoader.cpp
     includes/AlyssaMemoryHandler.cpp
@@ -115,7 +115,7 @@ set(TEST_TTS
 )
 
 set(TEST_MQTT
-    test_mqtt.cpp
+    tests/test_mqtt.cpp
 )
 
 set(TEST_VOICE
@@ -124,15 +124,15 @@ set(TEST_VOICE
 )
 
 # --- Executables ---
-add_executable(test_main_cli ${TEST_MAIN_CLI_SOURCES})
-add_executable(test_main_whisper ${TEST_MAIN_WHISPER_SOURCES})
-add_executable(test_api ${TEST_API_SOURCES})
+add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
+add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
+add_executable(alyssa_api ${Alyssa_CLI_SOURCES})
 add_executable(test_mqtt ${TEST_MQTT})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
 
 # --- Linking ---
-target_link_libraries(test_main_cli PRIVATE
+target_link_libraries(alyssa_cli PRIVATE
     llama
     ggml
     whisper
@@ -187,7 +187,7 @@ target_link_libraries(test_voice PRIVATE
     stdc++fs
 )
 
-target_link_libraries(test_main_whisper PRIVATE
+target_link_libraries(alyssa_true PRIVATE
     llama
     ggml
     whisper
@@ -206,7 +206,7 @@ target_link_libraries(test_main_whisper PRIVATE
     stdc++fs
 )
 
-target_link_libraries(test_api PRIVATE
+target_link_libraries(alyssa_api PRIVATE
     llama
     ggml
     whisper
@@ -227,7 +227,7 @@ target_link_libraries(test_api PRIVATE
 
 # --- Post-Build Commands (Copy assets) ---
 # This copies 'models' and 'config' to the build folder automatically
-foreach(TARGET test_main_cli test_main_whisper test_api)
+foreach(TARGET alyssa_cli alyssa_true alyssa_api)
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
