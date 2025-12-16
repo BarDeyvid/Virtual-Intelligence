@@ -49,3 +49,4 @@ build/
 piper/
 docs/html/
 docs/latex/
+paho.mqtt.cpp
