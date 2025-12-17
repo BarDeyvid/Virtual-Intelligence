@@ -1,0 +1,2 @@
+# struct `detail::conjunction< B >`
+
