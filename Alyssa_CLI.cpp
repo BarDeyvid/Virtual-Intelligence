@@ -6,6 +6,13 @@
 #include <string>
 #include <thread>
 
+/**
+         * @brief Initialize Log Callback.
+         * @param level Level of Logging, just like any other logger.
+         * @param text The text of the logging.
+         * @param user_data IDK what the user_data is for, Microsoft Vibes.
+         * @return `void`.
+         */
 void log_callback(ggml_log_level level, const char * text, void * user_data) {
     (void)level;
     (void)user_data;
