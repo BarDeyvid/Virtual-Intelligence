@@ -1,0 +1,45 @@
+name: Generate API Documentation
+
+on:
+  push:
+    branches: [ main ]
+    # Só roda se houver mudanças em arquivos de código ou no Doxyfile
+    paths:
+      - 'includes/**'
+      - '**.cpp'
+      - '**.hpp'
+      - 'docs/Doxyfile'
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Essencial para permitir que a Action faça commit
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+          sudo npm install -g moxygen
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run Python Committer
+        run: python python_commiter.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and Push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: auto-update API documentation [skip ci]"
+          file_pattern: 'docs/api/*.md'

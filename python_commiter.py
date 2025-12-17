@@ -6,10 +6,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # Configuration
-DOCS_DIR = "/home/deyvid/Virtual-Intelligence/docs"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.join(BASE_DIR, "docs")
 XML_DIR = os.path.join(DOCS_DIR, "xml")
 API_DIR = os.path.join(DOCS_DIR, "api")
-DOXYFILE = "Doxyfile"  # Located inside DOCS_DIR
+DOXYFILE = "Doxyfile"
 
 def ensure_directories():
     """Create necessary directories if they don't exist."""
@@ -361,99 +362,22 @@ def create_index_file():
         f.write(f"**Statistics**: {len(namespace_files)} namespaces, {len(class_files)} classes, {len(struct_files)} structures\n")
 
 def commit_split_results_in_chunks(chunk_size=10):
-    """Commit the generated split files to git in chunks to avoid issues."""
-    print("\nStep 5: Committing to Git in chunks...")
+    """Adiciona os arquivos ao index do git. O commit e push serão feitos pela Action."""
+    print("\nStep 5: Prepping files for Git...")
     
     md_files = glob.glob(os.path.join(API_DIR, "*.md"))
-    valid_md_files = [f for f in md_files if not f.endswith('index.md')]
-    
-    if not valid_md_files:
-        print("No markdown files to commit.")
+    if not md_files:
+        print("No markdown files found to add.")
         return
     
-    # Sort files for consistent chunking
-    valid_md_files.sort()
-    
-    # Create chunks
-    chunks = [valid_md_files[i:i + chunk_size] for i in range(0, len(valid_md_files), chunk_size)]
-    
-    print(f"Committing {len(valid_md_files)} files in {len(chunks)} chunks of up to {chunk_size} files each...")
-    
-    total_committed = 0
-    successful_commits = 0
-    
-    for i, chunk in enumerate(chunks, 1):
-        print(f"\n  Chunk {i}/{len(chunks)} ({len(chunk)} files):")
-        
-        # Show which files are in this chunk
-        chunk_filenames = [os.path.basename(f) for f in chunk]
-        print(f"    Files: {', '.join(chunk_filenames[:3])}{'...' if len(chunk_filenames) > 3 else ''}")
-        
-        try:
-            # Add files in this chunk
-            for file_path in chunk:
-                subprocess.run(["git", "add", file_path], check=True)
-            
-            # Commit this chunk
-            commit_msg = f"docs: update API documentation (chunk {i}/{len(chunks)})"
-            result = subprocess.run(
-                ["git", "commit", "-m", commit_msg], 
-                capture_output=True, 
-                text=True
-            )
-            
-            if result.returncode == 0:
-                print(f"    ✓ Successfully committed {len(chunk)} files")
-                total_committed += len(chunk)
-                successful_commits += 1
-            else:
-                if "nothing to commit" in result.stderr.lower():
-                    print("    ℹ No changes in this chunk")
-                else:
-                    print(f"    ✗ Git commit error: {result.stderr[:200]}...")
-                    
-        except Exception as e:
-            print(f"    ✗ Error during git commit for chunk {i}: {e}")
-    
-    # Commit the index file separately
-    index_file = os.path.join(API_DIR, "index.md")
-    if os.path.exists(index_file):
-        print("\n  Committing index file...")
-        try:
-            subprocess.run(["git", "add", index_file], check=True)
-            result = subprocess.run(
-                ["git", "commit", "-m", "docs: update API documentation index"], 
-                capture_output=True, 
-                text=True
-            )
-            if result.returncode == 0:
-                print("    ✓ Successfully committed index.md")
-                successful_commits += 1
-            else:
-                if "nothing to commit" in result.stderr.lower():
-                    print("    ℹ No changes to index")
-                else:
-                    print(f"    ✗ Error committing index: {result.stderr[:200]}...")
-        except Exception as e:
-            print(f"    ✗ Error during git commit for index: {e}")
-    
-    print(f"\n✓ Commit summary: {total_committed} files in {successful_commits} commit(s)")
-    
-    # Push if needed
-    if successful_commits > 0:
-        push_choice = input("\nPush commits to remote repository? (y/N): ").lower()
-        if push_choice == 'y':
-            try:
-                print("Pushing to remote...")
-                result = subprocess.run(["git", "push"], capture_output=True, text=True)
-                if result.returncode == 0:
-                    print("✓ Successfully pushed commits")
-                else:
-                    print(f"Push error: {result.stderr[:200]}...")
-            except Exception as e:
-                print(f"Error during push: {e}")
+    try:
+        for file_path in md_files:
+            subprocess.run(["git", "add", file_path], check=True)
+        print(f"✓ {len(md_files)} files added to git index.")
+    except Exception as e:
+        print(f"✗ Error adding files to git: {e}")
 
 if __name__ == "__main__":
     ensure_directories()
     build_and_split_docs()
-    print("\nDone!")
+    print("\nDone! Files are ready for commit.")
