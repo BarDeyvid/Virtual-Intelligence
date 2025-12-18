@@ -56,6 +56,10 @@ set(WHISPER_INCLUDE_DIR "${AI_LIBS_ROOT}/whisper.cpp/include" "${AI_LIBS_ROOT}/w
 set(WHISPER_LIB_DIR "${AI_LIBS_ROOT}/whisper.cpp/build/src")
 link_directories(${WHISPER_LIB_DIR})
 
+add_subdirectory(spdlog)
+include_directories(${PROJECT_SOURCE_DIR}/spdlog/include)
+
+
 # --- Include Directories ---
 include_directories(
     ${PROJECT_SOURCE_DIR}
@@ -149,6 +153,7 @@ target_link_libraries(alyssa_cli PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 target_link_libraries(test_elevenlabs PRIVATE
@@ -163,6 +168,7 @@ target_link_libraries(test_elevenlabs PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 target_link_libraries(test_mqtt PRIVATE
@@ -171,6 +177,7 @@ target_link_libraries(test_mqtt PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 target_link_libraries(test_voice PRIVATE
@@ -185,6 +192,7 @@ target_link_libraries(test_voice PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 target_link_libraries(alyssa_true PRIVATE
@@ -204,6 +212,7 @@ target_link_libraries(alyssa_true PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 target_link_libraries(alyssa_api PRIVATE
@@ -223,6 +232,7 @@ target_link_libraries(alyssa_api PRIVATE
     Threads::Threads
     dl
     stdc++fs
+    spdlog::spdlog
 )
 
 # --- Post-Build Commands (Copy assets) ---

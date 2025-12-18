@@ -1,40 +1,48 @@
-#pragma once
-#include <string>
-#include <fstream>
 #include <iostream>
-#include <mutex>
 
-namespace logging {
+#include "spdlog/spdlog.h"
+#include <spdlog/sinks/stdout_color_sinks.h>    
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/pattern_formatter.h>
+#include <memory>
 
-enum class Level { DEBUG, INFO, WARN};
-
-struct Logger {
-    std::ofstream file;
-    std::mutex mtx;
-
-    explicit Logger(const std::string &filename = "server.log") {
-        file.open(filename, std::ios::app);
+class Log {
+public:
+    static std::shared_ptr<spdlog::logger>& getLogger() {
+        // Check if the logger already exists
+        static auto logger = spdlog::get("AI_Log");
+        if (!logger) {
+            logger = spdlog::stdout_color_mt("AI_Log");
+        }
+        return logger;
     }
 
-    void write(Level lvl, const std::string &msg) {
-        std::lock_guard<std::mutex> lock(mtx);
-        std::string prefix;
-        switch (lvl) { case Level::DEBUG: prefix = "[D] "; break;
-                       case Level::INFO :  prefix = "[I] "; break;
-                       case Level::WARN :  prefix = "[W] "; break; }
-        std::string line = prefix + msg + "\n";
-        std::cout << line;
-        if (file.is_open()) file << line;
-    }
+    static void init(const std::string& log_file_path) {
+        try {
+            // Check if the logger already exists
+            auto existing_logger = spdlog::get("AI_Log");
+            if (existing_logger) {
+                spdlog::drop_all();  // Drop all existing loggers
+            }
+            
+            // Create a file sink with rotation policy
+            auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/" + log_file_path, 1024 * 1024 * 5, 3);
+            file_sink->set_level(spdlog::level::debug);
+            
+            // Create a console sink
+            auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+            console_sink->set_level(spdlog::level::info);
+            
+            // Set the pattern for both sinks
+            auto formatter = std::make_unique<spdlog::pattern_formatter>("[%Y-%m-%d %H:%M:%S] [%^%l%^] [%n]: %v");
+            file_sink->set_formatter(std::move(formatter));
+            console_sink->set_formatter(std::move(formatter));
 
-    void debug(const std::string &msg) { write(Level::DEBUG, msg); }
-    void info (const std::string &msg) { write(Level::INFO , msg); }
-    void warn (const std::string &msg) { write(Level::WARN , msg); }
+            // Create a logger with both sinks
+            auto logger = std::shared_ptr<spdlog::logger>(new spdlog::logger("AI_Log", {file_sink, console_sink}));
+            spdlog::register_logger(logger);
+        } catch (const spdlog::spdlog_ex& ex) {
+            std::cerr << "Log initialization failed: " << ex.what() << std::endl;
+        }
+    }
 };
-
-inline Logger &instance() {
-    static Logger logger;
-    return logger;
-}
-
-} // namespace log

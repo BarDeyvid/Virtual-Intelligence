@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include "includes/log.hpp"
 
 /**
          * @brief Initialize Log Callback.
@@ -25,15 +26,19 @@ int main() {
         llama_log_set(log_callback, nullptr);
         ggml_backend_load_all(); 
 
+        Log::init("alyssa_cli.log");
+
+        auto& logger = Log::getLogger();
+
         CoreIntegration alyssa_brain;
-        std::cout << "Inicializando CoreIntegration Teste CLI..." << std::endl;
+        logger->debug("Inicializando CoreIntegration Teste CLI...");
         alyssa_brain.set_user_name("Deyvid");
         // 1. Chama a Inicialização com o caminho do modelo BASE
         if (!alyssa_brain.initialize("models/gemma-3-4b-it-q4_0.gguf")) {
-            std::cerr << "Falha Crítica ao inicializar o CoreIntegration. Encerrando." << std::endl;
+            logger->critical("Falha Crítica ao inicializar o CoreIntegration. Encerrando.");
             return 1;
         }
-        std::cout << "CoreIntegration Inicializado com sucesso!" << std::endl;
+        logger->debug("CoreIntegration Inicializado com sucesso!");
 
         while (true) {
             std::cout << "\n\033[32m> \033[0m";
@@ -52,10 +57,12 @@ int main() {
             std::cout << "\n\033[36m[ALYSSA]: \033[0m" << alyssa_response << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "\n[ERRO FATAL] " << e.what() << std::endl;
+        auto& logger = Log::getLogger();
+        logger->critical("\n[ERRO FATAL] " + std::string(e.what()));
         return 1;
     } catch (...) {
-        std::cerr << "\n[ERRO FATAL] Erro desconhecido não capturado." << std::endl;
+                auto& logger = Log::getLogger();
+        logger->critical("\n[ERRO FATAL] Erro desconhecido não capturado.");
         return 1;
     } 
     return 0;

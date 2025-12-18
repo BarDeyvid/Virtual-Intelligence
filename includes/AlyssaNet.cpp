@@ -15,7 +15,6 @@
 #include <cctype>
 
 using namespace alyssa_core;
-logging::Logger logg;
 
 // =========================================================================
 // Constructor & Destructor
@@ -28,7 +27,7 @@ logging::Logger logg;
 CoreIntegration::CoreIntegration() 
     : initialized(false), active_expert_in_cache("") 
 {
-    logg.info("CoreIntegration constructed");
+    printf("CoreIntegration constructed");
 }
 
 /**
@@ -42,7 +41,7 @@ CoreIntegration::~CoreIntegration() {
             free((char*)msg.content);
         }
     }
-    logg.info("CoreIntegration destroyed");
+    printf("CoreIntegration destroyed");
 }
 
 // =========================================================================
