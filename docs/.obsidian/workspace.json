@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "TODO.md",
+                "file": "api/index.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "TODO"
+              "title": "index"
             }
           }
         ]
@@ -189,6 +189,21 @@
   },
   "active": "0b5432791d4d2826",
   "lastOpenFiles": [
+    "api/namespace_WeightedFusion_Trainer.md",
+    "api/index.md",
+    "api/struct_EmotionalAnalyzerConfig.md",
+    "api/struct_static_const.md",
+    "api/struct_string_>.md",
+    "api/struct_value_in_range_of_impl2<_OfType,_T,_true,_false_>.md",
+    "api/struct_value_in_range_of_impl2<_OfType,_T,_true,_true_>.md",
+    "api/struct_worker.md",
+    "api/class_byte_container_with_subtype.md",
+    "api/class_BufferStream.md",
+    "api/class_binary_writer.md",
+    "api/class_binary_reader.md",
+    "api/class_basic_json.md",
+    "api/class_AlyssaCore.md",
+    "api/class_AdvancedMemorySystem.md",
     "TODO.md",
     "Templates/Template.md",
     "2025-December-Saturday-23-23 - Ola.md",
