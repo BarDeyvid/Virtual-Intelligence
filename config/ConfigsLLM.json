@@ -79,6 +79,19 @@
       }
     },
     {
+      "id": "opencvModel",
+      "model_path": "",          
+      "system_prompt": "",
+      "usa_LoRA": false,
+      "lora_path": "",
+      "n_ctx": 16000,
+      "parametros": {
+        "temperatura": 0.1,
+        "top_p": 0.9,
+        "max_tokens": 64
+      }
+    },   
+    {
       "id": "alyssa",
       "model_path": "models/gemma-3-4b-it-q4_0.gguf",
       "system_prompt": "Você é **Alyssa**, uma IA que integra múltiplas perspectivas internas. Você recebe:\n\n1. BLOCO [PENSAMENTOS]: Contém os insights dos seus subsistemas especialistas\n2. ENTRADA DO USUÁRIO: O que o usuário disse\n\nSUA TAREFA:\n- Analise os pensamentos fornecidos\n- Integre essas perspectivas em uma resposta natural\n- Responda DIRETAMENTE ao usuário\n\nNÃO gere blocos [PENSAMENTOS] - eles já foram fornecidos.\nNÃO gere blocos [RESPOSTA] - responda diretamente.\n\nSeja calorosa, direta e humana. Use português brasileiro natural. Mantenha respostas curtas e genuínas.",

@@ -73,16 +73,19 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/paho.mqtt.cpp/include
 )
 
+# --- Common Source Files ---
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+
 # --- Source Files ---
-set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp includes/AlyssaNet.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
-set(Alyssa_TRUE_SOURCES Alyssa_TRUE.cpp includes/AlyssaNet.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
-set(Alyssa_API_SOURCES Alyssa_API.cpp includes/AlyssaNet.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/pc_metrics_reader.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
+set(Alyssa_TRUE_SOURCES Alyssa_TRUE.cpp ${COMMON_SOURCES})
+set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
 set(TEST_MQTT tests/test_mqtt.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
-set(TEST_OPENCV test_cuda.cpp) # ADICIONADO
+set(TEST_OPENCV test_cuda.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
@@ -91,10 +94,9 @@ add_executable(alyssa_api ${Alyssa_API_SOURCES})
 add_executable(test_mqtt ${TEST_MQTT})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
-add_executable(test_opencv ${TEST_OPENCV}) # ADICIONADO
+add_executable(test_opencv ${TEST_OPENCV})
 
 # --- Linking ---
-
 set(COMMON_LIBS
     llama
     ggml
@@ -130,10 +132,18 @@ target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_
 # --- Post-Build Commands ---
 foreach(TARGET alyssa_cli alyssa_true alyssa_api)
     add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/models
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/config
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/models ${CMAKE_BINARY_DIR}/models
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/config ${CMAKE_BINARY_DIR}/config
-        COMMENT "Copying assets to build folder"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+            ${CMAKE_SOURCE_DIR}/models
+            ${CMAKE_BINARY_DIR}/models
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+            ${CMAKE_SOURCE_DIR}/config
+            ${CMAKE_BINARY_DIR}/config
+        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
+            ${CMAKE_SOURCE_DIR}/fusion_router.onnx
+            ${CMAKE_BINARY_DIR}/fusion_router.onnx
+        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
+            ${CMAKE_SOURCE_DIR}/fusion_router.onnx.data
+            ${CMAKE_BINARY_DIR}/fusion_router.onnx.data
+        COMMENT "Copying models and config directories to build folder"
     )
 endforeach()

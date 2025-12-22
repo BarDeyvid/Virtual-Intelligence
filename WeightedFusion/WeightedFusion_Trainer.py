@@ -13,7 +13,7 @@ import os
 # Use the full list of experts from your C++ log
 EXPERTS = [
     "socialModel", "emotionalModel", "introspectiveModel", 
-    "creativeModel", "analyticalModel", "memoryModel", "alyssa"
+    "creativeModel", "analyticalModel", "memoryModel", "opencvModel" "alyssa"
 ]
 EXPERT_TO_ID = {name: i for i, name in enumerate(EXPERTS)}
 NUM_EXPERTS = len(EXPERTS)
@@ -21,8 +21,8 @@ EMBEDDING_DIM = 768 # Matches your system's dim
 
 # Choose a 768-dimensional model
 EMBEDDING_MODEL_NAME = 'all-mpnet-base-v2' 
-DATA_FILE = 'router_training_data.csv'
-ONNX_FILENAME = "fusion_router.onnx"
+DATA_FILE = '../datasets/router_training_data.csv'
+ONNX_FILENAME = "../fusion_router.onnx"
 
 # ==========================================
 # 2. Model Definition
