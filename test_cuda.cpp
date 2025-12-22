@@ -1,4 +1,5 @@
 #include <opencv2/opencv.hpp>
+#include <opencv2/cudaimgproc.hpp> // Header para filtros na GPU
 #include <iostream>
 
 int main() {
@@ -16,24 +17,25 @@ int main() {
 
     cv::Mat frame; // Matrix to store each frame
 
+    cv::cuda::GpuMat gpuFrame, gpuGray; 
+
     while (true) {
-        // Capture a new frame
-        cap >> frame; // Or use cap.read(frame);
+        cap >> frame;
+        if (frame.empty()) break;
 
-        // Check if the frame is empty (e.g., if the video stream ended)
-        if (frame.empty()) {
-            std::cerr << "Error: Blank frame grabbed." << std::endl;
-            break;
-        }
+        // 1. Upload para a VRAM da RTX 5060 Ti
+        gpuFrame.upload(frame);
 
-        // Display the frame in a window named "Camera Feed"
-        cv::imshow("Camera Feed", frame);
+        // 2. Processamento na GPU (ex: converter para cinza)
+        cv::cuda::cvtColor(gpuFrame, gpuGray, cv::COLOR_BGR2GRAY);
 
-        // Wait for 1 millisecond for a key press
-        // If the 'Esc' key (ASCII value 27) is pressed, break the loop
-        if (cv::waitKey(1) == 27) {
-            break;
-        }
+        // 3. Download de volta para a RAM (apenas para exibir)
+        cv::Mat result;
+        gpuGray.download(result);
+
+        cv::imshow("Feed Acelerado pela GPU", result);
+
+        if (cv::waitKey(1) == 27) break;
     }
 
     // Release the camera resource and destroy all OpenCV windows
