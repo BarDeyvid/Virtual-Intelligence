@@ -52,3 +52,5 @@ docs/latex/
 docs/xml/
 paho.mqtt.cpp
 spdlog/
+opencv/
+opencv_contrib/
