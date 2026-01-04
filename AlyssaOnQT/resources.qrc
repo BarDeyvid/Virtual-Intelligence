@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/chat.svg</file>
+        <file>icons/brain.svg</file>
+        <file>icons/trash.svg</file>
+        <file>icons/download.svg</file>
+        <file>icons/copy.svg</file>
+        <file>icons/send.svg</file>
+        <file>icons/check.svg</file>
+    </qresource>
+</RCC>

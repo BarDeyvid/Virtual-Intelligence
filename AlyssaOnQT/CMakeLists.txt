@@ -4,7 +4,7 @@ project(AlyssaOnQT VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Qml Widgets QuickControls2 Sql)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -14,8 +14,17 @@ qt_add_executable(appAlyssaOnQT
 
 qt_add_qml_module(appAlyssaOnQT
     URI AlyssaOnQT
+    VERSION 1.0
     QML_FILES
-        Main.qml
+        main.qml
+        ChatArea.qml
+        ChatHistoryModel.qml
+        Storage.qml
+    RESOURCES
+        ApiManager.js
+        QML_FILES ApiManager.qml
+        QML_FILES ExportNotification.qml
+    # Removed duplicate: QML_FILES Storage.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -29,8 +38,12 @@ set_target_properties(appAlyssaOnQT PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-target_link_libraries(appAlyssaOnQT
-    PRIVATE Qt6::Quick
+target_link_libraries(appAlyssaOnQT PRIVATE
+    Qt6::Quick
+    Qt6::Qml
+    Qt6::Widgets
+    Qt6::QuickControls2
+    Qt6::Sql
 )
 
 include(GNUInstallDirs)
