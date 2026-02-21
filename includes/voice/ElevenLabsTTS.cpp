@@ -59,20 +59,35 @@ ElevenLabsTTS::ElevenLabsTTS(const std::string& api_key,
     initializePortAudio();
     initializeFFmpeg();
 
-    // TENTA CARREGAR DO ARQUIVO
-    std::string temp_key, temp_voice;
-    int temp_rate;
+    // 1. Tenta carregar do ambiente (.env)
+    const char* env_key = std::getenv("ELEVENLABS_API_KEY");
+    const char* env_voice = std::getenv("ELEVENLABS_VOICE_ID");
 
-    if (loadConfig("config/ConfigsTTS.json", temp_key, temp_voice, temp_rate)) {
-        api_key_ = temp_key;
-        voice_id_ = temp_voice;
-        sample_rate_ = temp_rate;
-    } else {
-        api_key_ = api_key;
-        voice_id_ = voice_id;
-        sample_rate_ = sample_rate;
+    if (env_key) {
+        api_key_ = std::string(env_key);
+        std::cout << "API Key carregada via ambiente." << std::endl;
     }
+
+    if (env_voice) {
+        voice_id_ = std::string(env_voice);
     }
+
+    // 2. Se não encontrou no ambiente, tenta o ConfigsTTS.json (Fallback)
+    if (api_key_.empty()) {
+        std::string temp_key, temp_voice;
+        int temp_rate;
+        if (loadConfig("config/ConfigsTTS.json", temp_key, temp_voice, temp_rate)) {
+            api_key_ = temp_key;
+            voice_id_ = temp_voice;
+            sample_rate_ = temp_rate;
+        } else {
+            // 3. Fallback final: Parâmetros passados no construtor
+            api_key_ = api_key;
+            voice_id_ = voice_id;
+            sample_rate_ = sample_rate;
+        }
+    }
+}
 
 /**
 * @brief Default destructor.
