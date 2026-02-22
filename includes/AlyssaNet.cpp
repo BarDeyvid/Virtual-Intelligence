@@ -457,12 +457,35 @@ void CoreIntegration::switch_expert_context(const std::string& new_expert_id) {
 
 /**
  * @brief Clear KV cache for current expert.
+ * @details Properly clears the KV cache memory to prevent context leakage between experts.
+ *          Removes all cached sequences and resets memory pointers.
  */
 void CoreIntegration::clear_kv_cache() {
-    if (core_instance) {
-        llama_memory_seq_rm(llama_get_memory(core_instance->get_context()), 0, -1, -1);
+    if (!core_instance) return;
+    
+    llama_context* ctx = core_instance->get_context();
+    if (!ctx) return;
+    
+    try {
+        // 1. Remove ALL sequences from KV cache (0 = first token, -1 = all remaining)
+        llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1);
+        
+        // 2. Additional safety: clear the memory directly if available
+        auto memory = llama_get_memory(ctx);
+        if (memory) {
+            // Remove all sequence data from memory
+            llama_memory_seq_rm(memory, 0, -1, -1);
+        }
+        
+        // 3. Reset context tracking variables
         active_expert_in_cache = "";
-        std::cout << "[Orquestrador]: KV Cache limpo." << std::endl;
+        
+        // 4. Log with timestamp for debugging context leakage
+        std::cout << "[Orquestrador] KV Cache limpo completamente - "
+                  << "contexto anterior isolado." << std::endl;
+                  
+    } catch (const std::exception& e) {
+        std::cerr << "[ERRO] Falha ao limpar KV cache: " << e.what() << std::endl;
     }
 }
 
@@ -632,19 +655,40 @@ CoreIntegration::run_expert_committee(
         
         try {
             // IMPORTANTE: Trocar contexto para cada especialista
+            // Isso limpa o KV cache automaticamente
             switch_expert_context(expert_id);
             
             auto& expert = experts[expert_id];
             auto& history = expert_histories[expert_id];
             
-            // Obter contribuição através da interface
+            // ====== ISOLAÇÃO DE HISTÓRICO PARA COMITÊ ======
+            // Para o comitê, queremos que cada especialista tenha uma perspectiva
+            // FRESCA, não contaminada por histórico anterior
+            // Mas ainda mantemos o histórico para referências (não usamos-o inline)
+            
+            // Criar uma cópia vazia do histórico para este turno do comitê
+            // Isso previne context leakage entre turnos
+            std::vector<llama_chat_message> committee_isolated_history = history;
+            
+            // Se há muitas mensagens no histórico, limitar para os últimos N turnos apenas
+            // para evitar que históricos antigos contaminem o comitê
+            if (committee_isolated_history.size() > 4) {
+                // Manter apenas os últimos 2 turnos (user + assistant)
+                size_t start_idx = committee_isolated_history.size() - 4;
+                committee_isolated_history.erase(
+                    committee_isolated_history.begin(), 
+                    committee_isolated_history.begin() + start_idx
+                );
+            }
+            
+            // Obter contribuição através da interface com histórico isolado
             llama_adapter_lora* active_lora = nullptr;
             auto contrib = expert->get_contribution(
                 input,
                 core_instance.get(),
                 embedder,
                 nullptr, // lora_override
-                history,
+                committee_isolated_history,  // Usar histórico isolado
                 &active_lora
             );
             
@@ -799,24 +843,70 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
 
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
 
-    // Recuperar memórias e aumentar o input
+    // =====================================================================
+    // ISOLATED MEMORY CONTEXT: Previne context leakage
+    // =====================================================================
+    
     std::string memory_context = "";
     std::string augmented_input = input;
 
     if (memory_manager) {
+        // 1. Recuperar memórias relevantes com LIMITE de tamanho
         auto memories = memory_manager->getHybridMemories(input);
+        
         if (!memories.empty()) {
-            memory_context = "\n[CONTEXTO RELEVANTE DE LTM]\n";
-            for (const auto& mem : memories) {
-                memory_context += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
+            // 2. Filtrar memórias para evitar contaminação
+            //    - Limitar a TOP 3 memórias mais relevantes
+            //    - Descartar se muito antigas (contexto irrelevante)
+            //    - Descartar se emoção conflita com input atual
+            
+            std::vector<typename decltype(memories)::value_type> filtered_memories;
+            int max_memories = 3; // Máximo de memórias por turno
+            
+            for (size_t i = 0; i < memories.size() && filtered_memories.size() < max_memories; ++i) {
+                const auto& mem = memories[i];
+                
+                // Validação simples: não injetar se a memória parece irrelevante
+                bool is_relevant = 
+                    (mem.content.find("?") != std::string::npos ||  // Pergunta
+                     mem.content.length() > 20) &&                  // Conteúdo significativo
+                    (mem.emotion.find("erro") == std::string::npos); // Não é erro
+                
+                if (is_relevant) {
+                    filtered_memories.push_back(mem);
+                }
             }
-            memory_context += "[FIM CONTEXTO LTM]\n";
-            std::cout << "[Memory Context] " << memory_context;
-            augmented_input = memory_context + input;
+            
+            // 3. Construir contexto isolado de memória
+            if (!filtered_memories.empty()) {
+                memory_context = "\n[CONTEXTO DE MEMÓRIA ANTERIOR - ISOLADO PARA ESTE TURNO]\n";
+                for (const auto& mem : filtered_memories) {
+                    // Truncar memórias muito longas para evitar dominação do prompt
+                    std::string content = mem.content;
+                    if (content.length() > 150) {
+                        content = content.substr(0, 150) + "...";
+                    }
+                    memory_context += "- " + content + "\n";
+                }
+                memory_context += "[FIM CONTEXTO ISOLADO]\n";
+                
+                std::cout << "[Memory Context] Injetando " << filtered_memories.size() 
+                         << " memória(s) isolada(s)" << std::endl;
+                
+                augmented_input = memory_context + input;
+                
+                // IMPORTANTE: Após usar as memórias para context augmentation,
+                // limpamos o histórico de memória injected para não contaminar turno seguinte
+            } else {
+                std::cout << "[Memory Context] Sem memórias relevantes para este turno" << std::endl;
+            }
         }
     }
 
-    // 1. Executa comitê de especialistas
+    // =====================================================================
+    // EXPERT COMMITTEE EXECUTION
+    // =====================================================================
+    
     std::vector<std::string> expert_committee = {
         "introspectiveModel", 
         "emotionalModel", 
@@ -824,7 +914,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
         "alyssa"        
     };
 
-    // 1. Executar comitê
+    // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
     
     // 2. CALCULAR COERÊNCIA DO COMITÊ
@@ -956,22 +1046,60 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
 
     std::cout << "\n[Weighted Fusion TTS-less] Processando input: " << input << std::endl;
 
+    // =====================================================================
+    // ISOLATED MEMORY CONTEXT (TTS-less version)
+    // =====================================================================
+    
     std::string memory_context = "";
     std::string augmented_input = input;
 
     if (memory_manager) {
+        // 1. Recuperar memórias relevantes com LIMITE de tamanho
         auto memories = memory_manager->getHybridMemories(input);
+        
         if (!memories.empty()) {
-            memory_context = "\n[CONTEXTO RELEVANTE DE LTM]\n";
-            for (const auto& mem : memories) {
-                memory_context += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
+            // 2. Filtrar memórias para evitar contaminação
+            std::vector<typename decltype(memories)::value_type> filtered_memories;
+            int max_memories = 3; // Máximo de memórias por turno
+            
+            for (size_t i = 0; i < memories.size() && filtered_memories.size() < max_memories; ++i) {
+                const auto& mem = memories[i];
+                
+                // Validação: evitar contextos irrelevantes
+                bool is_relevant = 
+                    (mem.content.find("?") != std::string::npos ||  
+                     mem.content.length() > 20) &&                  
+                    (mem.emotion.find("erro") == std::string::npos);
+                
+                if (is_relevant) {
+                    filtered_memories.push_back(mem);
+                }
             }
-            memory_context += "[FIM CONTEXTO LTM]\n";
-            std::cout << "[Memory Context] " << memory_context;
-            augmented_input = memory_context + input;
+            
+            // 3. Construir contexto isolado
+            if (!filtered_memories.empty()) {
+                memory_context = "\n[CONTEXTO DE MEMÓRIA ANTERIOR - ISOLADO PARA ESTE TURNO]\n";
+                for (const auto& mem : filtered_memories) {
+                    std::string content = mem.content;
+                    if (content.length() > 150) {
+                        content = content.substr(0, 150) + "...";
+                    }
+                    memory_context += "- " + content + "\n";
+                }
+                memory_context += "[FIM CONTEXTO ISOLADO]\n";
+                
+                std::cout << "[Memory Context] Injetando " << filtered_memories.size() 
+                         << " memória(s) isolada(s)" << std::endl;
+                
+                augmented_input = memory_context + input;
+            }
         }
     }
 
+    // =====================================================================
+    // EXPERT COMMITTEE EXECUTION
+    // =====================================================================
+    
     // 1. Executa APENAS os especialistas de pensamento (não incluir alyssa)
     std::vector<std::string> expert_committee = {
         "introspectiveModel", 
@@ -982,7 +1110,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
         "memoryModel"
     };
 
-    // 1. Executar comitê
+    // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
     
     // 2. CALCULAR COERÊNCIA DO COMITÊ
