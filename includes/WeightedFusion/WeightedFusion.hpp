@@ -5,6 +5,7 @@
 #include <functional>
 #include <cmath>
 #include "Embedding/Embedder.hpp"
+#include "EndocrineSystem.hpp"
 #include <onnxruntime/onnxruntime_cxx_api.h>
 #include <algorithm>
 #include <numeric>
@@ -108,15 +109,18 @@ public:
      * @brief Fuses multiple expert responses into a single output.
      * 
      * Uses neural-based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
+     * The EndocrineSystem influences weight distribution based on hormonal state.
      * 
      * @param input The user's input string.
      * @param contributions Vector of ExpertContribution objects containing responses from various experts.
+     * @param endocrine The EndocrineSystem instance for hormonal modulation of weights.
      * @param current_emotion Current emotional context (optional).
      * @return The fused response as a single string.
      */
     std::string fuse_responses(
         const std::string& input,
         const std::vector<ExpertContribution>& contributions,
+        const alyssa_endocrine::EndocrineSystem& endocrine,
         const std::string& current_emotion = "");
     
     /**

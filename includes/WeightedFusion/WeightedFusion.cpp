@@ -1,4 +1,6 @@
 #include "WeightedFusion/WeightedFusion.hpp"
+#include <iomanip>
+#include <iostream>
 
 namespace alyssa_fusion {
 
@@ -172,15 +174,8 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
 
         float* float_weights = output_tensors[0].GetTensorMutableData<float>();
         
-        static const std::vector<std::string> expert_order = {
-            "emotionalModel", 
-            "memoryModel", 
-            "introspectiveModel", 
-            "socialModel"
-        };
-
-        for (size_t i = 0; i < expert_order.size(); ++i) {
-            weights[expert_order[i]] = static_cast<double>(float_weights[i]);
+        for (size_t i = 0; i < expert_responses.size(); ++i) {
+            weights[expert_responses[i].expert_id] = static_cast<double>(float_weights[i]);
         }
 
         if (current_emotion == "happy" || current_emotion == "sad") {
@@ -208,15 +203,18 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
  * @brief Fuses multiple expert responses into a single output.
  * 
  * Uses neural-based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
+ * The EndocrineSystem influences weight distribution based on hormonal state.
  * 
  * @param input The user's input string.
  * @param contributions Vector of ExpertContribution objects containing responses from various experts.
+ * @param endocrine The EndocrineSystem instance for hormonal modulation of weights.
  * @param current_emotion Current emotional context (optional).
  * @return The fused response as a single string.
  */
 std::string WeightedFusion::fuse_responses(
     const std::string& input,
     const std::vector<ExpertContribution>& contributions,
+    const alyssa_endocrine::EndocrineSystem& endocrine,
     const std::string& current_emotion) {
     
     if (contributions.empty()) return "Nenhum especialista respondeu.";
@@ -225,8 +223,27 @@ std::string WeightedFusion::fuse_responses(
     // Calcula pesos usando fusão neural
     auto weights = calculate_neural_weights(input, contributions, current_emotion);
     
+    // 🧬 INFLUÊNCIA HORMONAL: Aplica multiplicadores baseado em hormônios
+    std::cout << "\n[Endocrine Modulation] Aplicando influência hormonal aos pesos...\n";
+    for (auto& contribution : const_cast<std::vector<ExpertContribution>&>(contributions)) {
+        double hormone_multiplier = endocrine.get_expert_weight_multiplier(contribution.expert_id);
+        
+        if (weights.find(contribution.expert_id) != weights.end()) {
+            weights[contribution.expert_id] *= hormone_multiplier;
+            std::cout << "  " << contribution.expert_id << ": ×" 
+                     << std::fixed << std::setprecision(3) << hormone_multiplier << "\n";
+        }
+    }
+    
+    // Renormalizar pesos após modulação hormonal
+    double sum = 0.0;
+    for (const auto& w : weights) sum += w.second;
+    if (sum > 0.0) {
+        for (auto& w : weights) w.second /= sum;
+    }
+    
     // Para debug - mostra os pesos calculados
-    std::cout << "\n[Weighted Fusion] Pesos calculados:\n";
+    std::cout << "\n[Weighted Fusion] Pesos finais (após hormônios):\n";
     for (const auto& w : weights) {
         std::cout << "  " << w.first << ": " << std::fixed << std::setprecision(3) << w.second << "\n";
     }
@@ -294,19 +311,34 @@ std::string WeightedFusion::detect_emotion_from_input(const std::string& input) 
     std::string lower_input = input;
     std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
     
-    if (lower_input.find("feliz") != std::string::npos || 
-        lower_input.find("alegre") != std::string::npos ||
-        lower_input.find("amo") != std::string::npos) {
-        return "happy";
-    } else if (lower_input.find("triste") != std::string::npos ||
-               lower_input.find("triste") != std::string::npos) {
-        return "sad";
-    } else if (lower_input.find("porque") != std::string::npos ||
-               lower_input.find("como") != std::string::npos) {
-        return "analytical";
+    // Emotion keyword mapping
+    const std::map<std::string, std::vector<std::string>> emotion_keywords = {
+        {"happy", {"feliz", "alegre", "amo", "adorei", "legal"}},
+        {"sad", {"triste", "infeliz", "deprimido", "choro", "sofro"}},
+        {"analytical", {"porque", "como", "explique", "analise", "entenda"}}
+    };
+    
+    // Count keyword matches per emotion
+    std::map<std::string, int> emotion_scores;
+    for (const auto& [emotion, keywords] : emotion_keywords) {
+        for (const auto& keyword : keywords) {
+            if (lower_input.find(keyword) != std::string::npos) {
+                emotion_scores[emotion]++;
+            }
+        }
     }
     
-    return "neutral";
+    // Return emotion with highest score
+    if (emotion_scores.empty()) {
+        return "neutral";
+    }
+    
+    auto best_emotion = std::max_element(
+        emotion_scores.begin(), emotion_scores.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; }
+    );
+    
+    return best_emotion->first;
 }
 
 /**

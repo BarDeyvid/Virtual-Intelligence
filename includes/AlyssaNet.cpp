@@ -25,7 +25,8 @@ using namespace alyssa_core;
  * @details Initializes with default values and logs construction.
  */
 CoreIntegration::CoreIntegration() 
-    : initialized(false), active_expert_in_cache("") 
+    : initialized(false), active_expert_in_cache(""),
+      endocrine_system(std::make_unique<alyssa_endocrine::EndocrineSystem>())
 {
     printf("CoreIntegration constructed");
 }
@@ -781,19 +782,49 @@ std::string CoreIntegration::generate_fused_input(
     // Organizar pensamentos por especialista
     std::map<std::string, std::vector<std::string>> thoughts_by_type;
     
+    // Build thought type mapping from ConfigsLLM.json
+    static std::map<std::string, std::string> thought_type_mapping;
+    
+    if (thought_type_mapping.empty()) {
+        // Load and cache mapping from configs
+        AllModelConfigs configs = load_config();
+        for (const auto& cfg : configs) {
+            std::string thought_label = cfg.id;
+            
+            // Convert ID to Portuguese thought type label
+            if (cfg.id.find("emotional") != std::string::npos) {
+                thought_label = "Emocional";
+            } else if (cfg.id.find("introspect") != std::string::npos) {
+                thought_label = "Introspectivo";
+            } else if (cfg.id.find("social") != std::string::npos) {
+                thought_label = "Social";
+            } else if (cfg.id.find("analyt") != std::string::npos) {
+                thought_label = "Analítico";
+            } else if (cfg.id.find("creat") != std::string::npos) {
+                thought_label = "Criativo";
+            } else if (cfg.id.find("memory") != std::string::npos) {
+                thought_label = "Memória";
+            } else {
+                // Capitalize first letter for unknown types
+                if (!thought_label.empty()) {
+                    thought_label[0] = std::toupper(thought_label[0]);
+                }
+            }
+            
+            thought_type_mapping[cfg.id] = thought_label;
+        }
+    }
+    
     for (const auto& contrib : contributions) {
-        // Ignorar alyssa das contribuições (ela não deve estar aqui)
+        // Skip alyssa from contributions (should not be here)
         if (contrib.expert_id == "alyssa") continue;
         
-        // Mapear tipos de pensamento
-        std::string thought_type;
-        if (contrib.expert_id == "emotionalModel") thought_type = "Emocional";
-        else if (contrib.expert_id == "introspectiveModel") thought_type = "Introspectivo";
-        else if (contrib.expert_id == "socialModel") thought_type = "Social";
-        else if (contrib.expert_id == "analyticalModel") thought_type = "Analítico";
-        else if (contrib.expert_id == "creativeModel") thought_type = "Criativo";
-        else if (contrib.expert_id == "memoryModel") thought_type = "Memória";
-        else thought_type = contrib.expert_id;
+        // Get thought type from loaded config mapping
+        std::string thought_type = contrib.expert_id;
+        auto it = thought_type_mapping.find(contrib.expert_id);
+        if (it != thought_type_mapping.end()) {
+            thought_type = it->second;
+        }
         
         thoughts_by_type[thought_type].push_back(contrib.response);
     }
@@ -821,10 +852,23 @@ std::string CoreIntegration::generate_fused_input(
     
     thoughts += "[/PENSAMENTOS]\n\n";
     
+    // =====================================================================
+    // 🧬 INJECT HORMONAL STATE INTO SYSTEM CONTEXT
+    // =====================================================================
+    
+    std::string hormonal_context = "";
+    if (endocrine_system) {
+        hormonal_context = endocrine_system->generate_hormonal_system_context();
+        hormonal_context += "\n";
+        
+        std::cout << "\n[Hormonal Injection] " << hormonal_context << std::endl;
+    }
+    
     // Construir prompt final para a Alyssa
-    std::string fused_prompt = thoughts + 
+    std::string fused_prompt = hormonal_context +
+                               thoughts + 
                                "ENTRADA DO USUÁRIO: \"" + original_input + "\"\n\n" +
-                               "Baseado nos pensamentos acima, forneça sua resposta como Alyssa:";
+                               "Baseado nos pensamentos acima e seu estado hormonal atual, forneça sua resposta como Alyssa:";
     
     return fused_prompt;
 }
@@ -841,6 +885,15 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
         return "Erro: Sistema não inicializado corretamente.";
     }
 
+    // =====================================================================
+    // ENDOCRINE SYSTEM: Apply metabolism and print current state
+    // =====================================================================
+    
+    if (endocrine_system) {
+        endocrine_system->apply_metabolism(0.05); // Gradual decay toward baseline
+        std::cout << endocrine_system->get_hormone_profile().to_string() << std::endl;
+    }
+
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
 
     // =====================================================================
@@ -849,6 +902,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     
     std::string memory_context = "";
     std::string augmented_input = input;
+    AllModelConfigs configs = load_config();
 
     if (memory_manager) {
         // 1. Recuperar memórias relevantes com LIMITE de tamanho
@@ -907,15 +961,36 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     // EXPERT COMMITTEE EXECUTION
     // =====================================================================
     
-    std::vector<std::string> expert_committee = {
-        "introspectiveModel", 
-        "emotionalModel", 
-        "socialModel",
-        "alyssa"        
-    };
+    std::vector<std::string> expert_committee;
+    for (const auto& cfg : configs) {
+        // Adiciona ao comitê de execução
+        expert_committee.push_back(cfg.id);
+        if (cfg.id == "alyssa") {
+            continue; // Alyssa não participa do comitê, ela é a fusão final
+        }
+
+        std::string fallback = cfg.id;
+        fallback[0] = std::toupper(fallback[0]);
+        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
+    }
 
     // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
+    
+    // =====================================================================
+    // ENDOCRINE SYSTEM: Update hormone levels based on expert signals
+    // =====================================================================
+    
+    if (endocrine_system && !contributions.empty()) {
+        std::vector<std::string> expert_signals;
+        for (const auto& contrib : contributions) {
+            expert_signals.push_back(contrib.response);
+        }
+        endocrine_system->update_hormone_levels(expert_signals);
+        
+        std::cout << "\n[Endocrine Update] Hormônios atualizados após comitê:\n"
+                  << endocrine_system->get_hormone_profile().to_string() << std::endl;
+    }
     
     // 2. CALCULAR COERÊNCIA DO COMITÊ
     float committee_coherence = calculate_committee_coherence(contributions);
@@ -961,6 +1036,16 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
             std::cout << "\n Small talk/ruído não salvo na LTM." << std::endl;
         }
     }
+    
+    // =====================================================================
+    // CLEANUP: Clear KV cache to prevent bleed-through to next turn
+    // =====================================================================
+    
+    if (endocrine_system) {
+        std::cout << "\n[Turn End] Limpando caches para próximo turno.\n"
+                  << "  Estado final: " << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
+    }
+    clear_kv_cache();
 
     return final_response;
 }
@@ -1044,6 +1129,15 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
         return "Erro: Sistema não inicializado corretamente.";
     }
 
+    // =====================================================================
+    // ENDOCRINE SYSTEM: Apply metabolism and print current state
+    // =====================================================================
+    
+    if (endocrine_system) {
+        endocrine_system->apply_metabolism(0.05); // Gradual decay toward baseline
+        std::cout << endocrine_system->get_hormone_profile().to_string() << std::endl;
+    }
+
     std::cout << "\n[Weighted Fusion TTS-less] Processando input: " << input << std::endl;
 
     // =====================================================================
@@ -1052,6 +1146,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     
     std::string memory_context = "";
     std::string augmented_input = input;
+    AllModelConfigs configs = load_config();
 
     if (memory_manager) {
         // 1. Recuperar memórias relevantes com LIMITE de tamanho
@@ -1101,17 +1196,36 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     // =====================================================================
     
     // 1. Executa APENAS os especialistas de pensamento (não incluir alyssa)
-    std::vector<std::string> expert_committee = {
-        "introspectiveModel", 
-        "emotionalModel", 
-        "socialModel",
-        "analyticalModel",
-        "creativeModel",
-        "memoryModel"
-    };
+    std::vector<std::string> expert_committee;
+    for (const auto& cfg : configs) {
+        // Adiciona ao comitê de execução
+        expert_committee.push_back(cfg.id);
+        if (cfg.id == "alyssa") {
+            continue; // Alyssa não participa do comitê, ela é a fusão final
+        }
+
+        std::string fallback = cfg.id;
+        fallback[0] = std::toupper(fallback[0]);
+        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
+    }
 
     // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
+    
+    // =====================================================================
+    // ENDOCRINE SYSTEM: Update hormone levels based on expert signals
+    // =====================================================================
+    
+    if (endocrine_system && !contributions.empty()) {
+        std::vector<std::string> expert_signals;
+        for (const auto& contrib : contributions) {
+            expert_signals.push_back(contrib.response);
+        }
+        endocrine_system->update_hormone_levels(expert_signals);
+        
+        std::cout << "\n[Endocrine Update] Hormônios atualizados após comitê:\n"
+                  << endocrine_system->get_hormone_profile().to_string() << std::endl;
+    }
     
     // 2. CALCULAR COERÊNCIA DO COMITÊ
     float committee_coherence = calculate_committee_coherence(contributions);
@@ -1159,6 +1273,16 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
         memory_manager->processInteraction(input, final_response);
         std::cout << "\n Interação salva na LTM." << std::endl;
     }
+    
+    // =====================================================================
+    // CLEANUP: Clear KV cache to prevent bleed-through to next turn
+    // =====================================================================
+    
+    if (endocrine_system) {
+        std::cout << "\n[Turn End] Limpando caches para próximo turno.\n"
+                  << "  Estado final: " << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
+    }
+    clear_kv_cache();
 
     return final_response;
 }

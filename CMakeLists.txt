@@ -4,6 +4,7 @@ project(VirtualIntelligence CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- Dependencies ---
 
@@ -68,7 +69,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
