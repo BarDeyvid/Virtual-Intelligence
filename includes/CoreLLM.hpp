@@ -3,6 +3,7 @@
 #include "voice/ElevenLabsTTS.hpp"
 #include "AlyssaMemoryHandler.hpp"
 #include "IExpert.hpp"
+#include "EndocrineSystem.hpp"
 #include <memory>
 #include <map>
 #include <vector>
@@ -30,6 +31,7 @@ private:
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;    ///< Weighted fusion engine
     std::shared_ptr<Embedder> embedder;                             ///< Embedding generator for semantic analysis
     std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager; ///< Long-term memory manager
+    std::unique_ptr<alyssa_endocrine::EndocrineSystem> endocrine_system; ///< Hormonal system for behavioral modulation
     
     /// @brief Map of registered expert models with their unique IDs
     std::unordered_map<std::string, std::unique_ptr<alyssa_experts::IExpert>> experts;
@@ -295,6 +297,14 @@ private:
      * @brief Perform system reflection/self-analysis.
      */
     void reflect();
+    
+    /**
+     * @brief Get reference to the EndocrineSystem for hormonal state access.
+     * @return Pointer to EndocrineSystem (nullptr if not initialized)
+     */
+    alyssa_endocrine::EndocrineSystem* get_endocrine_system() const {
+        return endocrine_system.get();
+    }
 
 public:
     /**

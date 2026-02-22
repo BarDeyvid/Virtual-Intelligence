@@ -69,7 +69,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})

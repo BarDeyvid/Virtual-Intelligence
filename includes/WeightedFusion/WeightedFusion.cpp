@@ -1,4 +1,6 @@
 #include "WeightedFusion/WeightedFusion.hpp"
+#include <iomanip>
+#include <iostream>
 
 namespace alyssa_fusion {
 
@@ -208,15 +210,18 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
  * @brief Fuses multiple expert responses into a single output.
  * 
  * Uses neural-based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
+ * The EndocrineSystem influences weight distribution based on hormonal state.
  * 
  * @param input The user's input string.
  * @param contributions Vector of ExpertContribution objects containing responses from various experts.
+ * @param endocrine The EndocrineSystem instance for hormonal modulation of weights.
  * @param current_emotion Current emotional context (optional).
  * @return The fused response as a single string.
  */
 std::string WeightedFusion::fuse_responses(
     const std::string& input,
     const std::vector<ExpertContribution>& contributions,
+    const alyssa_endocrine::EndocrineSystem& endocrine,
     const std::string& current_emotion) {
     
     if (contributions.empty()) return "Nenhum especialista respondeu.";
@@ -225,8 +230,27 @@ std::string WeightedFusion::fuse_responses(
     // Calcula pesos usando fusão neural
     auto weights = calculate_neural_weights(input, contributions, current_emotion);
     
+    // 🧬 INFLUÊNCIA HORMONAL: Aplica multiplicadores baseado em hormônios
+    std::cout << "\n[Endocrine Modulation] Aplicando influência hormonal aos pesos...\n";
+    for (auto& contribution : const_cast<std::vector<ExpertContribution>&>(contributions)) {
+        double hormone_multiplier = endocrine.get_expert_weight_multiplier(contribution.expert_id);
+        
+        if (weights.find(contribution.expert_id) != weights.end()) {
+            weights[contribution.expert_id] *= hormone_multiplier;
+            std::cout << "  " << contribution.expert_id << ": ×" 
+                     << std::fixed << std::setprecision(3) << hormone_multiplier << "\n";
+        }
+    }
+    
+    // Renormalizar pesos após modulação hormonal
+    double sum = 0.0;
+    for (const auto& w : weights) sum += w.second;
+    if (sum > 0.0) {
+        for (auto& w : weights) w.second /= sum;
+    }
+    
     // Para debug - mostra os pesos calculados
-    std::cout << "\n[Weighted Fusion] Pesos calculados:\n";
+    std::cout << "\n[Weighted Fusion] Pesos finais (após hormônios):\n";
     for (const auto& w : weights) {
         std::cout << "  " << w.first << ": " << std::fixed << std::setprecision(3) << w.second << "\n";
     }
