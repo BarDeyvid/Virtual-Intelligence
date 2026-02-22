@@ -781,19 +781,49 @@ std::string CoreIntegration::generate_fused_input(
     // Organizar pensamentos por especialista
     std::map<std::string, std::vector<std::string>> thoughts_by_type;
     
+    // Build thought type mapping from ConfigsLLM.json
+    static std::map<std::string, std::string> thought_type_mapping;
+    
+    if (thought_type_mapping.empty()) {
+        // Load and cache mapping from configs
+        AllModelConfigs configs = load_config();
+        for (const auto& cfg : configs) {
+            std::string thought_label = cfg.id;
+            
+            // Convert ID to Portuguese thought type label
+            if (cfg.id.find("emotional") != std::string::npos) {
+                thought_label = "Emocional";
+            } else if (cfg.id.find("introspect") != std::string::npos) {
+                thought_label = "Introspectivo";
+            } else if (cfg.id.find("social") != std::string::npos) {
+                thought_label = "Social";
+            } else if (cfg.id.find("analyt") != std::string::npos) {
+                thought_label = "Analítico";
+            } else if (cfg.id.find("creat") != std::string::npos) {
+                thought_label = "Criativo";
+            } else if (cfg.id.find("memory") != std::string::npos) {
+                thought_label = "Memória";
+            } else {
+                // Capitalize first letter for unknown types
+                if (!thought_label.empty()) {
+                    thought_label[0] = std::toupper(thought_label[0]);
+                }
+            }
+            
+            thought_type_mapping[cfg.id] = thought_label;
+        }
+    }
+    
     for (const auto& contrib : contributions) {
-        // Ignorar alyssa das contribuições (ela não deve estar aqui)
+        // Skip alyssa from contributions (should not be here)
         if (contrib.expert_id == "alyssa") continue;
         
-        // Mapear tipos de pensamento
-        std::string thought_type;
-        if (contrib.expert_id == "emotionalModel") thought_type = "Emocional";
-        else if (contrib.expert_id == "introspectiveModel") thought_type = "Introspectivo";
-        else if (contrib.expert_id == "socialModel") thought_type = "Social";
-        else if (contrib.expert_id == "analyticalModel") thought_type = "Analítico";
-        else if (contrib.expert_id == "creativeModel") thought_type = "Criativo";
-        else if (contrib.expert_id == "memoryModel") thought_type = "Memória";
-        else thought_type = contrib.expert_id;
+        // Get thought type from loaded config mapping
+        std::string thought_type = contrib.expert_id;
+        auto it = thought_type_mapping.find(contrib.expert_id);
+        if (it != thought_type_mapping.end()) {
+            thought_type = it->second;
+        }
         
         thoughts_by_type[thought_type].push_back(contrib.response);
     }
@@ -1052,6 +1082,7 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     
     std::string memory_context = "";
     std::string augmented_input = input;
+    AllModelConfigs configs = load_config();
 
     if (memory_manager) {
         // 1. Recuperar memórias relevantes com LIMITE de tamanho
@@ -1101,14 +1132,18 @@ std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
     // =====================================================================
     
     // 1. Executa APENAS os especialistas de pensamento (não incluir alyssa)
-    std::vector<std::string> expert_committee = {
-        "introspectiveModel", 
-        "emotionalModel", 
-        "socialModel",
-        "analyticalModel",
-        "creativeModel",
-        "memoryModel"
-    };
+    std::vector<std::string> expert_committee;
+    for (const auto& cfg : configs) {
+        // Adiciona ao comitê de execução
+        expert_committee.push_back(cfg.id);
+        if (cfg.id == "alyssa") {
+            continue; // Alyssa não participa do comitê, ela é a fusão final
+        }
+
+        std::string fallback = cfg.id;
+        fallback[0] = std::toupper(fallback[0]);
+        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
+    }
 
     // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);

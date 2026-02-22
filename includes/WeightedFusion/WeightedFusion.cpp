@@ -294,19 +294,34 @@ std::string WeightedFusion::detect_emotion_from_input(const std::string& input) 
     std::string lower_input = input;
     std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
     
-    if (lower_input.find("feliz") != std::string::npos || 
-        lower_input.find("alegre") != std::string::npos ||
-        lower_input.find("amo") != std::string::npos) {
-        return "happy";
-    } else if (lower_input.find("triste") != std::string::npos ||
-               lower_input.find("triste") != std::string::npos) {
-        return "sad";
-    } else if (lower_input.find("porque") != std::string::npos ||
-               lower_input.find("como") != std::string::npos) {
-        return "analytical";
+    // Emotion keyword mapping
+    const std::map<std::string, std::vector<std::string>> emotion_keywords = {
+        {"happy", {"feliz", "alegre", "amo", "adorei", "legal"}},
+        {"sad", {"triste", "infeliz", "deprimido", "choro", "sofro"}},
+        {"analytical", {"porque", "como", "explique", "analise", "entenda"}}
+    };
+    
+    // Count keyword matches per emotion
+    std::map<std::string, int> emotion_scores;
+    for (const auto& [emotion, keywords] : emotion_keywords) {
+        for (const auto& keyword : keywords) {
+            if (lower_input.find(keyword) != std::string::npos) {
+                emotion_scores[emotion]++;
+            }
+        }
     }
     
-    return "neutral";
+    // Return emotion with highest score
+    if (emotion_scores.empty()) {
+        return "neutral";
+    }
+    
+    auto best_emotion = std::max_element(
+        emotion_scores.begin(), emotion_scores.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; }
+    );
+    
+    return best_emotion->first;
 }
 
 /**
