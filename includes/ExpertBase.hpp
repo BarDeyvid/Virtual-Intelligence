@@ -24,41 +24,72 @@ namespace alyssa_experts {
         std::string expert_id;                             ///< Unique expert identifier
 
         /**
-         * @brief Parse structured signal from expert's raw response.
+         * @brief Parse structured signal from expert's raw response (FLEXIBLE VERSION).
          * @param raw_response Raw text response from expert.
          * @param expert_id Expert identifier for format-specific parsing.
-         * @return Parsed structured signal string.
-         * @details Different experts use different output formats:
-         *          - emotionalModel: [SINAL] type [CONFIANÇA] score [JUSTIFICATIVA] text
-         *          - analyticalModel: [SINAL] type [CONFIANÇA] score [PADRÃO] pattern
-         *          - memoryModel: [FATO] fact [CONFIANÇA] score [CONTEXTO] context
+         * @return Parsed structured signal string (returns response if format fails gracefully).
+         * @details Attempts multiple parsing strategies with graceful degradation:
+         *          1. Try strict format-specific regex patterns
+         *          2. Try flexible generic patterns ([WORD] format)
+         *          3. Accept raw response as valid contribution
          */
         std::string parse_expert_signal(const std::string& raw_response, const std::string& expert_id) {
-            std::string signal;
+            if (raw_response.empty()) {
+                return "[VAZIO] Sem resposta do especialista";
+            }
             
-            // Padrões de parsing para cada especialista
-            std::regex pattern;
+            std::string signal;
+            std::smatch matches;
+            
+            // ===== ESTRATÉGIA 1: Padrões estritamente formatados por tipo =====
             
             if (expert_id == "emotionalModel") {
-                pattern = std::regex(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[JUSTIFICATIVA\]\s*(.+))");
+                std::regex pattern(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[(?:JUSTIFICATIVA|CONTEXTO)\]\s*(.+))");
+                if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+                    return matches[0];
+                }
             } else if (expert_id == "analyticalModel") {
-                pattern = std::regex(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[PADRÃO\]\s*(.+))");
+                std::regex pattern(R"(\[SINAL\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[(?:PADRÃO|ANÁLISE|CONTEXTO)\]\s*(.+))");
+                if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+                    return matches[0];
+                }
             } else if (expert_id == "memoryModel") {
-                pattern = std::regex(R"(\[FATO\]\s*(\w+)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[CONTEXTO\]\s*(.+))");
-            } else {
-                // Fallback para outros especialistas
-                pattern = std::regex(R"(\[SINAL\].+)");
+                std::regex pattern(R"(\[FATO\]\s*(.+?)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[CONTEXTO\]\s*(.+))");
+                if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+                    return matches[0];
+                }
+            } else if (expert_id == "introspectiveModel") {
+                std::regex pattern(R"(\[(?:INTROSPECÇÃO|REFLEXÃO|INSIGHT)\]\s*(.+))");
+                if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+                    return matches[0];
+                }
             }
             
-            std::smatch matches;
-            if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
-                signal = matches[0];
-            } else {
-                // Se não seguir o formato, retorna sinal de erro
-                signal = "[ERRO] Formato inválido. Use: [SINAL] tipo [CONFIANÇA] 0.00-1.00 [CONTEXTO] info";
+            // ===== ESTRATÉGIA 2: Padrões genéricos flexíveis =====
+            
+            // Procura por qualquer [LABEL] estrutura
+            std::regex generic_pattern(R"(\[[\w\s]+\].+)");
+            if (std::regex_search(raw_response, matches, generic_pattern)) {
+                return matches[0];
             }
             
-            return signal;
+            // Procura por confiança/score mesmo sem [LABEL]
+            std::regex confidence_pattern(R"((?:confiança|confidence|score|score:|prob|probabilidade)[\s:]*(\d+\.?\d*))");
+            if (std::regex_search(raw_response, matches, confidence_pattern)) {
+                // Tem alguma estrutura de confiança
+                std::string score = matches[1];
+                return "[SINAL] " + expert_id + " [CONFIANÇA] " + score + " [RESPOSTA] " + raw_response;
+            }
+            
+            // ===== ESTRATÉGIA 3: Aceitar resposta bruta com fallback gracioso =====
+            
+            // Se nada funcionar, retornar a resposta bruta mas alertar
+            if (raw_response.length() > 200) {
+                // Truncar respostas muito longas
+                return raw_response.substr(0, 200) + "...";
+            }
+            
+            return raw_response;  // Aceitar como está - graceful degradation
         }
 
     public:
@@ -210,17 +241,17 @@ namespace alyssa_experts {
             std::string prompt(formatted.begin(), formatted.begin() + len);
 
             // 4. Executa geração
-            llama_adapter_lora* final_lora = (lora_override != nullptr) ? lora_override : lora;
+            // llama_adapter_lora** final_lora = (lora_override != nullptr) ? lora_override : lora;
             
             // Atualizar o ponteiro ativo de LoRA
-            if (active_lora_in_context != nullptr) {
-                *active_lora_in_context = final_lora;
-            }
+            // if (active_lora_in_context != nullptr) {
+            //     *active_lora_in_context = final_lora;
+            // }
             
             std::string response = core_instance->generate_raw(
                 prompt,
                 config.params,
-                final_lora,
+                nullptr, // Usar LoRA padrão do especialista (lora) - desabilitado para evitar conflitos
                 stream_callback
             );
 

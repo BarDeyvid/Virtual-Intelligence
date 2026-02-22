@@ -39,11 +39,6 @@ endif()
 find_library(PROTOBUF_LIBRARY protobuf)
 find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 
-# 7. Eclipse Paho MQTT
-add_subdirectory(paho.mqtt.cpp)
-set(PAHO_CPP_TARGET paho-mqttpp3-shared) 
-set(PAHO_C_TARGET paho-mqtt3a)
-
 # --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
 
@@ -70,7 +65,6 @@ include_directories(
     ${CURL_INCLUDE_DIRS}
     ${AVCODEC_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS} 
-    ${PROJECT_SOURCE_DIR}/paho.mqtt.cpp/include
 )
 
 # --- Common Source Files ---
@@ -83,7 +77,6 @@ set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
-set(TEST_MQTT tests/test_mqtt.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
 set(TEST_OPENCV test_cuda.cpp)
 
@@ -91,7 +84,6 @@ set(TEST_OPENCV test_cuda.cpp)
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
 add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
 add_executable(alyssa_api ${Alyssa_API_SOURCES})
-add_executable(test_mqtt ${TEST_MQTT})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
 add_executable(test_opencv ${TEST_OPENCV})
@@ -126,7 +118,6 @@ target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads) # ADICIONADO
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
-target_link_libraries(test_mqtt PRIVATE ${PAHO_CPP_TARGET} ${PAHO_C_TARGET} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 
 # --- Post-Build Commands ---

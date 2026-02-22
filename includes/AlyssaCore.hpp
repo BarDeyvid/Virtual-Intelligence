@@ -19,7 +19,6 @@
 #include <vector>
 #include <functional>
 
-#pragma warning(disable: 4244 4267 4458)
 
 using json = nlohmann::json;
 
@@ -232,21 +231,21 @@ namespace alyssa_core {
         std::string generate_raw(
             const std::string & prompt,
             const SimpleModelParameters& params,
-            llama_adapter_lora* lora, // LoRA a ser aplicado
+            llama_adapter_lora** lora, // LoRA a ser aplicado
             std::function<void(const std::string& piece)> stream_callback
         ) {
             std::string response;
             int n_prompt_tokens_total;
 
             // 1. APLICAR O LoRA (se fornecido)
-            if (lora != nullptr) {
-                int err = llama_set_adapter_lora(ctx, lora, 1.0);
-                if (err != 0) {
-                    std::cerr << "AlyssaLLM: Falha ao aplicar LoRA" << std::endl;
-                } else {
-                    std::cout << "Adaptador LoRA aplicado." << std::endl;
-                }
-            }
+            //if (lora != nullptr) {
+            //    int err = llama_set_adapters_lora(ctx, lora, 1.0);
+            //    if (err != 0) {
+            //        std::cerr << "AlyssaLLM: Falha ao aplicar LoRA" << std::endl;
+            //    } else {
+            //        std::cout << "Adaptador LoRA aplicado." << std::endl;
+            //    }
+            //}
 
             // 2. CRIAR O SAMPLER (com parâmetros do especialista)
             llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
