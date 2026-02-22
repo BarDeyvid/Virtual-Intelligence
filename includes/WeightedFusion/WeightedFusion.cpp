@@ -174,15 +174,8 @@ std::map<std::string, double> WeightedFusion::calculate_neural_weights(
 
         float* float_weights = output_tensors[0].GetTensorMutableData<float>();
         
-        static const std::vector<std::string> expert_order = {
-            "emotionalModel", 
-            "memoryModel", 
-            "introspectiveModel", 
-            "socialModel"
-        };
-
-        for (size_t i = 0; i < expert_order.size(); ++i) {
-            weights[expert_order[i]] = static_cast<double>(float_weights[i]);
+        for (size_t i = 0; i < expert_responses.size(); ++i) {
+            weights[expert_responses[i].expert_id] = static_cast<double>(float_weights[i]);
         }
 
         if (current_emotion == "happy" || current_emotion == "sad") {

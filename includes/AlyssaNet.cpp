@@ -902,6 +902,7 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     
     std::string memory_context = "";
     std::string augmented_input = input;
+    AllModelConfigs configs = load_config();
 
     if (memory_manager) {
         // 1. Recuperar memórias relevantes com LIMITE de tamanho
@@ -960,12 +961,18 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     // EXPERT COMMITTEE EXECUTION
     // =====================================================================
     
-    std::vector<std::string> expert_committee = {
-        "introspectiveModel", 
-        "emotionalModel", 
-        "socialModel",
-        "alyssa"        
-    };
+    std::vector<std::string> expert_committee;
+    for (const auto& cfg : configs) {
+        // Adiciona ao comitê de execução
+        expert_committee.push_back(cfg.id);
+        if (cfg.id == "alyssa") {
+            continue; // Alyssa não participa do comitê, ela é a fusão final
+        }
+
+        std::string fallback = cfg.id;
+        fallback[0] = std::toupper(fallback[0]);
+        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
+    }
 
     // Executar comitê
     auto contributions = run_expert_committee(expert_committee, augmented_input);
