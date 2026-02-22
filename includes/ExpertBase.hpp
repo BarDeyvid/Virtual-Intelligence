@@ -210,17 +210,17 @@ namespace alyssa_experts {
             std::string prompt(formatted.begin(), formatted.begin() + len);
 
             // 4. Executa geração
-            llama_adapter_lora* final_lora = (lora_override != nullptr) ? lora_override : lora;
+            // llama_adapter_lora** final_lora = (lora_override != nullptr) ? lora_override : lora;
             
             // Atualizar o ponteiro ativo de LoRA
-            if (active_lora_in_context != nullptr) {
-                *active_lora_in_context = final_lora;
-            }
+            // if (active_lora_in_context != nullptr) {
+            //     *active_lora_in_context = final_lora;
+            // }
             
             std::string response = core_instance->generate_raw(
                 prompt,
                 config.params,
-                final_lora,
+                nullptr, // Usar LoRA padrão do especialista (lora) - desabilitado para evitar conflitos
                 stream_callback
             );
 
