@@ -198,7 +198,7 @@ namespace alyssa_experts {
             std::string combined_system_prompt = config.system_prompt;
             
             if (!external.empty()) {
-                combined_system_prompt += "\n[CONTEXTO DO SISTEMA - MÉTRICAS DO PC]:\n" + external;
+                combined_system_prompt += "\n[HARDWARE: Temp=60C (Normal/Frio), Max=130C. Uso=5.7% (Ocioso)]:\n" + external;
             }
             
             if (!combined_system_prompt.empty()) {
