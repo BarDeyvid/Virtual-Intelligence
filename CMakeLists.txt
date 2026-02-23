@@ -40,6 +40,12 @@ endif()
 find_library(PROTOBUF_LIBRARY protobuf)
 find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 
+# 7 Nlohmann JSON (header-only, mas vamos garantir que está presente)
+find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
+if (NOT NLOHMANN_JSON_INCLUDE_DIR)
+    message(FATAL_ERROR "Could not find nlohmann/json.hpp. Please install nlohmann/json or provide the path.")
+endif()
+
 # --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
 
@@ -69,7 +75,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/HyprlandContext.cpp includes/InputCapture.cpp includes/VisionEnhancer.cpp includes/DatasetTools.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
@@ -79,7 +85,7 @@ set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
-set(TEST_OPENCV test_cuda.cpp)
+set(TEST_OPENCV test_opencv.cpp includes/HyprlandContext.cpp includes/InputCapture.cpp includes/VisionEnhancer.cpp includes/DatasetTools.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
@@ -116,7 +122,7 @@ target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 
 # Vinculando especificamente o teste do OpenCV
-target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads) # ADICIONADO
+target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl) # Enhanced vision system
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
