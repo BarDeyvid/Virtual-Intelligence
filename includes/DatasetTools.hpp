@@ -41,13 +41,25 @@ namespace dataset_tools {
         };
         
         Type action_type;
+        // Optional raw action string (e.g. specific key like "w" or custom action)
+        std::string raw_action;
         std::string description;
         double confidence;  // 0.0 - 1.0
         int64_t timestamp_ms;
         
         ActionLabel() : action_type(IDLE), confidence(1.0), timestamp_ms(0) {}
-        
+
         json to_json() const {
+            // If a raw action string is provided, use it directly as action_type
+            if (!raw_action.empty()) {
+                return json{
+                    {"action_type", raw_action},
+                    {"description", description},
+                    {"confidence", confidence},
+                    {"timestamp_ms", timestamp_ms}
+                };
+            }
+
             std::string type_str;
             switch (action_type) {
                 case IDLE: type_str = "idle"; break;
@@ -60,7 +72,7 @@ namespace dataset_tools {
                 case DRAG: type_str = "drag"; break;
                 default: type_str = "unknown"; break;
             }
-            
+
             return json{
                 {"action_type", type_str},
                 {"description", description},

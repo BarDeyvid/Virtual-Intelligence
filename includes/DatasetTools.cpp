@@ -117,9 +117,17 @@ namespace dataset_tools {
         }
         
         // Check for recent keyboard events
+        // Prefer buffered key events (event buffer consumed once per cycle)
+        if (input_events.contains("buffered_key_events")) {
+            ActionLabel buffered_label = detect_typing(input_events["buffered_key_events"]);
+            if (buffered_label.action_type != ActionLabel::IDLE || !buffered_label.raw_action.empty()) {
+                return buffered_label;
+            }
+        }
+
         if (input_events.contains("recent_key_events")) {
-            ActionLabel typing_label = detect_typing(input_events);
-            if (typing_label.action_type != ActionLabel::IDLE) {
+            ActionLabel typing_label = detect_typing(input_events["recent_key_events"]);
+            if (typing_label.action_type != ActionLabel::IDLE || !typing_label.raw_action.empty()) {
                 return typing_label;
             }
         }
@@ -187,37 +195,33 @@ namespace dataset_tools {
 
     ActionLabel ActionLabelizer::detect_typing(const json& recent_events) {
         ActionLabel label;
-        
-        if (!recent_events.contains("recent_key_events")) {
-            return label;
-        }
-        
-        auto key_events = recent_events["recent_key_events"];
-        if (!key_events.is_array() || key_events.empty()) {
-            return label;
-        }
-        
-        // If there are recent non-modifier key presses, mark as typing
-        int key_press_count = 0;
-        for (const auto& event : key_events) {
+        if (!recent_events.is_array()) return label;
+
+        // Find the most recent non-modifier key press
+        for (int i = (int)recent_events.size() - 1; i >= 0; --i) {
+            const auto& event = recent_events[i];
             if (!event.is_object()) continue;
-            
+
             if (event.contains("event_type") && event["event_type"] == "press") {
                 if (event.contains("key_name")) {
                     std::string key = event["key_name"];
-                    // Exclude modifier keys
-                    if (key != "shift" && key != "control" && key != "alt" && key != "super") {
-                        key_press_count++;
+                    // Normalize to lower-case
+                    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+                    if (key == "shift" || key == "control" || key == "alt" || key == "super") {
+                        continue; // skip modifiers
                     }
+
+                    // Instead of generic TYPING, set raw_action to the key name
+                    label.raw_action = key;
+                    label.description = "Key press detected: " + key;
+                    label.confidence = 0.95f;
+                    if (event.contains("timestamp_ms")) label.timestamp_ms = event["timestamp_ms"];
+                    return label;
                 }
             }
         }
-        
-        if (key_press_count > 0) {
-            label.action_type = ActionLabel::TYPING;
-            label.confidence = 0.9f;
-            label.description = "Typing activity detected";
-        }
+
+        return label;
         
         return label;
     }

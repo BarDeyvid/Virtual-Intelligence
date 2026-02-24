@@ -54,3 +54,4 @@ paho.mqtt.cpp
 spdlog/
 opencv/
 opencv_contrib/
+*.jsonl

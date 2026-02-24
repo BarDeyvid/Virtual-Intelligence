@@ -6,6 +6,7 @@
 #include <queue>
 #include <memory>
 #include <cstdint>
+#include <mutex>
 
 using json = nlohmann::json;
 
@@ -180,6 +181,9 @@ namespace input_capture {
     private:
         std::vector<MouseEvent> mouse_history;
         std::vector<KeyEvent> key_history;
+        // Buffered key events: consumed once per dataset capture cycle
+        mutable std::vector<KeyEvent> buffered_key_events;
+        mutable std::mutex buffer_mutex;
         ModifierState current_modifiers;
         
         int last_mouse_x, last_mouse_y;

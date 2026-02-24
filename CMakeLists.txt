@@ -17,6 +17,9 @@ find_package(PkgConfig REQUIRED)
 find_package(OpenCV REQUIRED)
 message(STATUS "OpenCV found: ${OpenCV_VERSION}")
 
+# X11 (optional) - used for keyboard polling fallback
+find_package(X11)
+
 # 2. SQLite3
 find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
 find_library(SQLITE3_LIBRARY sqlite3)
@@ -117,12 +120,20 @@ set(COMMON_LIBS
     spdlog::spdlog
 )
 
+if (X11_FOUND)
+    list(APPEND COMMON_LIBS ${X11_LIBRARIES})
+endif()
+
 target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 
 # Vinculando especificamente o teste do OpenCV
-target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl) # Enhanced vision system
+if (X11_FOUND)
+    target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl ${X11_LIBRARIES}) # Enhanced vision system
+else()
+    target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl) # Enhanced vision system
+endif()
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)

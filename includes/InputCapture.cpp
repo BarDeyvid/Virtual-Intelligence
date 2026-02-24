@@ -2,6 +2,16 @@
 #include <chrono>
 #include <cmath>
 #include <algorithm>
+#include "log.hpp"
+#if defined(__linux__)
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/input.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <cstring>
+#endif
 
 namespace input_capture {
 
@@ -17,6 +27,49 @@ namespace input_capture {
         float dt_sec = dt_ms / 1000.0f;
         return distance / dt_sec;  // pixels per second
     }
+
+#if defined(__linux__)
+    // Kernel-level sampler: read /dev/input/event* and query current key bitmap via EVIOCGKEY
+    static void sample_held_keys_evdev(std::vector<KeyEvent>& out, const ModifierState& modifiers) {
+        const char* devdir = "/dev/input";
+        DIR* d = opendir(devdir);
+        if (!d) return;
+
+        struct dirent* de;
+        while ((de = readdir(d))) {
+            if (strncmp(de->d_name, "event", 5) != 0) continue;
+            std::string path = std::string(devdir) + "/" + de->d_name;
+            int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+            if (fd < 0) continue;
+
+            // KEY_MAX is defined in linux/input.h
+            const size_t key_bytes = (KEY_MAX + 7) / 8 + 1;
+            std::vector<unsigned char> keys(key_bytes);
+            memset(keys.data(), 0, key_bytes);
+
+            if (ioctl(fd, EVIOCGKEY((int)key_bytes), keys.data()) >= 0) {
+                for (int kc = 0; kc <= KEY_MAX; ++kc) {
+                    size_t idx = kc / 8;
+                    int bit = kc % 8;
+                    if (idx < keys.size() && (keys[idx] & (1 << bit))) {
+                        KeyEvent ev;
+                        ev.event_type = KeyEvent::PRESS;
+                        ev.keycode = (uint32_t)kc;
+                        ev.key_name = "keycode_" + std::to_string(kc);
+                        ev.modifiers = modifiers;
+                        auto now = std::chrono::system_clock::now();
+                        ev.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                        out.push_back(ev);
+                    }
+                }
+            }
+
+            close(fd);
+        }
+
+        closedir(d);
+    }
+#endif
 
     void InputCapture::poll_modifiers() {
         // TODO: Implement polling from libinput or /dev/input
@@ -138,6 +191,12 @@ namespace input_capture {
         event.timestamp_ms = now_ms;
         
         key_history.push_back(event);
+        // Append to buffered events so capture cycles can consume them once
+        {
+            std::lock_guard<std::mutex> lk(buffer_mutex);
+            buffered_key_events.push_back(event);
+        }
+        Log::getLogger()->debug("record_key_press: {} ({})", key_name, keycode);
         
         // Update modifiers based on the key pressed
         if (key_name == "shift" || key_name == "Shift_L" || key_name == "Shift_R") {
@@ -162,6 +221,13 @@ namespace input_capture {
         event.timestamp_ms = now_ms;
         
         key_history.push_back(event);
+
+        // Also record releases in the buffered events (useful for duration computation)
+        {
+            std::lock_guard<std::mutex> lk(buffer_mutex);
+            buffered_key_events.push_back(event);
+        }
+        Log::getLogger()->debug("record_key_release: {} ({})", key_name, keycode);
         
         // Update modifiers based on the key released
         if (key_name == "shift" || key_name == "Shift_L" || key_name == "Shift_R") {
@@ -228,7 +294,31 @@ namespace input_capture {
         // Statistics
         result["total_mouse_events"] = (int)mouse_history.size();
         result["total_key_events"] = (int)key_history.size();
-        
+
+        // Include buffered key events (consumed once per dataset capture cycle)
+        json buffered_array = json::array();
+        {
+            std::lock_guard<std::mutex> lk(buffer_mutex);
+            // If no buffered events are present, attempt a lightweight X11 poll
+#if defined(__linux__)
+            if (buffered_key_events.empty()) {
+                std::vector<KeyEvent> sampled;
+                // Kernel-level sampler
+                sample_held_keys_evdev(sampled, current_modifiers);
+                for (auto &s : sampled) buffered_key_events.push_back(s);
+                if (!sampled.empty()) {
+                    Log::getLogger()->info("evdev sampler found {} held keys", sampled.size());
+                }
+            }
+#endif
+            for (const auto &be : buffered_key_events) {
+                buffered_array.push_back(be.to_json());
+            }
+            // clear after serialization so next cycle starts fresh
+            buffered_key_events.clear();
+        }
+        result["buffered_key_events"] = buffered_array;
+
         return result;
     }
 }
