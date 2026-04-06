@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.14)
-cmake_policy(SET CMP0146 OLD) # Silencia aviso de remoção do FindCUDA no OpenCV
 project(VirtualIntelligence CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -41,7 +40,7 @@ find_library(PROTOBUF_LIBRARY protobuf)
 find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 
 # --- AI Libraries Root ---
-set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
+set(AI_LIBS_ROOT "/home/deyvidb/Virtual-Intelligence")
 
 # Llama.cpp & Whisper.cpp Setup
 set(LLAMA_INCLUDE_DIR "${AI_LIBS_ROOT}/llama.cpp/include" "${AI_LIBS_ROOT}/llama.cpp/ggml/include")
