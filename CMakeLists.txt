@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.14)
-cmake_policy(SET CMP0146 OLD) # Silencia aviso de remoção do FindCUDA no OpenCV
 project(VirtualIntelligence CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -16,9 +15,6 @@ find_package(PkgConfig REQUIRED)
 # OpenCV Setup
 find_package(OpenCV REQUIRED)
 message(STATUS "OpenCV found: ${OpenCV_VERSION}")
-
-# X11 (optional) - used for keyboard polling fallback
-find_package(X11)
 
 # 2. SQLite3
 find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
@@ -43,14 +39,8 @@ endif()
 find_library(PROTOBUF_LIBRARY protobuf)
 find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 
-# 7 Nlohmann JSON (header-only, mas vamos garantir que está presente)
-find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
-if (NOT NLOHMANN_JSON_INCLUDE_DIR)
-    message(FATAL_ERROR "Could not find nlohmann/json.hpp. Please install nlohmann/json or provide the path.")
-endif()
-
 # --- AI Libraries Root ---
-set(AI_LIBS_ROOT "/home/deyvid/Virtual-Intelligence")
+set(AI_LIBS_ROOT "/home/deyvidb/Virtual-Intelligence")
 
 # Llama.cpp & Whisper.cpp Setup
 set(LLAMA_INCLUDE_DIR "${AI_LIBS_ROOT}/llama.cpp/include" "${AI_LIBS_ROOT}/llama.cpp/ggml/include")
@@ -78,7 +68,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/HyprlandContext.cpp includes/InputCapture.cpp includes/VisionEnhancer.cpp includes/DatasetTools.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
@@ -88,7 +78,7 @@ set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
-set(TEST_OPENCV test_opencv.cpp includes/HyprlandContext.cpp includes/InputCapture.cpp includes/VisionEnhancer.cpp includes/DatasetTools.cpp)
+set(TEST_OPENCV test_cuda.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
@@ -96,7 +86,6 @@ add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
 add_executable(alyssa_api ${Alyssa_API_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
-add_executable(test_opencv ${TEST_OPENCV})
 
 # --- Linking ---
 set(COMMON_LIBS
@@ -120,20 +109,11 @@ set(COMMON_LIBS
     spdlog::spdlog
 )
 
-if (X11_FOUND)
-    list(APPEND COMMON_LIBS ${X11_LIBRARIES})
-endif()
-
 target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 
 # Vinculando especificamente o teste do OpenCV
-if (X11_FOUND)
-    target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl ${X11_LIBRARIES}) # Enhanced vision system
-else()
-    target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads curl) # Enhanced vision system
-endif()
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
