@@ -18,7 +18,7 @@
 #include <cstring>
 #include <vector>
 #include <functional>
-
+#include <memory>
 
 using json = nlohmann::json;
 
@@ -27,24 +27,25 @@ using json = nlohmann::json;
  * @brief Structure to hold parameters for the model generation.
  */
 struct SimpleModelParameters {
-    double temperature = 0.0; /**< Temperature parameter for controlling randomness in text generation. */
-    double top_p = 0.0;         /**< Top-p (nucleus) sampling parameter for diverse output. */
-    int max_tokens = 0;          /**< Maximum number of tokens to generate. */
+    double temperature = 0.8; /**< Temperature parameter for controlling randomness in text generation. */
+    double top_p = 1.0;         /**< Top-p (nucleus) sampling parameter for diverse output. */
+    int max_tokens = 512;       /**< Maximum number of tokens to generate. */
 };
 
 /**
  * @struct SimpleModelConfig
- * @brief Structure to hold configuration details for a simple model.
+ * @brief holds configuration details for a simple model.
  */
 struct SimpleModelConfig {
     std::string id;             /**< Unique identifier for the model. */
     std::string model_path;       /**< Path to the base model file. */
     std::string system_prompt;    /**< System prompt for initializing the model context. */
     std::string role_instruction; /**< Instruction or role assigned to the model. */
-    bool usa_LoRA;              /**< Flag indicating if LoRA adaptation should be used. */
+    bool usa_LoRA = false;              /**< Flag indicating if LoRA adaptation should be used. */
     std::string lora_path;        /**< Path to the LoRA file (if applicable). */
     SimpleModelParameters params;  /**< Parameters for model generation. */
     int n_ctx = 8192;            /**< Context size for the model. */
+    int n_batch = 8192;           /**< Batch size for processing tokens. */
 };
 
 using AllModelConfigs = std::vector<SimpleModelConfig>;
@@ -59,7 +60,7 @@ using AllModelConfigs = std::vector<SimpleModelConfig>;
  */
 inline AllModelConfigs load_config() {
     AllModelConfigs configs;
-    const std::string& filepath = "config/ConfigsLLM.json";
+    const std::string filepath = "config/ConfigsLLM.json";
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "ERRO: Não foi possível abrir o arquivo de configuração: " << filepath << std::endl;
@@ -95,6 +96,9 @@ inline AllModelConfigs load_config() {
                 if (model_json.contains("n_ctx")) {
                     config.n_ctx = model_json["n_ctx"].get<int>();
                 }
+                if (model_json.contains("n_batch")) {
+                    config.n_batch = model_json["n_batch"].get<int>();
+                }
 
                 // Extrair campos aninhados "parametros"
                 if (model_json.contains("parametros") && model_json["parametros"].is_object()) {
@@ -113,10 +117,8 @@ inline AllModelConfigs load_config() {
                 configs.push_back(config);
             }
         }
-    } catch (const json::parse_error& e) {
-        std::cerr << "ERRO de Parsing JSON: " << e.what() << std::endl;
-    } catch (const json::exception& e) {
-        std::cerr << "ERRO JSON (Campo ausente/Tipo errado?): " << e.what() << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "ERRO ao carregar config: " << e.what() << std::endl;
     }
 
     return configs;
@@ -125,35 +127,33 @@ inline AllModelConfigs load_config() {
 namespace alyssa_core {
 
     /**
+     * @brief RAII Wrapper for llama_sampler to prevent memory leaks during exceptions.
+     */
+    struct SamplerDeleter {
+        void operator()(llama_sampler* s) const { if (s) llama_sampler_free(s); }
+    };
+    using ScopedSampler = std::unique_ptr<llama_sampler, SamplerDeleter>;
+
+    /**
      * @class AlyssaCore
      * @brief Class to manage language models and generate text.
-     *
-     * The AlyssaCore class loads a base language model, manages its context, applies LoRA adaptation if necessary,
-     * and generates text based on given prompts. It provides methods for getting model details and generating text.
      */
     class AlyssaCore {
     private:
         llama_model* model;              /**< Pointer to the loaded base model. */
         const llama_vocab* vocab;         /**< Pointer to the vocabulary used by the model. */
-        llama_model_params mParams;       /**< Parameters for the model loading. */
-
-        // O CONTEXTO ÚNICO E COMPARTILHADO
         llama_context* ctx;              /**< Pointer to the unique shared context. */
         int n_ctx;                        /**< Size of the context. */
+        int n_batch;                      /**< Size of the batch. */
 
     public:
         /**
          * @brief Constructor for AlyssaCore.
-         *
-         * Loads a base model from the specified path and initializes a context with the given size.
-         *
-         * @param base_model_path Path to the base model file.
-         * @param context_size Context size for the model (default is 2048).
          */
-        AlyssaCore(const std::string& base_model_path, int context_size = 2048) 
-            : model(nullptr), vocab(nullptr), ctx(nullptr), n_ctx(context_size) 
+        AlyssaCore(const std::string& base_model_path, int context_size = 2048, int batch_size = 8192) 
+            : model(nullptr), vocab(nullptr), ctx(nullptr), n_ctx(context_size), n_batch(batch_size) 
         {
-            mParams = llama_model_default_params();
+            llama_model_params mParams = llama_model_default_params();
             mParams.n_gpu_layers = -1; 
 
             model = llama_model_load_from_file(base_model_path.c_str(), mParams);
@@ -164,66 +164,37 @@ namespace alyssa_core {
             
             vocab = llama_model_get_vocab(model);
 
-            // Usar o n_ctx passado como parâmetro
             llama_context_params ctx_params = llama_context_default_params();
             ctx_params.n_ctx = n_ctx;
-            ctx_params.n_batch = n_ctx;
+            ctx_params.n_batch = n_batch;
 
             ctx = llama_init_from_model(model, ctx_params);
             if (!ctx) {
-                throw std::runtime_error("AlyssaCore: Falha ao criar contexto ÚNICO.");
+                throw std::runtime_error("AlyssaCore: Falha ao criar contexto.");
             }
-            std::cout << "Contexto ÚNICO criado com n_ctx = " << n_ctx << std::endl;
+            std::cout << "Contexto criado com n_ctx = " << n_ctx << " e n_batch = " << n_batch << std::endl;
         }
 
         /**
          * @brief Destructor for AlyssaCore.
-         *
-         * Frees the model and context resources.
          */
         ~AlyssaCore() {
-            // Libera TUDO
             if (ctx) llama_free(ctx);
             if (model) llama_model_free(model);
-            std::cout << "Modelo BASE e Contexto ÚNICO liberados." << std::endl;
+            std::cout << "Modelo BASE e Contexto liberados." << std::endl;
         }
 
-        /**
-         * @brief Getter for the model.
-         *
-         * @return Pointer to the loaded base model.
-         */
         llama_model* get_model() { return model; }
-
-        /**
-         * @brief Getter for the vocabulary.
-         *
-         * @return Pointer to the vocabulary used by the model.
-         */
         const llama_vocab* get_vocab() { return vocab; }
-
-        /**
-         * @brief Getter for the context.
-         *
-         * @return Pointer to the unique shared context.
-         */
         llama_context* get_context() { return ctx; }
-
-        /**
-         * @brief Getter for the context size.
-         *
-         * @return Size of the context.
-         */
         int get_n_ctx() { return n_ctx; }
+        int get_n_batch() { return n_batch; }
 
         /**
-         * @brief Generates text based on a given prompt and parameters.
+         * @brief Generates text based on a given prompt (the new part of the conversation).
          *
-         * Applies LoRA adaptation if necessary, creates a sampler with specified parameters, tokenizes
-         * the prompt, and generates tokens until an end-of-generation (EOG) token is encountered.
-         *
-         * @param prompt The input prompt for text generation.
-         * @param params Parameters for controlling the text generation process.
+         * @param prompt The input prompt fragment to process.
+         * @param params Parameters for controlling the text generation.
          * @param lora Pointer to LoRA adapter (can be nullptr).
          * @param stream_callback Callback function to stream generated tokens (optional).
          * @return Generated text as a string.
@@ -231,109 +202,71 @@ namespace alyssa_core {
         std::string generate_raw(
             const std::string & prompt,
             const SimpleModelParameters& params,
-            llama_adapter_lora** lora, // LoRA a ser aplicado
+            llama_adapter_lora** lora, 
             std::function<void(const std::string& piece)> stream_callback
         ) {
             std::string response;
-            int n_prompt_tokens_total;
+            llama_batch batch;
 
-            // 1. APLICAR O LoRA (se fornecido)
-            //if (lora != nullptr) {
-            //    int err = llama_set_adapters_lora(ctx, lora, 1.0);
-            //    if (err != 0) {
-            //        std::cerr << "AlyssaLLM: Falha ao aplicar LoRA" << std::endl;
-            //    } else {
-            //        std::cout << "Adaptador LoRA aplicado." << std::endl;
-            //    }
-            //}
-
-            // 2. CRIAR O SAMPLER (com parâmetros do especialista)
-            llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
-            float top_p = (params.top_p > 0.0) ? params.top_p : 0.05f;
-            llama_sampler_chain_add(smpl, llama_sampler_init_min_p(top_p, 1));
-            float temp = (params.temperature > 0.0) ? params.temperature : 0.8f;
-            llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f));
-            llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+            // 1. RAII Sampler to prevent leaks
+            ScopedSampler smpl(llama_sampler_chain_init(llama_sampler_chain_default_params()));
             
-            // 3. Verifica se o contexto já tem tokens
-            const bool is_first_run = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) == -1;
+            float top_p = (params.top_p > 0.0) ? static_cast<float>(params.top_p) : 1.0f;
+            float temp = (params.temperature > 0.0) ? static_cast<float>(params.temperature) : 0.8f;
 
-            // 4. Obtém o número de tokens que JÁ ESTÃO no KV cache.
-            const int n_cached = is_first_run ? 0 : llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
+            llama_sampler_chain_add(smpl.get(), llama_sampler_init_min_p(0.05f, 1));
+            llama_sampler_chain_add(smpl.get(), llama_sampler_init_temp(temp));
+            llama_sampler_chain_add(smpl.get(), llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f));
+            llama_sampler_chain_add(smpl.get(), llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
-            // 5. Tokeniza o prompt COMPLETO
-            n_prompt_tokens_total = llama_tokenize( 
-                vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first_run, true
-            );
+            // 2. Tokenize the NEW prompt part
+            std::vector<llama_token> tokens(prompt.size() + 1);
+            int n_tokens = llama_tokenize(vocab, prompt.c_str(), prompt.size(), tokens.data(), tokens.size(), true, true);
+            if (n_tokens < 0) throw std::runtime_error("Falha ao tokenizar o prompt.");
+            tokens.resize(n_tokens);
 
-            // Inverte o sinal para obter o número total de tokens
-            if (n_prompt_tokens_total < 0) {
-                n_prompt_tokens_total = -n_prompt_tokens_total;
-            } else if (n_prompt_tokens_total == 0) {
-                return ""; 
-            }
+            // 3 & 4. Prepare batch and Decode in chunks to prevent GGML_ASSERT(n_tokens <= n_batch)
+            for (int i = 0; i < n_tokens; i += n_batch) {
+                int chunk_size = std::min(n_batch, n_tokens - i);
+                llama_batch batch = llama_batch_get_one(tokens.data() + i, chunk_size);
 
-            std::vector<llama_token> prompt_tokens(n_prompt_tokens_total);
-            if (llama_tokenize(vocab, prompt.c_str(), prompt.size(),
-                            prompt_tokens.data(), prompt_tokens.size(),
-                            is_first_run, true) < 0) {
-                throw std::runtime_error("Falha ao tokenizar o prompt\n");
-            }
-
-            // 6. Calcula quantos tokens são REALMENTE NOVOS
-            const int n_new_tokens = prompt_tokens.size() - n_cached;
-            if (n_new_tokens < 0) {
-                // Dessincronização do KV Cache
-                std::cerr << "AVISO: Detectada dessincronização do KV Cache. Limpando cache." << std::endl;
-                llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1);
-                // Recursivamente tenta novamente com cache limpo
-                return generate_raw(prompt, params, lora, stream_callback);
-            }
-
-            // 7. Prepara um batch APENAS com os tokens NOVOS
-            llama_batch batch = llama_batch_get_one(
-                prompt_tokens.data() + n_cached, 
-                n_new_tokens                     
-            );
-
-            llama_token new_token_id;
-
-            // Loop principal de geração
-            while (true) {
-                int n_ctx_total = llama_n_ctx(ctx);
-                int n_ctx_used  = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
-                
-                if (n_ctx_used + batch.n_tokens > n_ctx_total) {
-                    fprintf(stderr, "Tamanho do contexto excedido\n");
-                    throw std::runtime_error("Tamanho do contexto excedido\n");
+                if (llama_decode(ctx, batch) != 0) {
+                    throw std::runtime_error("Falha ao decodificar prompt chunk.");
                 }
+            }
 
-                int ret = llama_decode(ctx, batch);
-                if (ret != 0) throw std::runtime_error("Falha ao decodificar");
-
-                new_token_id = llama_sampler_sample(smpl, ctx, -1);
+            // 5. Generation Loop
+            int tokens_generated = 0;
+            while (tokens_generated < params.max_tokens) {
+                llama_token new_token_id = llama_sampler_sample(smpl.get(), ctx, -1);
 
                 if (llama_vocab_is_eog(vocab, new_token_id)) break;
 
-                char buf[256];
+                // Convert token to string piece
+                char buf[512];
                 int n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
-                if (n < 0) throw std::runtime_error("Falha ao converter token\n");
+                if (n < 0) throw std::runtime_error("Falha ao converter token.");
 
                 std::string piece(buf, n);
-                printf("%s", piece.c_str());
-                fflush(stdout);
                 response += piece;
-
+                
                 if (stream_callback) {
                     stream_callback(piece);
                 }
 
-                batch = llama_batch_get_one(&new_token_id, 1);
+                // Prepare batch for the single newly generated token for next step
+                llama_token next_batch_tokens[1] = { new_token_id };
+                batch = llama_batch_get_one(next_batch_tokens, 1);
+
+                if (llama_decode(ctx, batch) != 0) {
+                    throw std::runtime_error("Falha ao decodificar token gerado.");
+                }
+
+                tokens_generated++;
             }
 
-            llama_sampler_free(smpl);
             return response;
         }
+
     };
 }
