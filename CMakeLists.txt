@@ -86,7 +86,6 @@ add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
 add_executable(alyssa_api ${Alyssa_API_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
-add_executable(test_opencv ${TEST_OPENCV})
 
 # --- Linking ---
 set(COMMON_LIBS
@@ -115,7 +114,6 @@ target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 
 # Vinculando especificamente o teste do OpenCV
-target_link_libraries(test_opencv PRIVATE ${OpenCV_LIBS} Threads::Threads) # ADICIONADO
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)

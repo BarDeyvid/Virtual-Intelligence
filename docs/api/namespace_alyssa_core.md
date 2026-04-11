@@ -1,2 +1,0 @@
-# namespace `alyssa_core`
-

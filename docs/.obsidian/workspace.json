@@ -1,24 +1,24 @@
 {
   "main": {
-    "id": "1aee04c61a721975",
+    "id": "f1ed29a61f0d8539",
     "type": "split",
     "children": [
       {
-        "id": "c656cbb70fb17ee1",
+        "id": "82bca36d5a950b2e",
         "type": "tabs",
         "children": [
           {
-            "id": "0b5432791d4d2826",
+            "id": "a03f07a0c0d03fc5",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "api/index.md",
+                "file": "10_Architecture/Core_Architecture.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "index"
+              "title": "Core_Architecture"
             }
           }
         ]
@@ -27,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "969b3c9101ac98cb",
+    "id": "5110249d6a6e5b9a",
     "type": "split",
     "children": [
       {
-        "id": "08ad1d105d4b044c",
+        "id": "ce2eaa6f63f87ca4",
         "type": "tabs",
         "children": [
           {
-            "id": "964dc2b51bb7392b",
+            "id": "bb1f9aaa721cd473",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -48,12 +48,12 @@
             }
           },
           {
-            "id": "9a18c8bd798dfba8",
+            "id": "04064a5d0fea9654",
             "type": "leaf",
             "state": {
               "type": "search",
               "state": {
-                "query": "tag:[object Object]",
+                "query": "",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -65,7 +65,7 @@
             }
           },
           {
-            "id": "834544af76a45995",
+            "id": "7da109c2bbe9626c",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -81,20 +81,20 @@
     "width": 300
   },
   "right": {
-    "id": "8a2d479a4cbc0112",
+    "id": "e05ea0882c0256a3",
     "type": "split",
     "children": [
       {
-        "id": "bc192f87ca73f4ae",
+        "id": "6efb2a0495ac4843",
         "type": "tabs",
         "children": [
           {
-            "id": "5a0a0a19d033b42e",
+            "id": "680212e274355c05",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "TODO.md",
+                "file": "10_Architecture/Core_Architecture.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,25 +104,25 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for TODO"
+              "title": "Backlinks for Core_Architecture"
             }
           },
           {
-            "id": "562e737c5c572296",
+            "id": "997c616d193b982c",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "TODO.md",
+                "file": "10_Architecture/Core_Architecture.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from TODO"
+              "title": "Outgoing links from Core_Architecture"
             }
           },
           {
-            "id": "fce5e5d5ef607e66",
+            "id": "24de4137fb275cca",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -137,7 +137,7 @@
             }
           },
           {
-            "id": "759c7c23824a1062",
+            "id": "01390af9e1d1f654",
             "type": "leaf",
             "state": {
               "type": "all-properties",
@@ -151,18 +151,18 @@
             }
           },
           {
-            "id": "64db64170a42929a",
+            "id": "a1f2b9a90561ef02",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "TODO.md",
+                "file": "10_Architecture/Core_Architecture.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of TODO"
+              "title": "Outline of Core_Architecture"
             }
           }
         ]
@@ -180,35 +180,20 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "bases:Create new base": false,
-      "obsidian-excalidraw-plugin:New drawing": false,
-      "templater-obsidian:Templater": false,
-      "obsidian-git:Open Git source control": false,
-      "omnisearch:Omnisearch": false
+      "bases:Create new base": false
     }
   },
-  "active": "0b5432791d4d2826",
+  "active": "a03f07a0c0d03fc5",
   "lastOpenFiles": [
-    "api/namespace_WeightedFusion_Trainer.md",
-    "api/index.md",
-    "api/struct_EmotionalAnalyzerConfig.md",
-    "api/struct_static_const.md",
-    "api/struct_string_>.md",
-    "api/struct_value_in_range_of_impl2<_OfType,_T,_true,_false_>.md",
-    "api/struct_value_in_range_of_impl2<_OfType,_T,_true,_true_>.md",
-    "api/struct_worker.md",
-    "api/class_byte_container_with_subtype.md",
-    "api/class_BufferStream.md",
-    "api/class_binary_writer.md",
-    "api/class_binary_reader.md",
-    "api/class_basic_json.md",
-    "api/class_AlyssaCore.md",
-    "api/class_AdvancedMemorySystem.md",
-    "TODO.md",
-    "Templates/Template.md",
-    "2025-December-Saturday-23-23 - Ola.md",
-    "2025-12-Saturday-13-26-00- Ola\n.md",
-    "2025-December-Saturday-21-55 - Ola.md",
-    "Templates"
+    "00_Map/Alyssa_Overview.md",
+    "10_Architecture/Core_Architecture.md",
+    "Welcome.md",
+    "90_Archive",
+    "50_API_Reference",
+    "40_Data_Flow",
+    "30_Experts",
+    "20_Core_Logic",
+    "10_Architecture",
+    "00_Map"
   ]
 }
