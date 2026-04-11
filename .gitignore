@@ -55,3 +55,7 @@ spdlog/
 opencv/
 opencv_contrib/
 *.jsonl
+
+.pi
+.agents
+skills-lock.json
