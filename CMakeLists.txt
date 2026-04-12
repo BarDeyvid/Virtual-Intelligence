@@ -39,6 +39,9 @@ endif()
 find_library(PROTOBUF_LIBRARY protobuf)
 find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 
+# 7 FTXUI
+find_package(ftxui REQUIRED)
+
 # --- AI Libraries Root ---
 set(AI_LIBS_ROOT "/home/deyvidb/Virtual-Intelligence")
 
@@ -72,6 +75,7 @@ set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
+set(Alyssa_CLI_2_SOURCES Alyssa_CLI_2.cpp ${COMMON_SOURCES})
 set(Alyssa_TRUE_SOURCES Alyssa_TRUE.cpp ${COMMON_SOURCES})
 set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 
@@ -82,6 +86,7 @@ set(TEST_OPENCV test_cuda.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
+add_executable(alyssa_cli_2 ${Alyssa_CLI_2_SOURCES})
 add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
 add_executable(alyssa_api ${Alyssa_API_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
@@ -110,6 +115,7 @@ set(COMMON_LIBS
 )
 
 target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
+target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
 target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
 
@@ -119,7 +125,7 @@ target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LIT
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 
 # --- Post-Build Commands ---
-foreach(TARGET alyssa_cli alyssa_true alyssa_api)
+foreach(TARGET alyssa_cli alyssa_cli_2 alyssa_true alyssa_api)
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
