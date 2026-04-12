@@ -179,6 +179,13 @@ public:
     void log_source_awareness(const std::string& source, const std::string& message);
 
     /**
+     * @brief Endocrine Getter
+     */
+    alyssa_endocrine::EndocrineSystem* get_endocrine_system() { 
+        return endocrine_system.get(); // Ou apenas o nome do seu membro interno
+    }
+
+    /**
      * @brief Clear all caches including KV cache and expert histories.
      */
     void clear_all_cache() {

@@ -439,6 +439,8 @@ bool CoreIntegration::is_small_talk(const std::string& input) {
     return !has_content && lower_input.length() < 30;
 };
 
+
+
 // =========================================================================
 // Context and Cache Control
 // =========================================================================
@@ -1047,8 +1049,10 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
     }
     clear_kv_cache();
 
+    
     return final_response;
 }
+
 
 /**
  * @brief Calculate coherence metric for expert committee responses.

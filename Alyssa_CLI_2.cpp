@@ -7,6 +7,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include "EndocrineSystem.hpp"
 
 #include "CoreLLM.hpp" 
 #include "llama.h"
@@ -14,138 +15,157 @@
 
 using namespace ftxui;
 
+struct EndocrineState {
+    float cortisol = 0.0f;
+    float dopamine = 0.0f;
+    float oxytocin = 0.0f;
+    float serotonin = 0.0f;
+    float adrenaline = 0.0f;
+    std::string current_state = "neutral";
+};
+
 struct AppState {
-    std::string user_input;
-    std::string alyssa_response;
     std::vector<std::pair<std::string, std::string>> chat_history;
+    std::vector<std::string> system_logs;
+    EndocrineState hormones;
     bool is_processing = false;
+    int tab_selected = 0;
     std::mutex mtx;
 };
 
-void log_callback(ggml_log_level level, const char * text, void * user_data) {
-    (void)level;
-    (void)user_data;
-    fputs(text, stderr);
-    fflush(stderr);
+AppState g_state;
+
+void ui_log_callback(ggml_log_level level, const char* text, void* user_data) {
+    auto* screen = static_cast<ScreenInteractive*>(user_data);
+    if (!text) return;
+    std::string line(text);
+    if (line.empty() || line == "\n") return;
+
+    std::lock_guard<std::mutex> lock(g_state.mtx);
+    g_state.system_logs.push_back(line);
+    if (g_state.system_logs.size() > 500) g_state.system_logs.erase(g_state.system_logs.begin());
+
+    screen->PostEvent(Event::Custom);
+}
+
+Element RenderHormone(std::string name, float val, Color col) {
+    return hbox({
+        text(" " + name) | size(WIDTH, EQUAL, 12),
+        gauge(val) | color(col) | flex,
+        text(" " + std::to_string(val).substr(0, 4)) | dim
+    });
 }
 
 int main() {
-    try {      
-        llama_log_set(log_callback, nullptr);
-        ggml_backend_load_all(); 
+    auto screen = ScreenInteractive::Fullscreen();
+    llama_log_set(ui_log_callback, &screen);
+    ggml_backend_load_all();
 
-        Log::init("alyssa_cli.log");
-        auto& logger = Log::getLogger();
+    CoreIntegration alyssa_brain;
+    alyssa_brain.set_user_name("Deyvid");
+    alyssa_brain.initialize("models/gemma-3-4b-it-q4_0.gguf");
 
-        CoreIntegration alyssa_brain;
-        logger->debug("Inicializando CoreIntegration FTXUI...");
-        alyssa_brain.set_user_name("Deyvid");
-        
-        if (!alyssa_brain.initialize("models/gemma-3-4b-it-q4_0.gguf")) {
-            logger->critical("Falha Crítica ao inicializar o CoreIntegration.");
-            return 1;
+    std::string input_buffer;
+    Component input_box = Input(&input_buffer, " Escreva para Alyssa...");
+    
+    auto on_enter = [&]() {
+        if (input_buffer.empty() || g_state.is_processing) return;
+        std::string msg = input_buffer;
+        input_buffer = "";
+        {
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            g_state.is_processing = true;
+            g_state.chat_history.push_back({"You", msg});
         }
 
-        AppState state;
-        auto screen = ScreenInteractive::Fullscreen();
-
-        std::string input_buffer;
-        Component input_box = Input(&input_buffer, "Digite sua mensagem...");
-
-        auto on_enter = [&]() {
-            if (input_buffer.empty() || state.is_processing) return;
-
-            std::string user_msg = input_buffer;
-            input_buffer = ""; 
+        std::thread([&, msg]() {
+            std::string resp = alyssa_brain.think_with_fusion_ttsless(msg);
+            auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
 
             {
-                std::lock_guard<std::mutex> lock(state.mtx);
-                state.is_processing = true;
-                state.chat_history.push_back({"You", user_msg});
+                std::lock_guard<std::mutex> lock(g_state.mtx);
+                g_state.hormones.cortisol = (float)profile.cortisol;
+                g_state.hormones.dopamine = (float)profile.dopamine;
+                g_state.hormones.oxytocin = (float)profile.oxytocin;
+                g_state.hormones.serotonin = (float)profile.serotonin;
+                g_state.hormones.adrenaline = (float)profile.adrenaline;
+                g_state.hormones.current_state = profile.get_emotional_state();
+                
+                g_state.chat_history.push_back({"Alyssa", resp});
+                g_state.is_processing = false;
+                screen.PostEvent(Event::Custom);
             }
+        }).detach();
+    };
 
-            std::thread([&, user_msg]() {
-                try {
-                    std::string response = alyssa_brain.think_with_fusion_ttsless(user_msg);
-                    
-                    std::lock_guard<std::mutex> lock(state.mtx);
-                    state.chat_history.push_back({"Alyssa", response});
-                    state.is_processing = false;
-                    screen.PostEvent(Event::Custom); 
-                } catch (const std::exception& e) {
-                    std::lock_guard<std::mutex> lock(state.mtx);
-                    state.chat_history.push_back({"Error", e.what()});
-                    state.is_processing = false;
-                    screen.PostEvent(Event::Custom);
-                }
-            }).detach();
+    std::vector<std::string> tab_values = {" 💬 Chat ", " 🧠 Endocrine ", " 📝 Logs "};
+    auto tab_menu = Menu(&tab_values, &g_state.tab_selected);
 
-            screen.PostEvent(Event::Custom);
-        };
+    auto main_container = Container::Vertical({
+        tab_menu,
+        input_box
+    });
 
-        // Correção no Renderer: usando a assinatura explícita
-        auto renderer = Renderer(input_box, [&] {
-            Elements chat_elements;
-            {
-                std::lock_guard<std::mutex> lock(state.mtx);
-                for (const auto& msg : state.chat_history) {
-                    if (msg.first == "You") {
-                        chat_elements.push_back(vbox({
-                            hbox({ text(" 👤 You: ") | color(Color::Blue) | bold }),
-                            paragraph("   " + msg.second) | color(Color::White)
-                        }));
-                    } else if (msg.first == "Alyssa") {
-                        chat_elements.push_back(vbox({
-                            hbox({ text(" ✨ Alyssa: ") | color(Color::Cyan) | bold }),
-                            paragraph("   " + msg.second) | color(Color::Cyan)
-                        }));
-                    } else if (msg.first == "Error") {
-                         chat_elements.push_back(vbox({
-                            hbox({ text(" ❌ Error: ") | color(Color::Red) | bold }),
-                            paragraph("   " + msg.second) | color(Color::Red)
-                        }));
-                    }
-                    chat_elements.push_back(separator() | dim);
-                }
-                if (state.is_processing) {
-                    chat_elements.push_back(hbox({ text(" ⏳ Alyssa está pensando...") | color(Color::Yellow) | dim }));
-                }
+    auto renderer = Renderer(main_container, std::function<Element()>([&] {
+        Element content;
+        
+        if (g_state.tab_selected == 0) { 
+            Elements msgs;
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            for (auto& m : g_state.chat_history) {
+                bool is_alyssa = m.first == "Alyssa";
+                msgs.push_back(vbox({
+                    text(" " + m.first) | bold | color(is_alyssa ? Color::Cyan : Color::Blue),
+                    paragraph(" " + m.second) | color(is_alyssa ? Color::CyanLight : Color::White),
+                    separator() | dim
+                }));
             }
-
-            return vbox({
-                hbox({
-                    text(" 🌌 ALYSSA AI ") | bold | color(Color::Cyan),
+            if (g_state.is_processing) msgs.push_back(text(" ⏳ Alyssa está pensando...") | dim | italic);
+            content = vbox(std::move(msgs)) | vscroll_indicator | frame | flex;
+        } 
+        else if (g_state.tab_selected == 1) { 
+            content = vbox({
+                window(text(" System Hormones "), vbox({
+                    text(" Current State: " + g_state.hormones.current_state) | bold | color(Color::Magenta),
                     separator(),
-                    text(" Terminal Interface ") | dim,
-                }) | bgcolor(Color::Blue) | color(Color::Black), // Corrigido Border::Black para Color::Black
-                separator(),
-                vbox(std::move(chat_elements)) | flex | vscroll_indicator | frame | border,
-                separator(),
-                hbox({
-                    text(" 💬 Input: ") | color(Color::White) | bold,
-                    input_box->Render() | flex,
-                }) | border,
-                hbox({
-                    text(" [Enter] Enviar  ") | dim,
-                    text(" [Ctrl+C] Sair ") | dim,
-                }) | center
-            });
+                    RenderHormone("Cortisol", g_state.hormones.cortisol, Color::Red),
+                    RenderHormone("Dopamine", g_state.hormones.dopamine, Color::Yellow),
+                    RenderHormone("Oxytocin", g_state.hormones.oxytocin, Color::Green),
+                    RenderHormone("Serotonin", g_state.hormones.serotonin, Color::Cyan),
+                    RenderHormone("Adrenaline", g_state.hormones.adrenaline, Color::Orange1),
+                }))
+            }) | flex;
+        } 
+        else { 
+            Elements log_lines;
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            for (auto& l : g_state.system_logs) log_lines.push_back(text(l));
+            content = vbox(std::move(log_lines)) | vscroll_indicator | frame | flex;
+        }
+
+        return vbox({
+            hbox({
+                text(" 🌌 ALYSSA AI ") | bold | color(Color::Black) | bgcolor(Color::Cyan),
+                tab_menu->Render() | flex,
+                filler(), 
+                text(" v2.0-MoE ") | dim
+            }) | border,
+            content | flex,
+            hbox({
+                text(" ❯ ") | bold | color(Color::Cyan),
+                input_box->Render() | flex,
+            }) | borderRounded | color(g_state.is_processing ? Color::GrayDark : Color::Cyan)
         });
+    }));
 
-        auto final_component = CatchEvent(renderer, [&](Event event) {
-            if (event == Event::Return) {
-                on_enter();
-                return true;
-            }
-            return false;
-        });
+    auto final_ui = CatchEvent(renderer, [&](Event event) {
+        if (event == Event::Return) {
+            on_enter();
+            return true;
+        }
+        return false;
+    });
 
-        screen.Loop(final_component);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Erro Fatal: " << e.what() << std::endl;
-        return 1;
-    }
-
+    screen.Loop(final_ui);
     return 0;
 }
