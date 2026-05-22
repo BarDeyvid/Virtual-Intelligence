@@ -875,6 +875,109 @@ std::string CoreIntegration::generate_fused_input(
     return fused_prompt;
 }
 
+std::string CoreIntegration::think_with_fusion_optimized(const std::string& input) {
+    if (!initialized || !core_instance || !fusion_engine) {
+        return "Erro: Sistema não inicializado corretamente.";
+    }
+
+    // 1. Coleta a lista de experts disponíveis (excluindo a própria alyssa)
+    std::vector<std::string> available_experts;
+    for (const auto& cfg : load_config()) {
+        if (cfg.id != "alyssa") {
+            available_experts.push_back(cfg.id);
+        }
+    }
+
+    // 2. 🧠 ROTEAMENTO ANTECIPADO (Gating Network)
+    // Calcula os pesos ideais baseados apenas no INPUT do usuário antes de rodar os LLMs
+    std::map<std::string, double> gating_weights = fusion_engine->calculate_rule_based_weights(input, available_experts);
+
+    // 3. Aplica o filtro Top-K (Ex: Vamos ativar no máximo os 2 melhores experts)
+    // Se o peso for muito baixo ou não estiver no Top-2, nós dropamos (peso = 0)
+    int top_k = 2;
+    double threshold = 0.15; // Peso mínimo aceitável
+    
+    // Lógica para manter apenas os maiores pesos
+    std::vector<std::pair<std::string, double>> sorted_weights(gating_weights.begin(), gating_weights.end());
+    std::sort(sorted_weights.begin(), sorted_weights.end(), [](const auto& a, const auto& b) {
+        return a.second > b.second;
+    });
+
+    std::set<std::string> active_experts;
+    for (int i = 0; i < sorted_weights.size(); ++i) {
+        // Ativa se estiver dentro do Top-K E acima do limiar mínimo de utilidade
+        if (i < top_k && sorted_weights[i].second >= threshold) {
+            active_experts.insert(sorted_weights[i].first);
+            std::cout << "[MoE Gating] Expert ATIVADO: " << sorted_weights[i].first 
+                      << " (Peso: " << sorted_weights[i].second << ")\n";
+        } else {
+            gating_weights[sorted_weights[i].first] = 0.0; // Zera para o Fusion ignorar
+        }
+    }
+
+    // 4. EXECUÇÃO CONDICIONAL (A mágica que economiza tempo)
+    std::vector<alyssa_fusion::ExpertContribution> contributions;
+    
+    for (const auto& cfg : load_config()) {
+        if (cfg.id == "alyssa") continue;
+
+        // SE O EXPERT NÃO FOI SELECIONADO PELO GATING, PULA DIRETO!
+        if (active_experts.find(cfg.id) == active_experts.end()) {
+            // Pulando a inferência, economizando o decode e o reset do KV cache!
+            continue; 
+        }
+
+        // Se passou, executa normalmente
+        std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
+        
+        switch_expert_context(cfg.id); // Troca o contexto do cache
+        auto& expert = experts[cfg.id];
+        auto& history = expert_histories[cfg.id];
+        
+        // Isola o histórico para o turno do comitê (como já fazes hoje)
+        std::vector<llama_chat_message> committee_isolated_history = history;
+        if (committee_isolated_history.size() > 4) {
+            committee_isolated_history.erase(
+                committee_isolated_history.begin(), 
+                committee_isolated_history.begin() + (committee_isolated_history.size() - 4)
+            );
+        }
+
+        // Pega a contribuição real gerando o texto no modelo 1B
+        alyssa_fusion::ExpertContribution contrib = expert->get_contribution(
+            input, core_instance.get(), embedder, nullptr, 
+            committee_isolated_history, &active_lora_in_context, nullptr
+        );
+        
+        // Injeta o peso calculado previamente pelo Gating para a fusão final saber a relevância
+        contrib.weight = gating_weights[cfg.id];
+        contributions.push_back(contrib);
+    }
+
+    // 5. Se nenhum sub-modelo passou pelo gating (ex: um input genérico ou vazio)
+    // Ativa um fallback padrão (ex: socialModel ou zenModel) para não ir sem contexto
+    if (contributions.empty()) {
+        std::cout << "[MoE Gating] Nenhum expert atingiu o threshold. Fallback: socialModel\n";
+        switch_expert_context("socialModel");
+        // ... roda apenas o socialModel aqui ...
+    }
+
+    // 6. DETECÇÃO DE EMOÇÃO (Usa os pesos prévios para determinar o humor)
+    std::string emotion = fusion_engine->detect_emotion_from_input(input);
+
+    // 7. GERA PROMPT FUSIONADO PARA A ALYSSA (4B)
+    // O generate_fused_input só vai receber os pensamentos dos experts que REALMENTE rodaram!
+    std::string fused_prompt = generate_fused_input(input, contributions, emotion); //
+
+    // 8. INFERÊNCIA FINAL DA ALYSSA (Modelo de 4B)
+    std::cout << "\n[Orquestrador]: Chamando Alyssa (4B) com insights integrados...\n";
+    std::string final_response = run_expert("alyssa", fused_prompt, false, nullptr);
+
+    // Atualiza o sistema endócrino e salva memória...
+    clear_kv_cache();
+    return final_response;
+}
+
 /**
  * @brief Process user input with weighted fusion and TTS.
  * @param input User's text input.
