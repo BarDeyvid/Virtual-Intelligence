@@ -79,7 +79,7 @@ int main() {
         }
 
         std::thread([&, msg]() {
-            std::string resp = alyssa_brain.think_with_fusion_ttsless(msg);
+            std::string resp = alyssa_brain.think_with_fusion_optimized(msg);
             auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
 
             {
