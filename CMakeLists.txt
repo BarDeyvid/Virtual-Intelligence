@@ -42,15 +42,23 @@ find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
 # 7 FTXUI
 find_package(ftxui REQUIRED)
 
-# --- AI Libraries Root ---
-set(AI_LIBS_ROOT "/home/deyvidb/Virtual-Intelligence")
+# --- AI Libraries Root (Dinâmico e Portável) ---
+set(AI_LIBS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Llama.cpp & Whisper.cpp Setup
-set(LLAMA_INCLUDE_DIR "${AI_LIBS_ROOT}/llama.cpp/include" "${AI_LIBS_ROOT}/llama.cpp/ggml/include")
+set(LLAMA_INCLUDE_DIR 
+    "${AI_LIBS_ROOT}/llama.cpp/include" 
+    "${AI_LIBS_ROOT}/llama.cpp/ggml/include"
+    "${AI_LIBS_ROOT}/llama.cpp/ggml/include/ggml"
+)
 set(LLAMA_LIB_DIR "${AI_LIBS_ROOT}/llama.cpp/build/bin")
 link_directories(${LLAMA_LIB_DIR})
 
-set(WHISPER_INCLUDE_DIR "${AI_LIBS_ROOT}/whisper.cpp/include" "${AI_LIBS_ROOT}/whisper.cpp/ggml/include")
+set(WHISPER_INCLUDE_DIR 
+    "${AI_LIBS_ROOT}/whisper.cpp/include" 
+    "${AI_LIBS_ROOT}/whisper.cpp/ggml/include"
+    "${AI_LIBS_ROOT}/whisper.cpp/ggml/include/ggml"
+)
 set(WHISPER_LIB_DIR "${AI_LIBS_ROOT}/whisper.cpp/build/src")
 link_directories(${WHISPER_LIB_DIR})
 
@@ -118,8 +126,6 @@ target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
 target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
 target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
-
-# Vinculando especificamente o teste do OpenCV
 
 target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
 target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
