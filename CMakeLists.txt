@@ -20,11 +20,15 @@ message(STATUS "OpenCV found: ${OpenCV_VERSION}")
 find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
 find_library(SQLITE3_LIBRARY sqlite3)
 
-# 3. FFmpeg
-pkg_check_modules(AVCODEC REQUIRED libavcodec)
-pkg_check_modules(AVFORMAT REQUIRED libavformat)
-pkg_check_modules(AVUTIL REQUIRED libavutil)
-pkg_check_modules(SWRESAMPLE REQUIRED libswresample)
+# 3. FFmpeg (via find_library for Windows compatibility)
+find_library(AVCODEC_LIBRARY avcodec)
+find_library(AVFORMAT_LIBRARY avformat)
+find_library(AVUTIL_LIBRARY avutil)
+find_library(SWRESAMPLE_LIBRARY swresample)
+
+if(NOT AVCODEC_LIBRARY)
+    message(WARNING "Could not find avcodec library. Audio features will be disabled.")
+endif()
 
 # 4. PortAudio
 find_library(PORTAUDIO_LIBRARY portaudio)
@@ -35,21 +39,53 @@ if (NOT ONNXRUNTIME_LIBRARY)
     message(FATAL_ERROR "Could not find libonnxruntime.so.")
 endif()
 
-# 6. Protocol Buffers
-find_library(PROTOBUF_LIBRARY protobuf)
-find_library(PROTOBUF_LITE_LIBRARY protobuf-lite)
+# 6. Protocol Buffers (using imported targets from protobuf-config.cmake)
+if(NOT TARGET protobuf::libprotobuf)
+    find_package(Protobuf REQUIRED)
+endif()
 
-# --- AI Libraries Root ---
-set(AI_LIBS_ROOT "/home/deyvidb/Virtual-Intelligence")
+# 7 FTXUI
+find_package(ftxui REQUIRED)
+
+# --- AI Libraries Root (Dinâmico e Portável) ---
+set(AI_LIBS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Llama.cpp & Whisper.cpp Setup
-set(LLAMA_INCLUDE_DIR "${AI_LIBS_ROOT}/llama.cpp/include" "${AI_LIBS_ROOT}/llama.cpp/ggml/include")
-set(LLAMA_LIB_DIR "${AI_LIBS_ROOT}/llama.cpp/build/bin")
-link_directories(${LLAMA_LIB_DIR})
+set(LLAMA_INCLUDE_DIR 
+    "${AI_LIBS_ROOT}/llama.cpp/include" 
+    "${AI_LIBS_ROOT}/llama.cpp/ggml/include"
+    "${AI_LIBS_ROOT}/llama.cpp/ggml/include/ggml"
+)
+# --- CUDA Build Paths (use build_cuda if CUDA is available, fallback to build) ---
+if(DEFINED ENV{CUDA_PATH} OR EXISTS "${AI_LIBS_ROOT}/llama.cpp/build_cuda")
+    set(LLAMA_BUILD_DIR "${AI_LIBS_ROOT}/llama.cpp/build_cuda")
+    set(WHISPER_BUILD_DIR "${AI_LIBS_ROOT}/whisper.cpp/build_cuda")
+    message(STATUS "Using CUDA-enabled build directories")
+else()
+    set(LLAMA_BUILD_DIR "${AI_LIBS_ROOT}/llama.cpp/build")
+    set(WHISPER_BUILD_DIR "${AI_LIBS_ROOT}/whisper.cpp/build")
+    message(STATUS "Using CPU-only build directories")
+endif()
 
-set(WHISPER_INCLUDE_DIR "${AI_LIBS_ROOT}/whisper.cpp/include" "${AI_LIBS_ROOT}/whisper.cpp/ggml/include")
-set(WHISPER_LIB_DIR "${AI_LIBS_ROOT}/whisper.cpp/build/src")
-link_directories(${WHISPER_LIB_DIR})
+set(LLAMA_LIB_DIR "${LLAMA_BUILD_DIR}")
+
+# Find actual library files (multi-config generator: Release/Debug subdirs)
+# Order: prefer build_cuda > build to pick up CUDA-enabled libs
+find_library(LLAMA_LIBRARY_FILE llama PATHS "${LLAMA_BUILD_DIR}/src" "${AI_LIBS_ROOT}/llama.cpp/build/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+find_library(GGML_LIBRARY_FILE ggml PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LIBS_ROOT}/llama.cpp/build/ggml/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+find_library(GGML_BASE_LIBRARY_FILE ggml-base PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LIBS_ROOT}/llama.cpp/build/ggml/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+find_library(GGML_CPU_LIBRARY_FILE ggml-cpu PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LIBS_ROOT}/llama.cpp/build/ggml/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+find_library(WHISPER_LIBRARY_FILE whisper PATHS "${WHISPER_BUILD_DIR}/src" "${AI_LIBS_ROOT}/whisper.cpp/build/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+
+message(STATUS "LLAMA lib: ${LLAMA_LIBRARY_FILE}")
+message(STATUS "GGML lib: ${GGML_LIBRARY_FILE}")
+message(STATUS "WHISPER lib: ${WHISPER_LIBRARY_FILE}")
+
+set(WHISPER_INCLUDE_DIR 
+    "${AI_LIBS_ROOT}/whisper.cpp/include" 
+    "${AI_LIBS_ROOT}/whisper.cpp/ggml/include"
+    "${AI_LIBS_ROOT}/whisper.cpp/ggml/include/ggml"
+)
 
 add_subdirectory(spdlog)
 include_directories(${PROJECT_SOURCE_DIR}/spdlog/include)
@@ -63,7 +99,6 @@ include_directories(
     ${WHISPER_INCLUDE_DIR}
     ${SQLITE3_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
-    ${AVCODEC_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS} 
 )
 
@@ -72,6 +107,7 @@ set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
+set(Alyssa_CLI_2_SOURCES Alyssa_CLI_2.cpp ${COMMON_SOURCES})
 set(Alyssa_TRUE_SOURCES Alyssa_TRUE.cpp ${COMMON_SOURCES})
 set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
 
@@ -82,6 +118,7 @@ set(TEST_OPENCV test_cuda.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
+add_executable(alyssa_cli_2 ${Alyssa_CLI_2_SOURCES})
 add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
 add_executable(alyssa_api ${Alyssa_API_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
@@ -89,50 +126,78 @@ add_executable(test_voice ${TEST_VOICE})
 
 # --- Linking ---
 set(COMMON_LIBS
-    llama
-    ggml
-    whisper
+    ${LLAMA_LIBRARY_FILE}
+    ${GGML_LIBRARY_FILE}
+    ${WHISPER_LIBRARY_FILE}
     ${ONNXRUNTIME_LIBRARY}
-    ${PROTOBUF_LIBRARY}      
-    ${PROTOBUF_LITE_LIBRARY}   
+    protobuf::libprotobuf
+    protobuf::libprotobuf-lite
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARY}
     ${PORTAUDIO_LIBRARY}
-    ${AVCODEC_LIBRARIES}
-    ${AVFORMAT_LIBRARIES}
-    ${AVUTIL_LIBRARIES}
-    ${SWRESAMPLE_LIBRARIES}
+    ${AVCODEC_LIBRARY}
+    ${AVFORMAT_LIBRARY}
+    ${AVUTIL_LIBRARY}
+    ${SWRESAMPLE_LIBRARY}
     ${OpenCV_LIBS} 
     Threads::Threads
-    dl
-    stdc++fs
     spdlog::spdlog
 )
 
-target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
-target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
-target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
-
-# Vinculando especificamente o teste do OpenCV
-
-target_link_libraries(test_elevenlabs PRIVATE ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
-target_link_libraries(test_voice PRIVATE whisper ${PROTOBUF_LIBRARY} ${PROTOBUF_LITE_LIBRARY} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARIES} ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES} ${SWRESAMPLE_LIBRARIES} Threads::Threads dl stdc++fs spdlog::spdlog)
+# Platform-specific libraries
+if(NOT WIN32)
+    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} dl stdc++fs)
+    target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component dl stdc++fs)
+    target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS} dl stdc++fs)
+    target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS} dl stdc++fs)
+    target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
+    target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
+else()
+    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
+    target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
+    target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
+    target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
+    target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
+    target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
+endif()
 
 # --- Post-Build Commands ---
-foreach(TARGET alyssa_cli alyssa_true alyssa_api)
+foreach(TARGET alyssa_cli alyssa_cli_2 alyssa_true alyssa_api)
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
-            ${CMAKE_BINARY_DIR}/models
+            $<TARGET_FILE_DIR:${TARGET}>/models
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/config
-            ${CMAKE_BINARY_DIR}/config
+            $<TARGET_FILE_DIR:${TARGET}>/config
         COMMAND ${CMAKE_COMMAND} -E copy_if_newer
             ${CMAKE_SOURCE_DIR}/fusion_router.onnx
-            ${CMAKE_BINARY_DIR}/fusion_router.onnx
+            $<TARGET_FILE_DIR:${TARGET}>/fusion_router.onnx
         COMMAND ${CMAKE_COMMAND} -E copy_if_newer
             ${CMAKE_SOURCE_DIR}/fusion_router.onnx.data
-            ${CMAKE_BINARY_DIR}/fusion_router.onnx.data
+            $<TARGET_FILE_DIR:${TARGET}>/fusion_router.onnx.data
         COMMENT "Copying models and config directories to build folder"
     )
+
+    #  SOLUÇÃO DA GAMBIARRA PARA WINDOWS 
+    # Copia as DLLs do llama.cpp, whisper.cpp e vcpkg direto para a pasta destino do executável
+    if(WIN32)
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            # 1. Copiar DLLs do llama.cpp (Se existirem no build_cuda ou build padrão)
+            COMMAND ${CMAKE_COMMAND} -E echo "Copiando DLLs do llama.cpp para $<TARGET_FILE_DIR:${TARGET}>..."
+            COMMAND ${CMAKE_COMMAND} -E copy_if_newer "${LLAMA_BUILD_DIR}/bin/$<CONFIG>/llama.dll" "$<TARGET_FILE_DIR:${TARGET}>/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_newer "${LLAMA_BUILD_DIR}/bin/$<CONFIG>/ggml.dll" "$<TARGET_FILE_DIR:${TARGET}>/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_newer "${LLAMA_BUILD_DIR}/bin/$<CONFIG>/ggml-base.dll" "$<TARGET_FILE_DIR:${TARGET}>/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_newer "${LLAMA_BUILD_DIR}/bin/$<CONFIG>/ggml-cpu.dll" "$<TARGET_FILE_DIR:${TARGET}>/"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${LLAMA_BUILD_DIR}/bin/$<CONFIG>" "$<TARGET_FILE_DIR:${TARGET}>"
+
+            # 2. Copiar DLLs do whisper.cpp
+            COMMAND ${CMAKE_COMMAND} -E echo "Copiando DLLs do whisper.cpp para $<TARGET_FILE_DIR:${TARGET}>..."
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${WHISPER_BUILD_DIR}/bin/$<CONFIG>" "$<TARGET_FILE_DIR:${TARGET}>"
+
+            # 3. Copiar TODAS as DLLs de dependências instaladas pelo vcpkg
+            COMMAND ${CMAKE_COMMAND} -E echo "Copiando DLLs do vcpkg para $<TARGET_FILE_DIR:${TARGET}>..."
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/bin" "$<TARGET_FILE_DIR:${TARGET}>"
+        )
+    endif()
 endforeach()

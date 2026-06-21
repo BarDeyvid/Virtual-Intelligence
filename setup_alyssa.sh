@@ -60,11 +60,14 @@ build_submodule() {
     echo "Compilando $name..."
     
     cd "$AI_LIBS_ROOT/$folder" || exit
-    # Garantindo que o build use o PATH do CUDA exportado
+    
+    rm -rf build
+    
     sudo -u "$REAL_USER" PATH="$PATH" cmake -B build \
         -DGGML_CUDA=ON \
         -DCMAKE_CUDA_ARCHITECTURES=native \
-        -DCUDAToolkit_ROOT=/opt/cuda
+        -DCUDAToolkit_ROOT=/opt/cuda \
+        -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/gcc-14
     
     sudo -u "$REAL_USER" cmake --build build --config Release -j "$THREADS"
 }
@@ -72,8 +75,8 @@ build_submodule() {
 build_submodule "llama.cpp" "Llama.cpp"
 build_submodule "whisper.cpp" "Whisper.cpp"
 
-mkdir -p /home/deyvidb/Virtual-Intelligence/models
-mkdir -p /home/deyvidb/Virtual-Intelligence/config
+mkdir -p "$AI_LIBS_ROOT/models"
+mkdir -p "$AI_LIBS_ROOT/config"
 
 # --- 5. Download Automático de Modelos (AlyssaNet) ---
 MODEL_DIR="$AI_LIBS_ROOT/models"
@@ -130,7 +133,7 @@ done
 # --- 6. Build da AlyssaNet ---
 echo "Compilando AlyssaNet..."
 cd "$AI_LIBS_ROOT" || exit
-sudo -u "$REAL_USER" PATH="$PATH" cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+sudo -u "$REAL_USER" PATH="$PATH" cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/gcc-14
 sudo -u "$REAL_USER" cmake --build build -j "$THREADS"
 
 echo "Tudo pronto! O NVCC foi localizado e a AlyssaNet está compilada."
