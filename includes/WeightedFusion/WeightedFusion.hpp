@@ -61,7 +61,7 @@ public:
         session_options.SetIntraOpNumThreads(1); 
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_BASIC);
 
-        session = Ort::Session(env, "fusion_router.onnx", session_options);
+        session = Ort::Session(env, L"fusion_router.onnx", session_options);
     }   
 
     /**

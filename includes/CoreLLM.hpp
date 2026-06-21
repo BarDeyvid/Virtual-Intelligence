@@ -101,6 +101,14 @@ public:
      */
     std::string think_with_fusion_ttsless(const std::string& input);
     
+    /**
+     * @brief Optimized processing with early expert routing and Top-K filtering.
+     * @param input User's text input.
+     * @return Fused response from multiple experts.
+     * @details Uses gating network for early routing, Top-K expert selection, and fusion.
+     */
+    std::string think_with_fusion_optimized(const std::string& input);
+    
     // =========================================================================
     // Expert Management Methods
     // =========================================================================

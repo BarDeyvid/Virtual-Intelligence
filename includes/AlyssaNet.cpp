@@ -946,7 +946,7 @@ std::string CoreIntegration::think_with_fusion_optimized(const std::string& inpu
         // Pega a contribuição real gerando o texto no modelo 1B
         alyssa_fusion::ExpertContribution contrib = expert->get_contribution(
             input, core_instance.get(), embedder, nullptr, 
-            committee_isolated_history, &active_lora_in_context, nullptr
+            committee_isolated_history, nullptr, nullptr
         );
         
         // Injeta o peso calculado previamente pelo Gating para a fusão final saber a relevância

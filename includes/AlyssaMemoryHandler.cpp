@@ -1,6 +1,11 @@
 // AlyssaMemoryHandler.cpp 
+
+#define _USE_MATH_DEFINES
+#define NOMINMAX
+
 #include <AlyssaMemoryHandler.hpp> 
 #include "Embedding/Embedder.hpp"
+#include <sstream>
 
 using namespace alyssa_memory;
 
