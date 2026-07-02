@@ -1,5 +1,4 @@
-// test_main.cpp
-#include "CoreLLM.hpp" 
+#include "AlyssaNet.hpp" 
 #include "llama.h"
 #include <iostream>
 #include <string>

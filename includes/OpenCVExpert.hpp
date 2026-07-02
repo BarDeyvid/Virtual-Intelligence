@@ -32,8 +32,7 @@ public:
     const std::vector<llama_chat_message>& get_history() const override { return history; }
 
     void clear_history() override {
-        for (auto& m : history) free((char*)m.content);
-        history.clear();
+        free_chat_history(history);
     }
 
     bool initialize(llama_model* shared_model) override {

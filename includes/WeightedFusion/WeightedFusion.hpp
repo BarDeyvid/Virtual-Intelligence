@@ -6,7 +6,6 @@
 #include <cmath>
 #include "Embedding/Embedder.hpp"
 #include "EndocrineSystem.hpp"
-#include <onnxruntime/onnxruntime_cxx_api.h>
 #include <algorithm>
 #include <numeric>
 
@@ -31,11 +30,7 @@ struct ExpertContribution {
 class WeightedFusion {
 private:
     Embedder& embedder;
-    
-    // ONNX Runtime Members
-    Ort::Env env;
-    Ort::Session session;
-    
+
     // Configurações de ponderação
     double emotion_weight_base = 0.3;              /**< Base weight for emotional context */
     double context_similarity_weight = 0.4;        /**< Weight for similarity in context */
@@ -52,17 +47,8 @@ public:
      * 
      * @param embedder_ref Reference to the Embedder instance used for generating embeddings.
      */
-    WeightedFusion(Embedder& embedder_ref) 
-        : embedder(embedder_ref),
-          env(ORT_LOGGING_LEVEL_WARNING, "AlyssaFusion"),
-          session(nullptr) { 
-          
-        Ort::SessionOptions session_options;
-        session_options.SetIntraOpNumThreads(1); 
-        session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_BASIC);
-
-        session = Ort::Session(env, L"fusion_router.onnx", session_options);
-    }   
+    WeightedFusion(Embedder& embedder_ref)
+        : embedder(embedder_ref) {}
 
     /**
      * @brief Calculates rule-based weights for expert contributions.
@@ -77,51 +63,6 @@ public:
         const std::string& input, 
         const std::vector<std::string>& available_experts);
     
-    /**
-     * @brief Calculates feature-based weights for expert contributions.
-     * 
-     * Computes the similarity between the input and each expert's response embedding, then applies softmax normalization to these similarities.
-     * 
-     * @param input The user's input string.
-     * @param expert_responses Vector of ExpertContribution objects containing responses from various experts.
-     * @return A map from expert IDs to their corresponding weights.
-     */
-    std::map<std::string, double> calculate_feature_based_weights(
-        const std::string& input,
-        const std::vector<ExpertContribution>& expert_responses);
-    
-    /**
-     * @brief Calculates neural-based weights for expert contributions using an ONNX model.
-     * 
-     * Generates embeddings for the input and each expert's response, runs inference through an ONNX model to determine weights, and applies emotion adjustments if specified.
-     * 
-     * @param input The user's input string.
-     * @param expert_responses Vector of ExpertContribution objects containing responses from various experts.
-     * @param current_emotion Current emotional context (e.g., "happy", "sad").
-     * @return A map from expert IDs to their corresponding weights.
-     */
-    std::map<std::string, double> calculate_neural_weights(
-        const std::string& input,
-        const std::vector<ExpertContribution>& expert_responses,
-        const std::string& current_emotion);
-    
-    /**
-     * @brief Fuses multiple expert responses into a single output.
-     * 
-     * Uses neural-based weights to determine the most relevant expert response and returns it. If no contributions are available, returns a default message.
-     * The EndocrineSystem influences weight distribution based on hormonal state.
-     * 
-     * @param input The user's input string.
-     * @param contributions Vector of ExpertContribution objects containing responses from various experts.
-     * @param endocrine The EndocrineSystem instance for hormonal modulation of weights.
-     * @param current_emotion Current emotional context (optional).
-     * @return The fused response as a single string.
-     */
-    std::string fuse_responses(
-        const std::string& input,
-        const std::vector<ExpertContribution>& contributions,
-        const alyssa_endocrine::EndocrineSystem& endocrine,
-        const std::string& current_emotion = "");
     
     /**
      * @brief Calculates the semantic similarity between two embeddings.

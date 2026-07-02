@@ -2,7 +2,7 @@
 #pragma once
 #include "IExpert.hpp"
 #include "AlyssaMemoryHandler.hpp"
-#include "pc_metrics_reader.cpp"
+#include "pc_metrics_reader.hpp"
 #include <memory>
 #include <regex>
 
@@ -135,10 +135,7 @@ namespace alyssa_experts {
          * @details Frees allocated memory for message content.
          */
         void clear_history() override {
-            for (auto& msg : history) {
-                free((char*)msg.content);
-            }
-            history.clear();
+            free_chat_history(history);
         }
 
         /**
@@ -187,8 +184,7 @@ namespace alyssa_experts {
             }
             
             // IMPORTANTE: Verificar se precisamos alocar memória para a string
-            char* user_msg = strdup(expert_input_with_role.c_str());
-            current_history.push_back({"user", user_msg});
+            push_chat_message(current_history, "user", expert_input_with_role);
 
             // 2. Monta template com métricas do sistema
             std::vector<llama_chat_message> messages_to_template;
@@ -203,8 +199,7 @@ namespace alyssa_experts {
             
             if (!combined_system_prompt.empty()) {
                 system_prompt_index = messages_to_template.size();
-                char* sys_msg = strdup(combined_system_prompt.c_str());
-                messages_to_template.push_back({"system", sys_msg});
+                push_chat_message(messages_to_template, "system", combined_system_prompt);
             }
             
             // Adiciona histórico da conversa
@@ -220,9 +215,9 @@ namespace alyssa_experts {
                 true, formatted.data(), formatted.size()
             );
 
-            // Limpa alocação do system prompt (se existir)
+            // Free the system prompt message we pushed into messages_to_template
             if (system_prompt_index != -1) {
-                free((char*)messages_to_template[system_prompt_index].content);
+                free(const_cast<char*>(messages_to_template[system_prompt_index].content));
             }
 
             if (len < 0) {
@@ -256,8 +251,7 @@ namespace alyssa_experts {
             );
 
             // 5. Adiciona resposta ao histórico
-            char* assistant_msg = strdup(response.c_str());
-            current_history.push_back({"assistant", assistant_msg});
+            push_chat_message(current_history, "assistant", response);
 
             return response;
         }

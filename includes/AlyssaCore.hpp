@@ -8,6 +8,14 @@
 
 #pragma once
 
+// MSVC treats POSIX names like strdup() as deprecated in favour of _strdup().
+// We suppress the warning because strdup is universally supported and makes
+// cross-platform code cleaner. The real fix (using std::string exclusively)
+// is covered under Phase 4 of the refactor.
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+#endif
+
 #include "llama.h"
 #include <string>
 #include <iostream>
@@ -49,6 +57,38 @@ struct SimpleModelConfig {
 };
 
 using AllModelConfigs = std::vector<SimpleModelConfig>;
+
+// =============================================================================
+// RAII wrapper for llama_chat_message history
+// =============================================================================
+
+/**
+ * @brief Appends a new message to a llama_chat_message history vector.
+ *
+ * Allocates the content string with strdup and pushes the message.  The
+ * caller owns the vector and must call free_chat_history() when done, OR
+ * rely on AlyssaCore's clear helpers which call that function.
+ *
+ * Using this helper (instead of raw strdup + push_back scattered around the
+ * codebase) makes ownership explicit and grep-able.
+ */
+inline void push_chat_message(
+    std::vector<llama_chat_message>& history,
+    const char* role,
+    const std::string& content
+) {
+    history.push_back({role, strdup(content.c_str())});
+}
+
+/**
+ * @brief Frees all strdup-allocated content strings and empties the vector.
+ */
+inline void free_chat_history(std::vector<llama_chat_message>& history) {
+    for (auto& msg : history) {
+        free(const_cast<char*>(msg.content));
+    }
+    history.clear();
+}
 
 /**
  * @brief Function to load model configurations from a JSON file.

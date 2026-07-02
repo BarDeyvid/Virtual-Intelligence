@@ -1,6 +1,6 @@
 #include <httplib.h>
 #include <json.hpp>
-#include <CoreLLM.hpp>
+#include <AlyssaNet.hpp>
 #include <iostream>
 
 using json = nlohmann::json;

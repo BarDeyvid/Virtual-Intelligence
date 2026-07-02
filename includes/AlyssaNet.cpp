@@ -1,6 +1,6 @@
 // AlyssaNet.cpp 
 
-#include "CoreLLM.hpp"
+#include "AlyssaNet.hpp"
 #include "AlyssaCore.hpp"
 #include "voice/ElevenLabsTTS.hpp"
 #include "log.hpp"
@@ -36,11 +36,8 @@ CoreIntegration::CoreIntegration()
  * @details Cleans up expert histories and logs destruction.
  */
 CoreIntegration::~CoreIntegration() {
-    // Libera históricos dos especialistas
     for (auto& pair : expert_histories) {
-        for (auto& msg : pair.second) {
-            free((char*)msg.content);
-        }
+        free_chat_history(pair.second);
     }
     printf("CoreIntegration destroyed");
 }
@@ -630,92 +627,6 @@ std::string CoreIntegration::run_expert(
     return response;
 }
 
-// =========================================================================
-// Expert Committee
-// =========================================================================
-
-/**
- * @brief Run committee of experts in parallel.
- * @param expert_ids Vector of expert identifiers to include in committee.
- * @param input Text input for all experts.
- * @return Vector of contributions from each expert.
- */
-std::vector<alyssa_fusion::ExpertContribution> 
-CoreIntegration::run_expert_committee(
-    const std::vector<std::string>& expert_ids,
-    const std::string& input
-) {
-    std::vector<alyssa_fusion::ExpertContribution> contributions;
-    
-    // Guardar o especialista ativo anterior
-    std::string previous_expert = active_expert_in_cache;
-    
-    for (const auto& expert_id : expert_ids) {
-        if (!has_expert(expert_id)) {
-            std::cerr << "Especialista não encontrado: " << expert_id << std::endl;
-            continue;
-        }
-        
-        try {
-            // IMPORTANTE: Trocar contexto para cada especialista
-            // Isso limpa o KV cache automaticamente
-            switch_expert_context(expert_id);
-            
-            auto& expert = experts[expert_id];
-            auto& history = expert_histories[expert_id];
-            
-            // ====== ISOLAÇÃO DE HISTÓRICO PARA COMITÊ ======
-            // Para o comitê, queremos que cada especialista tenha uma perspectiva
-            // FRESCA, não contaminada por histórico anterior
-            // Mas ainda mantemos o histórico para referências (não usamos-o inline)
-            
-            // Criar uma cópia vazia do histórico para este turno do comitê
-            // Isso previne context leakage entre turnos
-            std::vector<llama_chat_message> committee_isolated_history = history;
-            
-            // Se há muitas mensagens no histórico, limitar para os últimos N turnos apenas
-            // para evitar que históricos antigos contaminem o comitê
-            if (committee_isolated_history.size() > 4) {
-                // Manter apenas os últimos 2 turnos (user + assistant)
-                size_t start_idx = committee_isolated_history.size() - 4;
-                committee_isolated_history.erase(
-                    committee_isolated_history.begin(), 
-                    committee_isolated_history.begin() + start_idx
-                );
-            }
-            
-            // Obter contribuição através da interface com histórico isolado
-            llama_adapter_lora* active_lora = nullptr;
-            auto contrib = expert->get_contribution(
-                input,
-                core_instance.get(),
-                embedder,
-                nullptr, // lora_override
-                committee_isolated_history,  // Usar histórico isolado
-                &active_lora
-            );
-            
-            contributions.push_back(contrib);
-            
-            std::cout << "[Comitê] " << expert_id << " respondeu: " 
-                      << (contrib.response.length() > 50 ? 
-                          contrib.response.substr(0, 50) + "..." : contrib.response) 
-                      << std::endl;
-                      
-        } catch (const std::exception& e) {
-            std::cerr << "Erro executando " << expert_id << ": " << e.what() << std::endl;
-            // Continuar com o próximo especialista
-        }
-    }
-    
-    // Restaurar o especialista anterior
-    if (!previous_expert.empty()) {
-        switch_expert_context(previous_expert);
-    }
-    
-    return contributions;
-}
-
 /**
  * @brief Detect emotional content in input using heuristics.
  * @param input Text to analyze for emotional content.
@@ -817,7 +728,12 @@ std::string CoreIntegration::generate_fused_input(
         }
     }
     
-    for (const auto& contrib : contributions) {
+    // Sort by weight descending so the most relevant thought lands first in the prompt
+    std::vector<alyssa_fusion::ExpertContribution> sorted_contributions = contributions;
+    std::sort(sorted_contributions.begin(), sorted_contributions.end(),
+              [](const auto& a, const auto& b) { return a.weight > b.weight; });
+
+    for (const auto& contrib : sorted_contributions) {
         // Skip alyssa from contributions (should not be here)
         if (contrib.expert_id == "alyssa") continue;
         
@@ -875,264 +791,191 @@ std::string CoreIntegration::generate_fused_input(
     return fused_prompt;
 }
 
-std::string CoreIntegration::think_with_fusion_optimized(const std::string& input) {
-    if (!initialized || !core_instance || !fusion_engine) {
-        return "Erro: Sistema não inicializado corretamente.";
-    }
-
-    // 1. Coleta a lista de experts disponíveis (excluindo a própria alyssa)
-    std::vector<std::string> available_experts;
-    for (const auto& cfg : load_config()) {
-        if (cfg.id != "alyssa") {
-            available_experts.push_back(cfg.id);
-        }
-    }
-
-    // 2. 🧠 ROTEAMENTO ANTECIPADO (Gating Network)
-    // Calcula os pesos ideais baseados apenas no INPUT do usuário antes de rodar os LLMs
-    std::map<std::string, double> gating_weights = fusion_engine->calculate_rule_based_weights(input, available_experts);
-
-    // 3. Aplica o filtro Top-K (Ex: Vamos ativar no máximo os 2 melhores experts)
-    // Se o peso for muito baixo ou não estiver no Top-2, nós dropamos (peso = 0)
-    int top_k = 2;
-    double threshold = 0.15; // Peso mínimo aceitável
-    
-    // Lógica para manter apenas os maiores pesos
-    std::vector<std::pair<std::string, double>> sorted_weights(gating_weights.begin(), gating_weights.end());
-    std::sort(sorted_weights.begin(), sorted_weights.end(), [](const auto& a, const auto& b) {
-        return a.second > b.second;
-    });
-
-    std::set<std::string> active_experts;
-    for (int i = 0; i < sorted_weights.size(); ++i) {
-        // Ativa se estiver dentro do Top-K E acima do limiar mínimo de utilidade
-        if (i < top_k && sorted_weights[i].second >= threshold) {
-            active_experts.insert(sorted_weights[i].first);
-            std::cout << "[MoE Gating] Expert ATIVADO: " << sorted_weights[i].first 
-                      << " (Peso: " << sorted_weights[i].second << ")\n";
-        } else {
-            gating_weights[sorted_weights[i].first] = 0.0; // Zera para o Fusion ignorar
-        }
-    }
-
-    // 4. EXECUÇÃO CONDICIONAL (A mágica que economiza tempo)
-    std::vector<alyssa_fusion::ExpertContribution> contributions;
-    
-    for (const auto& cfg : load_config()) {
-        if (cfg.id == "alyssa") continue;
-
-        // SE O EXPERT NÃO FOI SELECIONADO PELO GATING, PULA DIRETO!
-        if (active_experts.find(cfg.id) == active_experts.end()) {
-            // Pulando a inferência, economizando o decode e o reset do KV cache!
-            continue; 
-        }
-
-        // Se passou, executa normalmente
-        std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
-        
-        switch_expert_context(cfg.id); // Troca o contexto do cache
-        auto& expert = experts[cfg.id];
-        auto& history = expert_histories[cfg.id];
-        
-        // Isola o histórico para o turno do comitê (como já fazes hoje)
-        std::vector<llama_chat_message> committee_isolated_history = history;
-        if (committee_isolated_history.size() > 4) {
-            committee_isolated_history.erase(
-                committee_isolated_history.begin(), 
-                committee_isolated_history.begin() + (committee_isolated_history.size() - 4)
-            );
-        }
-
-        // Pega a contribuição real gerando o texto no modelo 1B
-        alyssa_fusion::ExpertContribution contrib = expert->get_contribution(
-            input, core_instance.get(), embedder, nullptr, 
-            committee_isolated_history, nullptr, nullptr
-        );
-        
-        // Injeta o peso calculado previamente pelo Gating para a fusão final saber a relevância
-        contrib.weight = gating_weights[cfg.id];
-        contributions.push_back(contrib);
-    }
-
-    // 5. Se nenhum sub-modelo passou pelo gating (ex: um input genérico ou vazio)
-    // Ativa um fallback padrão (ex: socialModel ou zenModel) para não ir sem contexto
-    if (contributions.empty()) {
-        std::cout << "[MoE Gating] Nenhum expert atingiu o threshold. Fallback: socialModel\n";
-        switch_expert_context("socialModel");
-        // ... roda apenas o socialModel aqui ...
-    }
-
-    // 6. DETECÇÃO DE EMOÇÃO (Usa os pesos prévios para determinar o humor)
-    std::string emotion = fusion_engine->detect_emotion_from_input(input);
-
-    // 7. GERA PROMPT FUSIONADO PARA A ALYSSA (4B)
-    // O generate_fused_input só vai receber os pensamentos dos experts que REALMENTE rodaram!
-    std::string fused_prompt = generate_fused_input(input, contributions, emotion); //
-
-    // 8. INFERÊNCIA FINAL DA ALYSSA (Modelo de 4B)
-    std::cout << "\n[Orquestrador]: Chamando Alyssa (4B) com insights integrados...\n";
-    std::string final_response = run_expert("alyssa", fused_prompt, false, nullptr);
-
-    // Atualiza o sistema endócrino e salva memória...
-    clear_kv_cache();
-    return final_response;
-}
+// =========================================================================
+// Core Fusion Engine (shared by both TTS and TTS-less paths)
+// =========================================================================
 
 /**
- * @brief Process user input with weighted fusion and TTS.
- * @param input User's text input.
- * @param tts ElevenLabsTTS instance for voice synthesis.
- * @return Fused response from multiple experts.
- * @details Runs expert committee, applies weighted fusion, and generates voice output.
+ * @brief Shared implementation for all think_with_fusion variants.
+ *
+ * Runs rule-based Top-K gating, executes only the selected expert subset,
+ * builds the fused prompt, calls Alyssa for the final answer, and handles
+ * endocrine updates and memory storage.  TTS streaming is enabled when
+ * use_tts=true and tts != nullptr.
  */
-std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts) {
+std::string CoreIntegration::think_with_fusion_core(
+    const std::string& input,
+    bool use_tts,
+    ElevenLabsTTS* tts
+) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
     }
 
-    // =====================================================================
-    // ENDOCRINE SYSTEM: Apply metabolism and print current state
-    // =====================================================================
-    
+    // =========================================================================
+    // 1. ENDOCRINE: metabolism tick
+    // =========================================================================
     if (endocrine_system) {
-        endocrine_system->apply_metabolism(0.05); // Gradual decay toward baseline
+        endocrine_system->apply_metabolism(0.05);
         std::cout << endocrine_system->get_hormone_profile().to_string() << std::endl;
     }
 
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
 
-    // =====================================================================
-    // ISOLATED MEMORY CONTEXT: Previne context leakage
-    // =====================================================================
-    
-    std::string memory_context = "";
+    // =========================================================================
+    // 2. MEMORY CONTEXT AUGMENTATION (isolated, max 3 memories)
+    // =========================================================================
     std::string augmented_input = input;
     AllModelConfigs configs = load_config();
 
     if (memory_manager) {
-        // 1. Recuperar memórias relevantes com LIMITE de tamanho
         auto memories = memory_manager->getHybridMemories(input);
-        
-        if (!memories.empty()) {
-            // 2. Filtrar memórias para evitar contaminação
-            //    - Limitar a TOP 3 memórias mais relevantes
-            //    - Descartar se muito antigas (contexto irrelevante)
-            //    - Descartar se emoção conflita com input atual
-            
-            std::vector<typename decltype(memories)::value_type> filtered_memories;
-            int max_memories = 3; // Máximo de memórias por turno
-            
-            for (size_t i = 0; i < memories.size() && filtered_memories.size() < max_memories; ++i) {
-                const auto& mem = memories[i];
-                
-                // Validação simples: não injetar se a memória parece irrelevante
-                bool is_relevant = 
-                    (mem.content.find("?") != std::string::npos ||  // Pergunta
-                     mem.content.length() > 20) &&                  // Conteúdo significativo
-                    (mem.emotion.find("erro") == std::string::npos); // Não é erro
-                
-                if (is_relevant) {
-                    filtered_memories.push_back(mem);
-                }
+        std::vector<typename decltype(memories)::value_type> filtered;
+        for (size_t i = 0; i < memories.size() && filtered.size() < 3; ++i) {
+            const auto& m = memories[i];
+            bool relevant = (m.content.find("?") != std::string::npos || m.content.length() > 20)
+                         && (m.emotion.find("erro") == std::string::npos);
+            if (relevant) filtered.push_back(m);
+        }
+        if (!filtered.empty()) {
+            std::string mem_ctx = "\n[CONTEXTO DE MEMÓRIA ANTERIOR - ISOLADO PARA ESTE TURNO]\n";
+            for (const auto& m : filtered) {
+                std::string c = m.content.length() > 150 ? m.content.substr(0, 150) + "..." : m.content;
+                mem_ctx += "- " + c + "\n";
             }
-            
-            // 3. Construir contexto isolado de memória
-            if (!filtered_memories.empty()) {
-                memory_context = "\n[CONTEXTO DE MEMÓRIA ANTERIOR - ISOLADO PARA ESTE TURNO]\n";
-                for (const auto& mem : filtered_memories) {
-                    // Truncar memórias muito longas para evitar dominação do prompt
-                    std::string content = mem.content;
-                    if (content.length() > 150) {
-                        content = content.substr(0, 150) + "...";
-                    }
-                    memory_context += "- " + content + "\n";
-                }
-                memory_context += "[FIM CONTEXTO ISOLADO]\n";
-                
-                std::cout << "[Memory Context] Injetando " << filtered_memories.size() 
-                         << " memória(s) isolada(s)" << std::endl;
-                
-                augmented_input = memory_context + input;
-                
-                // IMPORTANTE: Após usar as memórias para context augmentation,
-                // limpamos o histórico de memória injected para não contaminar turno seguinte
-            } else {
-                std::cout << "[Memory Context] Sem memórias relevantes para este turno" << std::endl;
-            }
+            mem_ctx += "[FIM CONTEXTO ISOLADO]\n";
+            augmented_input = mem_ctx + input;
+            std::cout << "[Memory Context] Injetando " << filtered.size() << " memória(s)" << std::endl;
         }
     }
 
-    // =====================================================================
-    // EXPERT COMMITTEE EXECUTION
-    // =====================================================================
-    
-    std::vector<std::string> expert_committee;
+    // =========================================================================
+    // 3. RULE-BASED GATING + Top-K selection (k=3, threshold=0.15)
+    // =========================================================================
+    std::vector<std::string> available_experts;
     for (const auto& cfg : configs) {
-        // Adiciona ao comitê de execução
-        expert_committee.push_back(cfg.id);
-        if (cfg.id == "alyssa") {
-            continue; // Alyssa não participa do comitê, ela é a fusão final
-        }
-
-        std::string fallback = cfg.id;
-        fallback[0] = std::toupper(fallback[0]);
-        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
+        if (cfg.id != "alyssa") available_experts.push_back(cfg.id);
     }
 
-    // Executar comitê
-    auto contributions = run_expert_committee(expert_committee, augmented_input);
-    
-    // =====================================================================
-    // ENDOCRINE SYSTEM: Update hormone levels based on expert signals
-    // =====================================================================
-    
-    if (endocrine_system && !contributions.empty()) {
-        std::vector<std::string> expert_signals;
-        for (const auto& contrib : contributions) {
-            expert_signals.push_back(contrib.response);
+    constexpr int    TOP_K     = 3;
+    constexpr double THRESHOLD = 0.15;
+
+    std::map<std::string, double> gating_weights =
+        fusion_engine->calculate_rule_based_weights(augmented_input, available_experts);
+
+    std::vector<std::pair<std::string, double>> sorted_w(gating_weights.begin(), gating_weights.end());
+    std::sort(sorted_w.begin(), sorted_w.end(),
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+
+    std::set<std::string> active_experts;
+    for (int i = 0; i < static_cast<int>(sorted_w.size()); ++i) {
+        if (i < TOP_K && sorted_w[i].second >= THRESHOLD) {
+            active_experts.insert(sorted_w[i].first);
+            std::cout << "[MoE Gating] Expert ATIVADO: " << sorted_w[i].first
+                      << " (Peso: " << sorted_w[i].second << ")\n";
+        } else {
+            gating_weights[sorted_w[i].first] = 0.0;
         }
-        endocrine_system->update_hormone_levels(expert_signals);
-        
+    }
+
+    // =========================================================================
+    // 4. CONDITIONAL EXPERT EXECUTION (only the selected subset)
+    // =========================================================================
+    std::vector<alyssa_fusion::ExpertContribution> contributions;
+
+    for (const auto& cfg : configs) {
+        if (cfg.id == "alyssa") continue;
+        if (active_experts.find(cfg.id) == active_experts.end()) continue;
+
+        std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
+        switch_expert_context(cfg.id);
+
+        auto& expert  = experts[cfg.id];
+        auto& history = expert_histories[cfg.id];
+
+        std::vector<llama_chat_message> isolated_history = history;
+        if (isolated_history.size() > 4) {
+            isolated_history.erase(isolated_history.begin(),
+                                   isolated_history.begin() + (isolated_history.size() - 4));
+        }
+
+        llama_adapter_lora* active_lora = nullptr;
+        auto contrib = expert->get_contribution(
+            augmented_input, core_instance.get(), embedder, nullptr,
+            isolated_history, &active_lora
+        );
+        contrib.weight = gating_weights[cfg.id];
+        contributions.push_back(contrib);
+
+        std::cout << "[Comitê] " << cfg.id << " respondeu: "
+                  << (contrib.response.length() > 50
+                      ? contrib.response.substr(0, 50) + "..."
+                      : contrib.response) << std::endl;
+    }
+
+    // Fallback: no expert cleared the gate
+    if (contributions.empty()) {
+        std::cout << "[MoE Gating] Nenhum expert atingiu o threshold. Fallback: socialModel\n";
+        if (has_expert("socialModel")) {
+            switch_expert_context("socialModel");
+            auto& expert  = experts["socialModel"];
+            auto& history = expert_histories["socialModel"];
+            llama_adapter_lora* al = nullptr;
+            auto contrib = expert->get_contribution(
+                augmented_input, core_instance.get(), embedder, nullptr, history, &al);
+            contrib.weight = 1.0;
+            contributions.push_back(contrib);
+        }
+    }
+
+    // =========================================================================
+    // 5. ENDOCRINE: update from expert signals
+    // =========================================================================
+    if (endocrine_system && !contributions.empty()) {
+        std::vector<std::string> signals;
+        for (const auto& c : contributions) signals.push_back(c.response);
+        endocrine_system->update_hormone_levels(signals);
         std::cout << "\n[Endocrine Update] Hormônios atualizados após comitê:\n"
                   << endocrine_system->get_hormone_profile().to_string() << std::endl;
     }
-    
-    // 2. CALCULAR COERÊNCIA DO COMITÊ
-    float committee_coherence = calculate_committee_coherence(contributions);
-    
-    // 3. Se coerência muito baixa, regenerar sem comitê
-    if (committee_coherence < 0.3) {
-    std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
-              << "). Gerando resposta direta." << std::endl;
-    
-    contributions.clear();
-    
-    std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
-    
-    // This executes the model AND streams the audio via the callback
-    std::string direct_response = run_expert("alyssa", direct_prompt, true, &tts);
-    
-    printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", direct_response.c_str());
-    
-    if (memory_manager && should_store_in_memory(input, direct_response)) {
-        memory_manager->processInteraction(input, direct_response);
+
+    // =========================================================================
+    // 6. COHERENCE CHECK
+    // =========================================================================
+    float coherence = calculate_committee_coherence(contributions);
+    if (coherence < 0.3f) {
+        std::cout << "[AVISO] Coerência do comitê baixa (" << coherence
+                  << "). Gerando resposta direta." << std::endl;
+        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
+        std::string direct_resp   = run_expert("alyssa", direct_prompt, use_tts, tts);
+        printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", direct_resp.c_str());
+        if (memory_manager && should_store_in_memory(input, direct_resp))
+            memory_manager->processInteraction(input, direct_resp);
+        clear_kv_cache();
+        return direct_resp;
     }
 
-    return direct_response;
-}
-    
-    // 4. Continuar com fusão normal se coerência aceitável
-    std::string emotion = detect_emotion_with_heuristics(input);
+    // =========================================================================
+    // 7. GENERATE FUSED PROMPT & CALL ALYSSA
+    // =========================================================================
+    std::string emotion     = detect_emotion_with_heuristics(input);
     std::string fused_input = generate_fused_input(input, contributions, emotion);
-    
-    // 3. Executa alyssa com o input fusionado (com TTS)
-    std::string final_response = run_expert("alyssa", fused_input, true, &tts);
+    std::string final_response = run_expert("alyssa", fused_input, use_tts, tts);
 
-    // 4. Sintetiza áudio da resposta final
     printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
-    tts.synthesizeAndPlay(final_response);
 
-    // Salvar interação na memória
+    // Strip optional [RESPOSTA] tags
+    size_t s = final_response.find("[RESPOSTA]");
+    size_t e = final_response.find("[/RESPOSTA]");
+    if (s != std::string::npos && e != std::string::npos) {
+        final_response = final_response.substr(s + 10, e - s - 10);
+        final_response.erase(0, final_response.find_first_not_of(" \n\r\t"));
+        final_response.erase(final_response.find_last_not_of(" \n\r\t") + 1);
+    }
+
+    // =========================================================================
+    // 8. MEMORY & CLEANUP
+    // =========================================================================
     if (memory_manager) {
         if (should_store_in_memory(input, final_response)) {
             memory_manager->processInteraction(input, final_response);
@@ -1141,19 +984,22 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenL
             std::cout << "\n Small talk/ruído não salvo na LTM." << std::endl;
         }
     }
-    
-    // =====================================================================
-    // CLEANUP: Clear KV cache to prevent bleed-through to next turn
-    // =====================================================================
-    
+
     if (endocrine_system) {
         std::cout << "\n[Turn End] Limpando caches para próximo turno.\n"
-                  << "  Estado final: " << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
+                  << "  Estado final: "
+                  << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
     }
     clear_kv_cache();
-
-    
     return final_response;
+}
+
+/**
+ * @brief TTS-enabled wrapper over think_with_fusion_core.
+ */
+std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts)
+{
+    return think_with_fusion_core(input, true, &tts);
 }
 
 
@@ -1226,220 +1072,11 @@ bool CoreIntegration::should_store_in_memory(const std::string& input, const std
 };
 
 /**
- * @brief Process user input with weighted fusion without TTS.
- * @param input User's text input.
- * @return Fused response from multiple experts.
- * @details Same as think_with_fusion but without voice synthesis.
+ * @brief TTS-less wrapper over think_with_fusion_core.
  */
-std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input) {
-    if (!initialized || !core_instance || !fusion_engine) {
-        return "Erro: Sistema não inicializado corretamente.";
-    }
-
-    // =====================================================================
-    // ENDOCRINE SYSTEM: Apply metabolism and print current state
-    // =====================================================================
-    
-    if (endocrine_system) {
-        endocrine_system->apply_metabolism(0.05); // Gradual decay toward baseline
-        std::cout << endocrine_system->get_hormone_profile().to_string() << std::endl;
-    }
-
-    std::cout << "\n[Weighted Fusion TTS-less] Processando input: " << input << std::endl;
-
-    // =====================================================================
-    // ISOLATED MEMORY CONTEXT (TTS-less version)
-    // =====================================================================
-    
-    std::string memory_context = "";
-    std::string augmented_input = input;
-    AllModelConfigs configs = load_config();
-
-    if (memory_manager) {
-        // 1. Recuperar memórias relevantes com LIMITE de tamanho
-        auto memories = memory_manager->getHybridMemories(input);
-        
-        if (!memories.empty()) {
-            // 2. Filtrar memórias para evitar contaminação
-            std::vector<typename decltype(memories)::value_type> filtered_memories;
-            int max_memories = 3; // Máximo de memórias por turno
-            
-            for (size_t i = 0; i < memories.size() && filtered_memories.size() < max_memories; ++i) {
-                const auto& mem = memories[i];
-                
-                // Validação: evitar contextos irrelevantes
-                bool is_relevant = 
-                    (mem.content.find("?") != std::string::npos ||  
-                     mem.content.length() > 20) &&                  
-                    (mem.emotion.find("erro") == std::string::npos);
-                
-                if (is_relevant) {
-                    filtered_memories.push_back(mem);
-                }
-            }
-            
-            // 3. Construir contexto isolado
-            if (!filtered_memories.empty()) {
-                memory_context = "\n[CONTEXTO DE MEMÓRIA ANTERIOR - ISOLADO PARA ESTE TURNO]\n";
-                for (const auto& mem : filtered_memories) {
-                    std::string content = mem.content;
-                    if (content.length() > 150) {
-                        content = content.substr(0, 150) + "...";
-                    }
-                    memory_context += "- " + content + "\n";
-                }
-                memory_context += "[FIM CONTEXTO ISOLADO]\n";
-                
-                std::cout << "[Memory Context] Injetando " << filtered_memories.size() 
-                         << " memória(s) isolada(s)" << std::endl;
-                
-                augmented_input = memory_context + input;
-            }
-        }
-    }
-
-    // =====================================================================
-    // EXPERT COMMITTEE EXECUTION
-    // =====================================================================
-    
-    // 1. Executa APENAS os especialistas de pensamento (não incluir alyssa)
-    std::vector<std::string> expert_committee;
-    for (const auto& cfg : configs) {
-        // Adiciona ao comitê de execução
-        expert_committee.push_back(cfg.id);
-        if (cfg.id == "alyssa") {
-            continue; // Alyssa não participa do comitê, ela é a fusão final
-        }
-
-        std::string fallback = cfg.id;
-        fallback[0] = std::toupper(fallback[0]);
-        std::cout << "[Comitê] " << fallback << " adicionado ao comitê de execução." << std::endl;
-    }
-
-    // Executar comitê
-    auto contributions = run_expert_committee(expert_committee, augmented_input);
-    
-    // =====================================================================
-    // ENDOCRINE SYSTEM: Update hormone levels based on expert signals
-    // =====================================================================
-    
-    if (endocrine_system && !contributions.empty()) {
-        std::vector<std::string> expert_signals;
-        for (const auto& contrib : contributions) {
-            expert_signals.push_back(contrib.response);
-        }
-        endocrine_system->update_hormone_levels(expert_signals);
-        
-        std::cout << "\n[Endocrine Update] Hormônios atualizados após comitê:\n"
-                  << endocrine_system->get_hormone_profile().to_string() << std::endl;
-    }
-    
-    // 2. CALCULAR COERÊNCIA DO COMITÊ
-    float committee_coherence = calculate_committee_coherence(contributions);
-    
-    // 3. Se coerência muito baixa, regenerar sem comitê
-    if (committee_coherence < 0.3) {
-        std::cout << "[AVISO] Coerência do comitê baixa (" << committee_coherence 
-                  << "). Gerando resposta direta." << std::endl;
-        
-        // Limpar contribuições incoerentes
-        contributions.clear();
-        
-        // Gerar resposta direta com a Alyssa
-        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
-        return run_expert("alyssa", direct_prompt, false, nullptr);
-    }
-    
-    // 4. Continuar com fusão normal se coerência aceitável
-    std::string emotion = detect_emotion_with_heuristics(input);
-    std::string fused_input = generate_fused_input(input, contributions, emotion);
-
-
-    // 4. Executa alyssa com o input fusionado (sem TTS)
-    // Agora a Alyssa recebe apenas os pensamentos dos especialistas
-    std::string final_response = run_expert("alyssa", fused_input, false, nullptr);
-
-    // 5. Parse da resposta final (remover formatação se necessário)
-    // A resposta deve estar limpa, sem blocos [RESPOSTA]
-    size_t start_tag = final_response.find("[RESPOSTA]");
-    size_t end_tag = final_response.find("[/RESPOSTA]");
-    
-    if (start_tag != std::string::npos && end_tag != std::string::npos) {
-        // Extrair apenas o conteúdo dentro do bloco
-        final_response = final_response.substr(start_tag + 10, end_tag - start_tag - 10);
-        // Remover whitespace no início e fim
-        final_response.erase(0, final_response.find_first_not_of(" \n\r\t"));
-        final_response.erase(final_response.find_last_not_of(" \n\r\t") + 1);
-    }
-
-    // Exibe resposta final
-    printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
-
-    // Salvar interação na memória
-    if (memory_manager) {
-        memory_manager->processInteraction(input, final_response);
-        std::cout << "\n Interação salva na LTM." << std::endl;
-    }
-    
-    // =====================================================================
-    // CLEANUP: Clear KV cache to prevent bleed-through to next turn
-    // =====================================================================
-    
-    if (endocrine_system) {
-        std::cout << "\n[Turn End] Limpando caches para próximo turno.\n"
-                  << "  Estado final: " << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
-    }
-    clear_kv_cache();
-
-    return final_response;
-}
-
-// =========================================================================
-// Think Original (Orchestration)
-// =========================================================================
-
-/**
- * @brief Process user input using standard MoE architecture.
- * @param input User's text input.
- * @param tts ElevenLabsTTS instance for voice synthesis.
- * @return Response generated by the AI system.
- * @details Uses emotional analysis, memory retrieval, and Alyssa model for final response.
- */
-std::string CoreIntegration::think(const std::string& input, ElevenLabsTTS& tts) {
-    if (!initialized || !core_instance) {
-        return "Erro: O CoreIntegration não foi inicializado corretamente.";
-    }
-
-    // Manter histórico da conversação
-    static std::vector<std::pair<std::string, std::string>> conversation_history;
-
-    // Adiciona novo input ao histórico
-    conversation_history.emplace_back("user", input);
-
-    // --- LÓGICA MoE ---
-    
-    // 1. Chamar "emotionalModel" para analisar o input
-    std::string emotion = run_expert("emotionalModel", input, false, &tts);
-    
-    // 2. Chamar "memoryModel" para buscar contexto
-    std::string context_input = input + " [EMOÇÃO]: " + emotion;
-    for (const auto& [role, msg] : conversation_history) {
-        context_input += "\n[" + role + "]: " + msg;
-    }
-    
-    std::string context = run_expert("memoryModel", context_input, false, &tts);
-    
-    // 3. Chamar "alyssa" para a resposta final
-    std::string final_input = "[CONTEXTO]: " + context + "\n[INPUT]: " + input;
-
-    printf("\033[33m[ALYSSA FINAL]: \033[0m"); 
-    std::string final_response = run_expert("alyssa", final_input, true, &tts);
-    printf("\n\033[0m");
-
-    // Adiciona resposta ao histórico
-    conversation_history.emplace_back("assistant", final_response);
-
-    return final_response;
+std::string CoreIntegration::think_with_fusion_ttsless(const std::string& input)
+{
+    return think_with_fusion_core(input, false, nullptr);
 }
 
 // =========================================================================
@@ -1503,15 +1140,10 @@ void CoreIntegration::manage_dynamic_history(
     std::string accumulated_roles = "";
 
     for (int i = 0; i < messages_to_archive && !history.empty(); ++i) {
-        auto& msg = history.front();
-        
-        std::string role = msg.role;
-        std::string content = msg.content;
-        
-        accumulated_roles += role + ", ";
-        archived_content += "[" + role + "]: " + content + "\n";
-
-        free((char*)msg.content);
+        const auto& msg = history.front();
+        accumulated_roles += std::string(msg.role) + ", ";
+        archived_content  += "[" + std::string(msg.role) + "]: " + msg.content + "\n";
+        free(const_cast<char*>(msg.content));
         history.erase(history.begin());
     }
 

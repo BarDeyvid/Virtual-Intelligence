@@ -107,22 +107,20 @@ set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
-set(Alyssa_CLI_2_SOURCES Alyssa_CLI_2.cpp ${COMMON_SOURCES})
-set(Alyssa_TRUE_SOURCES Alyssa_TRUE.cpp ${COMMON_SOURCES})
-set(Alyssa_API_SOURCES Alyssa_API.cpp ${COMMON_SOURCES})
+set(Alyssa_CLI_WITH_VOICE_SOURCES Alyssa_CLI_WITH_VOICE.cpp ${COMMON_SOURCES})
 
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
 set(TEST_OPENCV test_cuda.cpp)
+set(TEST_FUSION_UTILS tests/test_fusion_utils.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
-add_executable(alyssa_cli_2 ${Alyssa_CLI_2_SOURCES})
-add_executable(alyssa_true ${Alyssa_TRUE_SOURCES})
-add_executable(alyssa_api ${Alyssa_API_SOURCES})
+add_executable(alyssa_cli_with_voice ${Alyssa_CLI_WITH_VOICE_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
+add_executable(test_fusion_utils ${TEST_FUSION_UTILS})
 
 # --- Linking ---
 set(COMMON_LIBS
@@ -146,23 +144,19 @@ set(COMMON_LIBS
 
 # Platform-specific libraries
 if(NOT WIN32)
-    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} dl stdc++fs)
-    target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component dl stdc++fs)
-    target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS} dl stdc++fs)
-    target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS} dl stdc++fs)
+    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component dl stdc++fs)
+    target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS} dl stdc++fs)
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
 else()
-    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS})
-    target_link_libraries(alyssa_cli_2 PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
-    target_link_libraries(alyssa_true PRIVATE ${COMMON_LIBS})
-    target_link_libraries(alyssa_api PRIVATE ${COMMON_LIBS})
+    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
+    target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS})
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
 endif()
 
 # --- Post-Build Commands ---
-foreach(TARGET alyssa_cli alyssa_cli_2 alyssa_true alyssa_api)
+foreach(TARGET alyssa_cli alyssa_cli_with_voice)
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
@@ -170,12 +164,6 @@ foreach(TARGET alyssa_cli alyssa_cli_2 alyssa_true alyssa_api)
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/config
             $<TARGET_FILE_DIR:${TARGET}>/config
-        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
-            ${CMAKE_SOURCE_DIR}/fusion_router.onnx
-            $<TARGET_FILE_DIR:${TARGET}>/fusion_router.onnx
-        COMMAND ${CMAKE_COMMAND} -E copy_if_newer
-            ${CMAKE_SOURCE_DIR}/fusion_router.onnx.data
-            $<TARGET_FILE_DIR:${TARGET}>/fusion_router.onnx.data
         COMMENT "Copying models and config directories to build folder"
     )
 
