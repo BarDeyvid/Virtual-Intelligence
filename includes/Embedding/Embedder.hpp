@@ -12,6 +12,7 @@
 #include <memory>
 #include <filesystem>
 #include <thread>
+#include <mutex>
 #include <cstring>
 #include "json.hpp"
 
@@ -161,6 +162,7 @@ public:
 private:
     Config config;                      ///< Configuration settings
     bool initialized = false;           ///< Initialization flag
+    std::mutex infer_mtx;               ///< Serialises inference: single context/batch, NOT thread-safe (Phase 3.2)
     std::string config_path = "config/embedder_config.json";  ///< Path to config file
     
     // Llama.cpp members

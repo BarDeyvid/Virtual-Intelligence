@@ -5,6 +5,9 @@
 #include "voice/ElevenLabsTTS.hpp"
 #include "log.hpp"
 #include "ExpertBase.hpp"
+#include "pc_metrics_reader.hpp"
+#include "UserPrefs.hpp"
+#include "InputController.hpp"
 #include <string>
 #include <memory>
 #include <algorithm>
@@ -13,6 +16,23 @@
 #include <set>
 #include <regex>
 #include <cctype>
+#include <future>
+#include <chrono>
+#include <random>
+#include <ctime>
+
+#include <curl/curl.h>
+#include <opencv2/opencv.hpp>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 using namespace alyssa_core;
 
@@ -165,13 +185,75 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             std::cout << "[WARN] Contexto base muito pequeno, ajustando para " << context_size << std::endl;
         }
         
-        std::cout << "[INFO] Criando AlyssaCore BASE com modelo: " << base_1b_config->model_path 
+        std::cout << "[INFO] Criando AlyssaCore BASE com modelo: " << base_1b_config->model_path
                   << " (n_ctx = " << context_size << ")" << std::endl;
         core_instance = std::make_unique<alyssa_core::AlyssaCore>(base_1b_config->model_path, context_size);
-        
+
+        // 4.1. Pool de contextos para execução paralela dos experts (Fase 3.2).
+        // Os contextos compartilham os pesos do modelo 1B (sem duplicar RAM/VRAM);
+        // cada um roda em sua própria thread. Tamanho = TOP_K do gating.
+        // Falha na criação (ex.: sem memória) não é fatal: cai no modo sequencial.
+        constexpr int EXPERT_POOL_SIZE = 3;
+        try {
+            for (int i = 0; i < EXPERT_POOL_SIZE; ++i) {
+                expert_context_pool.push_back(std::make_unique<alyssa_core::AlyssaCore>(
+                    core_instance->get_model(), context_size, base_1b_config->n_batch));
+            }
+            std::cout << "[Parallel] Pool de " << expert_context_pool.size()
+                      << " contextos criado para experts em paralelo" << std::endl;
+        } catch (const std::exception& e) {
+            expert_context_pool.clear();
+            std::cerr << "[Parallel] Falha ao criar pool de contextos (" << e.what()
+                      << "). Mantendo execução sequencial." << std::endl;
+        }
+
         // 5. Inicializar fusion engine
         fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
-        
+
+        // 5.1. Inicializar sistema de tools (registry-driven, Fase 1)
+        tool_executor = std::make_unique<alyssa_tools::ToolExecutor>();
+        if (tool_executor->load_registry("config/tools_registry.json")) {
+            tool_executor->register_default_handlers();
+            register_builtin_tools();
+        }
+        // Registro ausente/malformado não é fatal: Alyssa funciona sem tools.
+
+        // 5.2. Carregar perfil de personalidade (Fase 2.1; ausência não é fatal)
+        personality = alyssa_personality::load_personality("config/personality.json");
+        {
+            std::error_code ec;
+            personality_mtime = std::filesystem::last_write_time("config/personality.json", ec);
+        }
+
+        // 5.3. Detector de presença via webcam (cascade ausente = desativado)
+        presence_detector = std::make_unique<alyssa_vision::PresenceDetector>();
+        if (!presence_detector->is_ready()) {
+            presence_detector.reset(); // sem cascade, sem presença — sistema segue normal
+        }
+
+        // 5.4. Humor do dia: offsets pequenos e determinísticos (hash da data)
+        // nos hormônios — a Alyssa "acorda" um pouco diferente a cada dia.
+        if (endocrine_system) {
+            std::time_t t = std::time(nullptr);
+            std::tm local_tm{};
+#ifdef _WIN32
+            localtime_s(&local_tm, &t);
+#else
+            localtime_r(&t, &local_tm);
+#endif
+            unsigned seed = static_cast<unsigned>(
+                (local_tm.tm_year + 1900) * 10000 + (local_tm.tm_mon + 1) * 100 + local_tm.tm_mday);
+            std::mt19937 rng(seed);
+            std::uniform_real_distribution<double> offset(-0.08, 0.08);
+
+            for (const char* hormone : {"cortisol", "dopamine", "oxytocin", "serotonin", "adrenaline"}) {
+                double level = endocrine_system->get_hormone_level(hormone) + offset(rng);
+                endocrine_system->set_hormone_level(hormone, std::clamp(level, 0.0, 1.0));
+            }
+            std::cout << "[Humor do Dia] Baseline hormonal do dia aplicado (seed " << seed << "):\n"
+                      << endocrine_system->get_hormone_profile().to_string() << std::endl;
+        }
+
         // 6. Inicializar memory manager
         memory_manager = std::make_unique<alyssa_memory::AlyssaMemoryManager>(
             "../alyssa_advanced_memory.db", embedder);
@@ -214,7 +296,19 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             alyssa_context_size = 4096;
         }
         
-        auto alyssa_core = std::make_unique<alyssa_core::AlyssaCore>(alyssa_4b_config->model_path, alyssa_context_size);
+        // Fase 4.3: se o modelo 4B falhar ao carregar (arquivo ausente, sem
+        // VRAM...), Alyssa roda degradada sobre o modelo base 1B já carregado
+        // (contexto extra, sem duplicar pesos) em vez de derrubar o sistema.
+        std::unique_ptr<alyssa_core::AlyssaCore> alyssa_core;
+        try {
+            alyssa_core = std::make_unique<alyssa_core::AlyssaCore>(alyssa_4b_config->model_path, alyssa_context_size);
+        } catch (const std::exception& e) {
+            std::cerr << "[Fallback] Falha ao carregar modelo Alyssa 4B (" << e.what()
+                      << "). Usando modelo base 1B como fallback — qualidade reduzida." << std::endl;
+            int fallback_ctx = std::min(alyssa_context_size, 8192);
+            alyssa_core = std::make_unique<alyssa_core::AlyssaCore>(
+                core_instance->get_model(), fallback_ctx, base_1b_config->n_batch);
+        }
         
         // Criar especialista Alyssa que usa o core separado
         class Alyssa4bExpert : public alyssa_experts::ExpertBase {
@@ -290,6 +384,514 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         core_instance = nullptr;
         return false;
     }
+}
+
+// =========================================================================
+// Tool System (Phase 1): built-in handlers with heavy dependencies
+// =========================================================================
+
+namespace {
+
+size_t curl_write_to_string(void* contents, size_t size, size_t nmemb, void* userp) {
+    static_cast<std::string*>(userp)->append(static_cast<char*>(contents), size * nmemb);
+    return size * nmemb;
+}
+
+/// Remove tags HTML e decodifica as entidades mais comuns (parser cru de PoC).
+std::string strip_html(const std::string& html) {
+    std::string text;
+    bool in_tag = false;
+    for (char c : html) {
+        if (c == '<') in_tag = true;
+        else if (c == '>') in_tag = false;
+        else if (!in_tag) text += c;
+    }
+    static const std::pair<const char*, const char*> entities[] = {
+        {"&amp;", "&"}, {"&lt;", "<"}, {"&gt;", ">"},
+        {"&quot;", "\""}, {"&#x27;", "'"}, {"&#39;", "'"}, {"&nbsp;", " "}
+    };
+    for (const auto& [from, to] : entities) {
+        size_t pos = 0;
+        while ((pos = text.find(from, pos)) != std::string::npos) {
+            text.replace(pos, strlen(from), to);
+        }
+    }
+    return text;
+}
+
+/// Só permite nomes de arquivo simples (sem path, sem shell metachars).
+bool is_safe_filename(const std::string& name) {
+    if (name.empty() || name.size() > 128) return false;
+    for (char c : name) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '.' && c != '_' && c != '-') {
+            return false;
+        }
+    }
+    return name.find("..") == std::string::npos;
+}
+
+} // namespace
+
+void CoreIntegration::register_builtin_tools() {
+    if (!tool_executor) return;
+
+    // --- system_metrics: reaproveita o leitor já existente ---
+    tool_executor->register_handler("system_metrics",
+        [](const std::map<std::string, std::string>&) -> std::string {
+            PCMetricsReader reader;
+            return reader.get_simple_metrics_text();
+        });
+
+    // --- screenshot: GDI no Windows, grim no Linux, salvo via OpenCV ---
+    tool_executor->register_handler("screenshot",
+        [](const std::map<std::string, std::string>& args) -> std::string {
+            std::string filename = "screenshot.png";
+            auto it = args.find("filename");
+            if (it != args.end() && !it->second.empty()) filename = it->second;
+            if (!is_safe_filename(filename)) {
+                return "ERRO: nome de arquivo inválido (use apenas letras, números, '.', '_', '-'): " + filename;
+            }
+
+#ifdef _WIN32
+            HDC screen_dc = GetDC(nullptr);
+            if (!screen_dc) return "ERRO: falha ao acessar a tela (GetDC)";
+
+            int width  = GetSystemMetrics(SM_CXSCREEN);
+            int height = GetSystemMetrics(SM_CYSCREEN);
+
+            HDC mem_dc = CreateCompatibleDC(screen_dc);
+            HBITMAP bitmap = CreateCompatibleBitmap(screen_dc, width, height);
+            HGDIOBJ old_obj = SelectObject(mem_dc, bitmap);
+            BitBlt(mem_dc, 0, 0, width, height, screen_dc, 0, 0, SRCCOPY);
+
+            BITMAPINFOHEADER bi{};
+            bi.biSize = sizeof(BITMAPINFOHEADER);
+            bi.biWidth = width;
+            bi.biHeight = -height; // top-down
+            bi.biPlanes = 1;
+            bi.biBitCount = 32;
+            bi.biCompression = BI_RGB;
+
+            cv::Mat frame(height, width, CV_8UC4);
+            int rows = GetDIBits(mem_dc, bitmap, 0, height, frame.data,
+                                 reinterpret_cast<BITMAPINFO*>(&bi), DIB_RGB_COLORS);
+
+            SelectObject(mem_dc, old_obj);
+            DeleteObject(bitmap);
+            DeleteDC(mem_dc);
+            ReleaseDC(nullptr, screen_dc);
+
+            if (rows == 0) return "ERRO: falha ao capturar pixels da tela (GetDIBits)";
+
+            cv::Mat bgr;
+            cv::cvtColor(frame, bgr, cv::COLOR_BGRA2BGR);
+            if (!cv::imwrite(filename, bgr)) {
+                return "ERRO: falha ao salvar imagem em " + filename;
+            }
+            return "Screenshot salvo em '" + filename + "' (" +
+                   std::to_string(width) + "x" + std::to_string(height) + ")";
+#else
+            // Linux (Hyprland): delega ao grim, como o resto do pipeline de visão
+            std::string cmd = "grim " + filename;
+            if (std::system(cmd.c_str()) != 0) {
+                return "ERRO: falha ao executar grim (instalado?)";
+            }
+            return "Screenshot salvo em '" + filename + "'";
+#endif
+        });
+
+    // --- webcam_check / webcam_photo: presença e foto via webcam ---
+    tool_executor->register_handler("webcam_check",
+        [this](const std::map<std::string, std::string>&) -> std::string {
+            if (!presence_detector) {
+                return "ERRO: webcam/detecção facial indisponível neste sistema";
+            }
+            auto result = presence_detector->check();
+            if (!result.available) {
+                return "ERRO: " + result.error;
+            }
+            std::string desc;
+            if (result.present) {
+                desc = result.face_count == 1
+                     ? "1 pessoa na frente do computador"
+                     : std::to_string(result.face_count) + " pessoas na frente do computador";
+            } else {
+                desc = "ninguém visível na frente do computador";
+            }
+            desc += " (luminosidade do ambiente: " +
+                    std::to_string(static_cast<int>(result.brightness)) + "/255" +
+                    (result.brightness < 40 ? ", ambiente escuro" : "") + ")";
+            return desc;
+        });
+
+    tool_executor->register_handler("webcam_photo",
+        [this](const std::map<std::string, std::string>& args) -> std::string {
+            if (!presence_detector) {
+                return "ERRO: webcam indisponível neste sistema";
+            }
+            std::string filename = "webcam.png";
+            auto it = args.find("filename");
+            if (it != args.end() && !it->second.empty()) filename = it->second;
+            if (!is_safe_filename(filename)) {
+                return "ERRO: nome de arquivo inválido (use apenas letras, números, '.', '_', '-'): " + filename;
+            }
+            return presence_detector->capture_to_file(filename);
+        });
+
+    // --- controle de teclado/mouse: as "mãos" da Alyssa (companion mode).
+    //     Remover as entradas do tools_registry.json desativa tudo. ---
+    tool_executor->register_handler("screen_info",
+        [](const std::map<std::string, std::string>&) {
+            return alyssa_input::InputController::screen_info();
+        });
+
+    tool_executor->register_handler("mouse_move",
+        [](const std::map<std::string, std::string>& args) -> std::string {
+            int x = 0, y = 0;
+            try {
+                x = std::stoi(args.at("x"));
+                y = std::stoi(args.at("y"));
+            } catch (...) {
+                return "ERRO: x e y precisam ser números inteiros (pixels da tela)";
+            }
+            return alyssa_input::InputController::move_mouse(x, y);
+        });
+
+    tool_executor->register_handler("mouse_click",
+        [](const std::map<std::string, std::string>& args) -> std::string {
+            std::string button = "left";
+            auto it = args.find("button");
+            if (it != args.end() && !it->second.empty()) button = it->second;
+            return alyssa_input::InputController::click(button);
+        });
+
+    tool_executor->register_handler("keyboard_type",
+        [](const std::map<std::string, std::string>& args) {
+            return alyssa_input::InputController::type_text(args.at("text"));
+        });
+
+    tool_executor->register_handler("keyboard_key",
+        [](const std::map<std::string, std::string>& args) {
+            return alyssa_input::InputController::press_key(args.at("key"));
+        });
+
+    // --- open_url: abre um site no navegador padrão (uso: lazer da Alyssa
+    //     quando o usuário sai, ou pedido explícito) ---
+    tool_executor->register_handler("open_url",
+        [](const std::map<std::string, std::string>& args) -> std::string {
+            const std::string& url = args.at("url");
+
+            // Allowlist rígida: só http(s) e charset de URL sem metacaracteres
+            // de shell (a string vai para std::system).
+            if (url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) {
+                return "ERRO: só URLs http:// ou https:// são permitidas";
+            }
+            if (url.size() > 300) return "ERRO: URL longa demais";
+            // Charset conservador: sem %, !, aspas ou parênteses — a string
+            // passa pelo cmd/shell e esses caracteres têm significado lá.
+            for (char c : url) {
+                bool ok = std::isalnum(static_cast<unsigned char>(c)) ||
+                          std::string(":/.?&=_+#~-").find(c) != std::string::npos;
+                if (!ok) return std::string("ERRO: caractere não permitido na URL: '") + c + "'";
+            }
+
+#ifdef _WIN32
+            std::string cmd = "start \"\" \"" + url + "\"";
+#elif __APPLE__
+            std::string cmd = "open \"" + url + "\"";
+#else
+            std::string cmd = "xdg-open \"" + url + "\" >/dev/null 2>&1 &";
+#endif
+            if (std::system(cmd.c_str()) != 0) {
+                return "ERRO: falha ao abrir o navegador";
+            }
+            return "Aberto no navegador: " + url;
+        });
+
+    // --- web_search: DuckDuckGo HTML + extração crua dos títulos/snippets ---
+    tool_executor->register_handler("web_search",
+        [](const std::map<std::string, std::string>& args) -> std::string {
+            const std::string& query = args.at("query");
+
+            CURL* curl = curl_easy_init();
+            if (!curl) return "ERRO: falha ao inicializar cURL";
+
+            char* escaped = curl_easy_escape(curl, query.c_str(), static_cast<int>(query.size()));
+            std::string url = "https://html.duckduckgo.com/html/?q=" + std::string(escaped ? escaped : "");
+            if (escaped) curl_free(escaped);
+
+            std::string body;
+            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_to_string);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+            curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (AlyssaNet)");
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 12L);
+            // Mesmo esquema do ElevenLabsTTS: verificação SSL desativada (PoC)
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+            CURLcode res = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
+
+            if (res != CURLE_OK) {
+                return std::string("ERRO: requisição falhou: ") + curl_easy_strerror(res);
+            }
+
+            // Extração crua: âncoras de resultado do DDG (class="result__a")
+            std::string results;
+            int count = 0;
+            size_t pos = 0;
+            while (count < 3 && (pos = body.find("result__a", pos)) != std::string::npos) {
+                size_t title_start = body.find('>', pos);
+                size_t title_end   = body.find("</a>", title_start);
+                if (title_start == std::string::npos || title_end == std::string::npos) break;
+
+                std::string title = strip_html(body.substr(title_start + 1, title_end - title_start - 1));
+
+                std::string snippet;
+                size_t snip_pos = body.find("result__snippet", title_end);
+                if (snip_pos != std::string::npos && snip_pos < body.find("result__a", title_end)) {
+                    size_t snip_start = body.find('>', snip_pos);
+                    size_t snip_end   = body.find("</a>", snip_start);
+                    if (snip_end == std::string::npos) snip_end = body.find("</td>", snip_start);
+                    if (snip_start != std::string::npos && snip_end != std::string::npos) {
+                        snippet = strip_html(body.substr(snip_start + 1, snip_end - snip_start - 1));
+                        if (snippet.size() > 250) snippet = snippet.substr(0, 250) + "...";
+                    }
+                }
+
+                if (!title.empty()) {
+                    results += std::to_string(count + 1) + ". " + title + "\n";
+                    if (!snippet.empty()) results += "   " + snippet + "\n";
+                    ++count;
+                }
+                pos = title_end;
+            }
+
+            if (results.empty()) return "Nenhum resultado encontrado para: " + query;
+            return results;
+        });
+}
+
+// =========================================================================
+// Memory Compression & Resilience helpers (Phase 4)
+// =========================================================================
+
+void CoreIntegration::log_interaction_for_dataset(const std::string& input,
+                                                  const std::string& response,
+                                                  const std::string& mode) {
+    try {
+        nlohmann::json entry = {
+            {"timestamp", std::time(nullptr)},
+            {"input", input},
+            {"response", response},
+            {"mode", mode}
+        };
+        if (endocrine_system) {
+            entry["emotional_state"] =
+                endocrine_system->get_hormone_profile().get_emotional_state();
+        }
+        std::ofstream file("training_data.jsonl", std::ios::app);
+        if (file.is_open()) {
+            file << entry.dump() << "\n";
+        }
+    } catch (...) {
+        // dataset é best-effort: nunca derruba um turno
+    }
+}
+
+void CoreIntegration::maybe_reload_personality() {
+    std::error_code ec;
+    auto mtime = std::filesystem::last_write_time("config/personality.json", ec);
+    if (ec) return; // arquivo sumiu/inacessível: mantém o perfil em memória
+
+    if (mtime != personality_mtime) {
+        std::cout << "[Personality] Hot-reload: personality.json mudou, recarregando..." << std::endl;
+        auto reloaded = alyssa_personality::load_personality("config/personality.json");
+        if (reloaded.loaded) {
+            personality = reloaded;
+        } // malformado: mantém o perfil anterior em vez de degradar
+        personality_mtime = mtime;
+    }
+}
+
+std::string CoreIntegration::summarize_history_chunk(const std::string& text) {
+    alyssa_core::AlyssaCore* summarizer = !expert_context_pool.empty()
+        ? expert_context_pool[0].get()
+        : core_instance.get();
+    if (!summarizer || text.empty()) return "";
+
+    SimpleModelParameters params;
+    params.temperature = 0.3;
+    params.top_p = 0.8;
+    params.max_tokens = 96;
+    params.timeout_ms = 15000; // resumo não pode travar o turno
+
+    std::string prompt =
+        "Resuma a conversa abaixo em no máximo 3 frases, preservando fatos, nomes, "
+        "preferências e decisões importantes. Responda APENAS com o resumo, sem introdução.\n\n" + text;
+
+    // Pool: clear_kv direto. core_instance: clear_kv_cache() do orquestrador,
+    // que também zera o tracking active_expert_in_cache.
+    auto clean = [this, summarizer]() {
+        if (!expert_context_pool.empty()) summarizer->clear_kv();
+        else clear_kv_cache();
+    };
+
+    try {
+        clean();
+        std::string summary = summarizer->generate_raw(prompt, params, nullptr, nullptr);
+        clean();
+
+        summary.erase(0, summary.find_first_not_of(" \n\r\t"));
+        summary.erase(summary.find_last_not_of(" \n\r\t") + 1);
+        return summary;
+    } catch (const std::exception& e) {
+        std::cerr << "[Memory Cycle] Falha ao resumir histórico: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+std::string CoreIntegration::generate_fallback_response(const std::string& prompt) {
+    std::cout << "[Fallback] Resposta da Alyssa vazia/falhou. Tentando modelo base 1B..." << std::endl;
+
+    alyssa_core::AlyssaCore* fallback_core = !expert_context_pool.empty()
+        ? expert_context_pool[0].get()
+        : core_instance.get();
+    if (!fallback_core) {
+        return "Desculpa, deu ruim aqui no meu processamento. Tenta de novo?";
+    }
+
+    SimpleModelParameters params;
+    params.temperature = 0.7;
+    params.top_p = 0.9;
+    params.max_tokens = 160;
+    params.timeout_ms = 15000;
+
+    auto clean = [this, fallback_core]() {
+        if (!expert_context_pool.empty()) fallback_core->clear_kv();
+        else clear_kv_cache();
+    };
+
+    try {
+        clean();
+        std::string response = fallback_core->generate_raw(prompt, params, nullptr, nullptr);
+        clean();
+
+        response.erase(0, response.find_first_not_of(" \n\r\t"));
+        response.erase(response.find_last_not_of(" \n\r\t") + 1);
+
+        if (response.empty()) {
+            return "Desculpa, deu ruim aqui no meu processamento. Tenta de novo?";
+        }
+        std::cout << "[Fallback] Modelo base 1B respondeu (evento logado para debug)." << std::endl;
+        return response;
+    } catch (const std::exception& e) {
+        std::cerr << "[Fallback] Modelo base também falhou: " << e.what() << std::endl;
+        return "Desculpa, deu ruim aqui no meu processamento. Tenta de novo?";
+    }
+}
+
+std::string CoreIntegration::generate_proactive_message(const std::string& reason) {
+    if (!initialized || !core_instance) return "";
+
+    maybe_reload_personality();
+
+    std::cout << "\n[Proactivity] Gerando mensagem espontânea: "
+              << (reason.length() > 60 ? reason.substr(0, 60) + "..." : reason) << std::endl;
+
+    // Metabolismo leve: tempo passou desde a última interação
+    if (endocrine_system) {
+        endocrine_system->apply_metabolism(0.02);
+    }
+
+    std::string personality_context = alyssa_personality::generate_personality_context(
+        personality,
+        endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+
+    std::string hormonal_context = "";
+    if (endocrine_system) {
+        hormonal_context = endocrine_system->generate_hormonal_system_context() + "\n";
+    }
+
+    std::string tools_context = tool_executor ? tool_executor->get_tools_prompt() : "";
+
+    // Gostos aprendidos: o lazer e as iniciativas dela consideram o que ela
+    // já sabe sobre o usuário ("abrir algo que ela aprendeu que eu gosto")
+    std::string prefs_line = alyssa_prefs::render_preferences_line();
+    if (!prefs_line.empty()) prefs_line = "[MEMÓRIA DE GOSTOS] " + prefs_line + "\n\n";
+
+    std::string prompt = personality_context + hormonal_context + tools_context + prefs_line +
+        "[INICIATIVA PRÓPRIA] " + reason + "\n\n"
+        "Escreva UMA mensagem curta e espontânea, como quem manda mensagem no chat "
+        "sem ter sido chamada. Não cumprimente como se fosse a primeira conversa do dia "
+        "e não faça referência a estas instruções.";
+
+    std::string response = run_expert("alyssa", prompt, false, nullptr);
+    response = resolve_tool_calls(response, false, nullptr);
+
+    // Mesmo strip de [RESPOSTA] do fluxo principal
+    size_t s = response.find("[RESPOSTA]");
+    size_t e = response.find("[/RESPOSTA]");
+    if (s != std::string::npos && e != std::string::npos) {
+        response = response.substr(s + 10, e - s - 10);
+        response.erase(0, response.find_first_not_of(" \n\r\t"));
+        response.erase(response.find_last_not_of(" \n\r\t") + 1);
+    }
+
+    clear_kv_cache();
+    return response;
+}
+
+std::string CoreIntegration::resolve_tool_calls(std::string response, bool use_tts, ElevenLabsTTS* tts) {
+    if (!tool_executor) return response;
+
+    const int max_rounds = tool_executor->max_rounds();
+    const int max_calls  = tool_executor->max_calls_per_round();
+
+    for (int round = 0; round < max_rounds; ++round) {
+        auto calls = alyssa_tools::ToolExecutor::parse_tool_calls(response);
+        if (calls.empty()) break;
+
+        if (static_cast<int>(calls.size()) > max_calls) {
+            std::cout << "[Tools] " << calls.size() << " chamadas no turno; limitando a "
+                      << max_calls << std::endl;
+            calls.resize(max_calls);
+        }
+
+        bool any_failed = false;
+        std::string results_block = "[RESULTADOS_FERRAMENTAS]\n";
+        for (const auto& call : calls) {
+            std::cout << "[Tools] Alyssa chamou: " << call.name << std::endl;
+            alyssa_tools::ToolResult result = tool_executor->execute(call);
+            if (!result.success) any_failed = true;
+            results_block += "- " + call.name + ": " + result.output + "\n";
+        }
+        results_block += "[/RESULTADOS_FERRAMENTAS]\n\n";
+
+        // Falha com dica no erro → instrução explícita de retry corrigido.
+        // Modelo pequeno não infere sozinho que pode tentar de novo.
+        std::string followup;
+        if (any_failed && round + 1 < max_rounds) {
+            followup = results_block +
+                "Uma ferramenta FALHOU. Leia a dica na mensagem de erro, corrija os parâmetros "
+                "e chame de novo AGORA com [TOOL_CALL] nome(param=valor_corrigido) [/TOOL_CALL]. "
+                "Escreva APENAS o bloco corrigido. Se não der pra corrigir, explique em uma frase.";
+        } else {
+            followup = results_block +
+                "Responda ao usuário como Alyssa usando os DADOS CONCRETOS dos resultados "
+                "(nomes de arquivos, números, valores) — nunca diga vagamente que 'tem um monte de coisa'. "
+                "Se a lista for longa, cite uns 5-8 itens interessantes e o total. "
+                "Não mencione o formato interno das ferramentas. "
+                "Só use [TOOL_CALL] novamente se realmente precisar de outra ferramenta.";
+        }
+
+        response = run_expert("alyssa", followup, use_tts, tts);
+    }
+
+    // Se depois da última rodada ainda sobrou tool call, remove do texto final
+    return alyssa_tools::ToolExecutor::strip_tool_calls(response);
 }
 
 // =========================================================================
@@ -782,12 +1384,29 @@ std::string CoreIntegration::generate_fused_input(
         std::cout << "\n[Hormonal Injection] " << hormonal_context << std::endl;
     }
     
-    // Construir prompt final para a Alyssa
-    std::string fused_prompt = hormonal_context +
-                               thoughts + 
+    // Bloco compacto de ferramentas disponíveis (Fase 1: descrições curtas,
+    // não o registro inteiro, para não explodir o contexto)
+    std::string tools_context = "";
+    if (tool_executor) {
+        tools_context = tool_executor->get_tools_prompt();
+        if (!tools_context.empty()) tools_context += "\n";
+    }
+
+    // Bloco de personalidade com estado atual modulado pelos hormônios (Fase 2.1)
+    std::string personality_context = alyssa_personality::generate_personality_context(
+        personality,
+        endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+    if (!personality_context.empty()) personality_context += "\n";
+
+    // Construir prompt final para a Alyssa. Tools ficam por último antes da
+    // entrada: modelos pequenos dão mais atenção ao fim do prompt.
+    std::string fused_prompt = personality_context +
+                               hormonal_context +
+                               thoughts +
+                               tools_context +
                                "ENTRADA DO USUÁRIO: \"" + original_input + "\"\n\n" +
                                "Baseado nos pensamentos acima e seu estado hormonal atual, forneça sua resposta como Alyssa:";
-    
+
     return fused_prompt;
 }
 
@@ -812,6 +1431,9 @@ std::string CoreIntegration::think_with_fusion_core(
         return "Erro: Sistema não inicializado corretamente.";
     }
 
+    // Hot-reload de personalidade: tuning sem reiniciar
+    maybe_reload_personality();
+
     // =========================================================================
     // 1. ENDOCRINE: metabolism tick
     // =========================================================================
@@ -821,6 +1443,34 @@ std::string CoreIntegration::think_with_fusion_core(
     }
 
     std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
+
+    // =========================================================================
+    // 1.5. FAST PATH: small talk pula o comitê inteiro (latência ~1 chamada 4B)
+    // =========================================================================
+    if (is_small_talk(input)) {
+        std::cout << "[Fast Path] Small talk detectado — comitê pulado.\n";
+        auto fast_start = std::chrono::steady_clock::now();
+
+        std::string fast_personality = alyssa_personality::generate_personality_context(
+            personality,
+            endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+        std::string fast_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
+
+        std::string fast_prompt = fast_personality + fast_tools +
+            "[CONVERSA CASUAL] Responda curto e natural, como Alyssa: " + input;
+
+        std::string fast_resp = run_expert("alyssa", fast_prompt, use_tts, tts);
+        fast_resp = resolve_tool_calls(fast_resp, use_tts, tts);
+
+        auto fast_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - fast_start).count();
+        std::cout << "[Fast Path] Resposta em " << fast_ms << "ms\n";
+        printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", fast_resp.c_str());
+
+        log_interaction_for_dataset(input, fast_resp, "small_talk");
+        clear_kv_cache();
+        return fast_resp;
+    }
 
     // =========================================================================
     // 2. MEMORY CONTEXT AUGMENTATION (isolated, max 3 memories)
@@ -880,38 +1530,112 @@ std::string CoreIntegration::think_with_fusion_core(
 
     // =========================================================================
     // 4. CONDITIONAL EXPERT EXECUTION (only the selected subset)
+    //    Fase 3.2: paralelo via pool de contextos; sequencial como fallback.
     // =========================================================================
     std::vector<alyssa_fusion::ExpertContribution> contributions;
 
+    // Lista de selecionados na ordem das configs (determinística)
+    std::vector<const SimpleModelConfig*> selected;
     for (const auto& cfg : configs) {
         if (cfg.id == "alyssa") continue;
-        if (active_experts.find(cfg.id) == active_experts.end()) continue;
-
-        std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
-        switch_expert_context(cfg.id);
-
-        auto& expert  = experts[cfg.id];
-        auto& history = expert_histories[cfg.id];
-
-        std::vector<llama_chat_message> isolated_history = history;
-        if (isolated_history.size() > 4) {
-            isolated_history.erase(isolated_history.begin(),
-                                   isolated_history.begin() + (isolated_history.size() - 4));
-        }
-
-        llama_adapter_lora* active_lora = nullptr;
-        auto contrib = expert->get_contribution(
-            augmented_input, core_instance.get(), embedder, nullptr,
-            isolated_history, &active_lora
-        );
-        contrib.weight = gating_weights[cfg.id];
-        contributions.push_back(contrib);
-
-        std::cout << "[Comitê] " << cfg.id << " respondeu: "
-                  << (contrib.response.length() > 50
-                      ? contrib.response.substr(0, 50) + "..."
-                      : contrib.response) << std::endl;
+        if (active_experts.find(cfg.id) != active_experts.end()) selected.push_back(&cfg);
     }
+
+    auto committee_start = std::chrono::steady_clock::now();
+    const bool run_parallel = expert_context_pool.size() >= 2 && selected.size() >= 2;
+
+    if (run_parallel) {
+        // Processa em lotes do tamanho do pool: cada task usa um contexto
+        // exclusivo do lote, então não há dois decodes no mesmo contexto.
+        const size_t pool_size = expert_context_pool.size();
+
+        for (size_t base = 0; base < selected.size(); base += pool_size) {
+            size_t batch_n = std::min(pool_size, selected.size() - base);
+            std::vector<std::future<alyssa_fusion::ExpertContribution>> futures;
+
+            for (size_t i = 0; i < batch_n; ++i) {
+                const SimpleModelConfig* cfg = selected[base + i];
+                alyssa_core::AlyssaCore* slot_core = expert_context_pool[i].get();
+                alyssa_experts::IExpert* expert_ptr = experts[cfg->id].get();
+                double weight = gating_weights[cfg->id];
+
+                // Cópia isolada do histórico feita na thread principal (o mapa
+                // expert_histories não é tocado pelas workers)
+                std::vector<llama_chat_message> isolated_history = expert_histories[cfg->id];
+                if (isolated_history.size() > 4) {
+                    isolated_history.erase(isolated_history.begin(),
+                                           isolated_history.begin() + (isolated_history.size() - 4));
+                }
+
+                std::cout << "[MoE Execution] Rodando " << cfg->id << " (paralelo, slot "
+                          << i << ")...\n";
+
+                futures.push_back(std::async(std::launch::async,
+                    [this, expert_ptr, slot_core, weight,
+                     isolated_history, augmented_input]() mutable {
+                        slot_core->clear_kv(); // contexto reutilizado entre turnos
+
+                        size_t base_size = isolated_history.size();
+                        llama_adapter_lora* active_lora = nullptr;
+                        auto contrib = expert_ptr->get_contribution(
+                            augmented_input, slot_core, embedder, nullptr,
+                            isolated_history, &active_lora
+                        );
+                        contrib.weight = weight;
+
+                        // Libera as mensagens strdup'adas que o run() anexou à cópia
+                        for (size_t k = base_size; k < isolated_history.size(); ++k) {
+                            free(const_cast<char*>(isolated_history[k].content));
+                        }
+                        return contrib;
+                    }));
+            }
+
+            for (auto& f : futures) {
+                auto contrib = f.get();
+                std::cout << "[Comitê] " << contrib.expert_id << " respondeu: "
+                          << (contrib.response.length() > 50
+                              ? contrib.response.substr(0, 50) + "..."
+                              : contrib.response) << std::endl;
+                contributions.push_back(std::move(contrib));
+            }
+        }
+    } else {
+        // Caminho sequencial original (pool indisponível ou 1 expert só)
+        for (const SimpleModelConfig* cfg_ptr : selected) {
+            const auto& cfg = *cfg_ptr;
+            std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
+            switch_expert_context(cfg.id);
+
+            auto& expert  = experts[cfg.id];
+            auto& history = expert_histories[cfg.id];
+
+            std::vector<llama_chat_message> isolated_history = history;
+            if (isolated_history.size() > 4) {
+                isolated_history.erase(isolated_history.begin(),
+                                       isolated_history.begin() + (isolated_history.size() - 4));
+            }
+
+            llama_adapter_lora* active_lora = nullptr;
+            auto contrib = expert->get_contribution(
+                augmented_input, core_instance.get(), embedder, nullptr,
+                isolated_history, &active_lora
+            );
+            contrib.weight = gating_weights[cfg.id];
+            contributions.push_back(contrib);
+
+            std::cout << "[Comitê] " << cfg.id << " respondeu: "
+                      << (contrib.response.length() > 50
+                          ? contrib.response.substr(0, 50) + "..."
+                          : contrib.response) << std::endl;
+        }
+    }
+
+    auto committee_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - committee_start).count();
+    std::cout << "[MoE Execution] Comitê de " << selected.size() << " expert(s) concluído em "
+              << committee_ms << "ms (" << (run_parallel ? "paralelo" : "sequencial")
+              << ")" << std::endl;
 
     // Fallback: no expert cleared the gate
     if (contributions.empty()) {
@@ -946,11 +1670,21 @@ std::string CoreIntegration::think_with_fusion_core(
     if (coherence < 0.3f) {
         std::cout << "[AVISO] Coerência do comitê baixa (" << coherence
                   << "). Gerando resposta direta." << std::endl;
-        std::string direct_prompt = "[MODO DIRETO] Responda ao usuário: " + input;
+        // Modo direto também precisa de personalidade e ferramentas — perguntas
+        // curtas ("lista os arquivos?") caem muito neste caminho.
+        std::string direct_personality = alyssa_personality::generate_personality_context(
+            personality,
+            endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+        std::string direct_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
+
+        std::string direct_prompt = direct_personality + direct_tools +
+                                    "[MODO DIRETO] Responda ao usuário: " + input;
         std::string direct_resp   = run_expert("alyssa", direct_prompt, use_tts, tts);
+        direct_resp = resolve_tool_calls(direct_resp, use_tts, tts);
         printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", direct_resp.c_str());
         if (memory_manager && should_store_in_memory(input, direct_resp))
             memory_manager->processInteraction(input, direct_resp);
+        log_interaction_for_dataset(input, direct_resp, "direct");
         clear_kv_cache();
         return direct_resp;
     }
@@ -961,6 +1695,16 @@ std::string CoreIntegration::think_with_fusion_core(
     std::string emotion     = detect_emotion_with_heuristics(input);
     std::string fused_input = generate_fused_input(input, contributions, emotion);
     std::string final_response = run_expert("alyssa", fused_input, use_tts, tts);
+
+    // Fase 4.3: resposta vazia/erro do 4B → última cartada com o modelo base 1B
+    std::string trimmed = final_response;
+    trimmed.erase(0, trimmed.find_first_not_of(" \n\r\t"));
+    if (trimmed.empty() || trimmed.rfind("Erro:", 0) == 0) {
+        final_response = generate_fallback_response(fused_input);
+    }
+
+    // Resolver [TOOL_CALL] antes de qualquer pós-processamento (Fase 1.2)
+    final_response = resolve_tool_calls(final_response, use_tts, tts);
 
     printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
 
@@ -990,6 +1734,7 @@ std::string CoreIntegration::think_with_fusion_core(
                   << "  Estado final: "
                   << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
     }
+    log_interaction_for_dataset(input, final_response, "fusion");
     clear_kv_cache();
     return final_response;
 }
@@ -1129,29 +1874,40 @@ void CoreIntegration::manage_dynamic_history(
     std::vector<llama_chat_message>& history
 ) {
     size_t dynamic_limit = calculate_history_limit(expert_id);
-    
+
     if (history.size() <= dynamic_limit) return;
 
-    std::cout << "[Memory Cycle] Otimizando histórico do especialista '" << expert_id 
+    std::cout << "[Memory Cycle] Otimizando histórico do especialista '" << expert_id
               << "' (Limite atual: " << dynamic_limit << ", Tamanho: " << history.size() << ")\n";
 
-    int messages_to_archive = 4;
+    // Fase 4.2: resumo rolante. Se já existe um [RESUMO] na frente do
+    // histórico (de compressões anteriores), ele entra no novo resumo em vez
+    // de ser re-arquivado — um único bloco compacto carrega toda a história.
+    static const char* SUMMARY_PREFIX = "[RESUMO DA CONVERSA ANTERIOR]";
+    std::string previous_summary = "";
+    if (!history.empty() &&
+        std::string(history.front().content).rfind(SUMMARY_PREFIX, 0) == 0) {
+        previous_summary = history.front().content;
+        free(const_cast<char*>(history.front().content));
+        history.erase(history.begin());
+    }
+
+    int messages_to_archive = 8;
     std::string archived_content = "";
-    std::string accumulated_roles = "";
 
     for (int i = 0; i < messages_to_archive && !history.empty(); ++i) {
         const auto& msg = history.front();
-        accumulated_roles += std::string(msg.role) + ", ";
         archived_content  += "[" + std::string(msg.role) + "]: " + msg.content + "\n";
         free(const_cast<char*>(msg.content));
         history.erase(history.begin());
     }
 
+    // 1. Arquiva o conteúdo bruto na LTM (comportamento original)
     if (memory_manager && !archived_content.empty()) {
         std::string context_tag = "archived_history | expert:" + expert_id;
 
         int mem_id = memory_manager->storeMemoryWithEmotionalAnalysis(
-            archived_content, 
+            archived_content,
             context_tag
         );
 
@@ -1159,8 +1915,33 @@ void CoreIntegration::manage_dynamic_history(
         if (!intentions.empty()) {
             memory_manager->linkMemoryToIntention(mem_id, intentions[0].id);
         }
-        std::cout << "[LTM] Memória comprimida e arquivada (ID: " << mem_id << ")\n";
-        std::cout << "   -> Conteúdo: " << archived_content.substr(0, 50) << "...\n";
+        std::cout << "[LTM] Memória bruta arquivada (ID: " << mem_id << ")\n";
+    }
+
+    // 2. Gera o resumo rolante (resumo anterior + chunk arquivado) e reinjeta
+    //    no início do histórico — o contexto da conversa sobrevive à compressão.
+    std::string to_summarize = previous_summary.empty()
+        ? archived_content
+        : previous_summary + "\n" + archived_content;
+
+    std::string summary = summarize_history_chunk(to_summarize);
+    if (!summary.empty()) {
+        std::string summary_msg = std::string(SUMMARY_PREFIX) + " " + summary;
+        // Role "user" por compatibilidade: templates como o do Gemma não
+        // aceitam "system" no meio da conversa.
+        history.insert(history.begin(), {"user", strdup(summary_msg.c_str())});
+
+        if (memory_manager) {
+            memory_manager->storeMemoryWithEmotionalAnalysis(
+                summary, "conversation_summary | expert:" + expert_id);
+        }
+        std::cout << "[Memory Cycle] Resumo rolante atualizado ("
+                  << summary.length() << " chars): "
+                  << (summary.length() > 60 ? summary.substr(0, 60) + "..." : summary) << "\n";
+    } else if (!previous_summary.empty()) {
+        // Resumo falhou: devolve o resumo antigo em vez de perder tudo
+        history.insert(history.begin(), {"user", strdup(previous_summary.c_str())});
+        std::cout << "[Memory Cycle] Resumo novo falhou; mantendo resumo anterior.\n";
     }
 }
 

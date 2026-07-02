@@ -4,6 +4,10 @@
 #include "AlyssaMemoryHandler.hpp"
 #include "IExpert.hpp"
 #include "EndocrineSystem.hpp"
+#include "ToolExecutor.hpp"
+#include "PersonalityCore.hpp"
+#include "PresenceDetector.hpp"
+#include <filesystem>
 #include <memory>
 #include <map>
 #include <vector>
@@ -28,11 +32,22 @@
 class CoreIntegration {
 private:
     std::unique_ptr<alyssa_core::AlyssaCore> core_instance;           ///< Base model instance (1B)
+
+    /// @brief Pool of extra contexts on the shared 1B model for parallel expert
+    ///        execution (Phase 3.2). Declared AFTER core_instance on purpose:
+    ///        members are destroyed in reverse order, so the pool contexts are
+    ///        freed before the model they borrow from.
+    std::vector<std::unique_ptr<alyssa_core::AlyssaCore>> expert_context_pool;
+
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;    ///< Weighted fusion engine
     std::shared_ptr<Embedder> embedder;                             ///< Embedding generator for semantic analysis
     std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager; ///< Long-term memory manager
     std::unique_ptr<alyssa_endocrine::EndocrineSystem> endocrine_system; ///< Hormonal system for behavioral modulation
-    
+    std::unique_ptr<alyssa_tools::ToolExecutor> tool_executor;       ///< Registry-driven tool system (Phase 1)
+    alyssa_personality::Personality personality;                     ///< Static personality profile (Phase 2.1)
+    std::filesystem::file_time_type personality_mtime{};             ///< For hot-reload of personality.json
+    std::unique_ptr<alyssa_vision::PresenceDetector> presence_detector; ///< Webcam presence (night-shift)
+
     /// @brief Map of registered expert models with their unique IDs
     std::unordered_map<std::string, std::unique_ptr<alyssa_experts::IExpert>> experts;
     
@@ -89,6 +104,20 @@ public:
      * @return Fused response from multiple experts.
      */
     std::string think_with_fusion_ttsless(const std::string& input);
+
+    /**
+     * @brief Generate a spontaneous message without user input (Phase 2.2).
+     *
+     * Lightweight path for the ProactivityEngine: skips the MoE committee
+     * (it's small talk initiated by Alyssa, not a response to analyze) and
+     * skips LTM storage (no memory pollution with synthetic prompts).
+     * Personality and hormonal context are still injected, and tool calls
+     * in the output are resolved.
+     *
+     * @param reason PT-BR instruction seed from ProactivityEngine's trigger.
+     * @return Short proactive message, or empty string when not initialized.
+     */
+    std::string generate_proactive_message(const std::string& reason);
     
     // =========================================================================
     // Expert Management Methods
@@ -168,9 +197,45 @@ public:
     void log_source_awareness(const std::string& source, const std::string& message);
 
     /**
+     * @brief Presence detector getter (CLI proactivity thread uses it).
+     * @return Pointer, or nullptr when webcam/cascade unavailable.
+     */
+    alyssa_vision::PresenceDetector* get_presence_detector() {
+        return presence_detector.get();
+    }
+
+    /**
+     * @brief Current personality state line for UI display (Phase 5.3).
+     * @return Ex: "energia alta, de bom humor, respondona, madrugada".
+     */
+    std::string get_current_personality_state() const {
+        std::string state = alyssa_personality::derive_current_state(
+            personality,
+            endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+        std::string period = alyssa_personality::period_of_day(
+            alyssa_personality::current_local_hour());
+        return state.empty() ? period : state + ", " + period;
+    }
+
+    /**
+     * @brief Reload personality.json when its mtime changed (hot-reload).
+     * @details Called at the start of each turn — tuning de personalidade
+     *          sem reiniciar (e sem recarregar modelo nenhum).
+     */
+    void maybe_reload_personality();
+
+    /**
+     * @brief Tool executor getter (for UI inspection of the call log).
+     * @return Pointer to ToolExecutor (nullptr if not initialized).
+     */
+    alyssa_tools::ToolExecutor* get_tool_executor() {
+        return tool_executor.get();
+    }
+
+    /**
      * @brief Endocrine Getter
      */
-    alyssa_endocrine::EndocrineSystem* get_endocrine_system() { 
+    alyssa_endocrine::EndocrineSystem* get_endocrine_system() {
         return endocrine_system.get(); // Ou apenas o nome do seu membro interno
     }
 
@@ -207,6 +272,62 @@ private:
         bool use_tts,
         ElevenLabsTTS* tts
     );
+
+    // =========================================================================
+    // Tool System (Phase 1)
+    // =========================================================================
+
+    /**
+     * @brief Register tool handlers that need heavy deps (OpenCV, CURL, metrics).
+     * @details Generic filesystem/time handlers come from
+     *          ToolExecutor::register_default_handlers().
+     */
+    void register_builtin_tools();
+
+    /**
+     * @brief Resolve [TOOL_CALL] blocks emitted by Alyssa.
+     *
+     * Parses tool calls from the response, executes them, feeds the results
+     * back to the model, and repeats up to max_rounds (registry setting) to
+     * avoid infinite loops. Any leftover tool-call block is stripped from the
+     * final text.
+     *
+     * @param response Raw Alyssa output (may contain tool calls).
+     * @param use_tts  Whether follow-up inference streams to TTS.
+     * @param tts      TTS instance (nullptr when use_tts=false).
+     * @return Final response with tool results incorporated.
+     */
+    std::string resolve_tool_calls(std::string response, bool use_tts, ElevenLabsTTS* tts);
+
+    // =========================================================================
+    // Memory Compression & Resilience (Phase 4)
+    // =========================================================================
+
+    /**
+     * @brief Summarize an archived history chunk with the base 1B model (Phase 4.2).
+     * @param text Concatenated messages (and previous rolling summary, if any).
+     * @return Short summary, or empty string on failure (compression then
+     *         degrades to the old drop-only behavior).
+     */
+    std::string summarize_history_chunk(const std::string& text);
+
+    /**
+     * @brief Last-resort response using the base 1B model (Phase 4.3).
+     * @details Called when Alyssa's 4B answer comes back empty/failed.
+     * @param prompt The already-fused prompt.
+     * @return Response from the base model, or canned apology on total failure.
+     */
+    std::string generate_fallback_response(const std::string& prompt);
+
+    /**
+     * @brief Append one interaction to training_data.jsonl (LoRA groundwork).
+     * @details Cada linha: {timestamp, input, response, mode, emotional_state}.
+     *          O dataset cresce sozinho a cada conversa — quando chegar a hora
+     *          de fine-tunar o Gemma, a matéria-prima já existe.
+     */
+    void log_interaction_for_dataset(const std::string& input,
+                                     const std::string& response,
+                                     const std::string& mode);
 
     // =========================================================================
     // Expert Execution Methods

@@ -20,6 +20,7 @@
 #include <string>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 #include "json.hpp"
 #include <fstream>
 #include <cstdio>
@@ -38,6 +39,7 @@ struct SimpleModelParameters {
     double temperature = 0.8; /**< Temperature parameter for controlling randomness in text generation. */
     double top_p = 1.0;         /**< Top-p (nucleus) sampling parameter for diverse output. */
     int max_tokens = 512;       /**< Maximum number of tokens to generate. */
+    int timeout_ms = 0;         /**< Generation time budget in ms; 0 = unlimited (Phase 4.3). */
 };
 
 /**
@@ -153,7 +155,10 @@ inline AllModelConfigs load_config() {
                     if (params_json.contains("max_tokens")) {
                         config.params.max_tokens = params_json["max_tokens"].get<int>();
                     }
-                }                
+                    if (params_json.contains("timeout_ms")) {
+                        config.params.timeout_ms = params_json["timeout_ms"].get<int>();
+                    }
+                }
                 configs.push_back(config);
             }
         }
@@ -185,6 +190,8 @@ namespace alyssa_core {
         llama_context* ctx;              /**< Pointer to the unique shared context. */
         int n_ctx;                        /**< Size of the context. */
         int n_batch;                      /**< Size of the batch. */
+        bool owns_model = true;           /**< false = context-only wrapper over a shared model. */
+        bool last_timed_out = false;      /**< Set when generate_raw() hits its time budget. */
 
     public:
         /**
@@ -216,12 +223,53 @@ namespace alyssa_core {
         }
 
         /**
+         * @brief Context-only constructor over an already loaded model (Phase 3.2).
+         *
+         * Creates an additional llama_context on a model owned elsewhere.
+         * llama.cpp supports multiple contexts per model, each usable from its
+         * own thread — this is what makes parallel expert execution possible
+         * without duplicating weights in RAM/VRAM.
+         *
+         * IMPORTANT: the wrapper must be destroyed BEFORE the owning AlyssaCore.
+         */
+        AlyssaCore(llama_model* shared_model, int context_size, int batch_size)
+            : model(shared_model), vocab(nullptr), ctx(nullptr),
+              n_ctx(context_size), n_batch(batch_size), owns_model(false)
+        {
+            if (!model) {
+                throw std::runtime_error("AlyssaCore: modelo compartilhado nulo.");
+            }
+            vocab = llama_model_get_vocab(model);
+
+            llama_context_params ctx_params = llama_context_default_params();
+            ctx_params.n_ctx = n_ctx;
+            ctx_params.n_batch = n_batch;
+
+            ctx = llama_init_from_model(model, ctx_params);
+            if (!ctx) {
+                throw std::runtime_error("AlyssaCore: Falha ao criar contexto compartilhado.");
+            }
+            std::cout << "Contexto adicional criado (modelo compartilhado, n_ctx = "
+                      << n_ctx << ")" << std::endl;
+        }
+
+        /**
          * @brief Destructor for AlyssaCore.
          */
         ~AlyssaCore() {
             if (ctx) llama_free(ctx);
-            if (model) llama_model_free(model);
-            std::cout << "Modelo BASE e Contexto liberados." << std::endl;
+            if (model && owns_model) llama_model_free(model);
+            if (owns_model) std::cout << "Modelo BASE e Contexto liberados." << std::endl;
+        }
+
+        /**
+         * @brief Clear this context's KV cache (all sequences).
+         * @details Pool contexts are reused across turns/experts; without this
+         *          the previous expert's tokens would contaminate the next run.
+         */
+        void clear_kv() {
+            if (!ctx) return;
+            llama_memory_seq_rm(llama_get_memory(ctx), -1, -1, -1);
         }
 
         llama_model* get_model() { return model; }
@@ -229,6 +277,9 @@ namespace alyssa_core {
         llama_context* get_context() { return ctx; }
         int get_n_ctx() { return n_ctx; }
         int get_n_batch() { return n_batch; }
+
+        /// true when the last generate_raw() hit its time budget (Phase 4.3).
+        bool last_generation_timed_out() const { return last_timed_out; }
 
         /**
          * @brief Generates text based on a given prompt (the new part of the conversation).
@@ -247,6 +298,8 @@ namespace alyssa_core {
         ) {
             std::string response;
             llama_batch batch;
+            last_timed_out = false;
+            const auto gen_start = std::chrono::steady_clock::now();
 
             // 1. RAII Sampler to prevent leaks
             ScopedSampler smpl(llama_sampler_chain_init(llama_sampler_chain_default_params()));
@@ -278,6 +331,20 @@ namespace alyssa_core {
             // 5. Generation Loop
             int tokens_generated = 0;
             while (tokens_generated < params.max_tokens) {
+                // Orçamento de tempo (Fase 4.3): estourou → devolve o parcial.
+                // Melhor resposta truncada em Ns do que UI travada indefinidamente.
+                if (params.timeout_ms > 0) {
+                    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - gen_start).count();
+                    if (elapsed_ms > params.timeout_ms) {
+                        last_timed_out = true;
+                        std::cerr << "[AlyssaCore] Timeout de geração (" << params.timeout_ms
+                                  << "ms) após " << tokens_generated
+                                  << " tokens. Retornando resposta parcial." << std::endl;
+                        break;
+                    }
+                }
+
                 llama_token new_token_id = llama_sampler_sample(smpl.get(), ctx, -1);
 
                 if (llama_vocab_is_eog(vocab, new_token_id)) break;

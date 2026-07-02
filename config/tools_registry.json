@@ -1,0 +1,125 @@
+{
+  "settings": {
+    "max_rounds": 2,
+    "max_calls_per_round": 3,
+    "default_timeout_s": 10
+  },
+  "tools": [
+    {
+      "name": "get_datetime",
+      "description": "Retorna a data e hora atuais do sistema",
+      "params": []
+    },
+    {
+      "name": "read_file",
+      "description": "Lê o conteúdo de um arquivo de texto (relativo ao diretório de trabalho)",
+      "params": [
+        {"name": "path", "type": "string", "required": true},
+        {"name": "max_lines", "type": "int", "required": false, "default": "100"}
+      ]
+    },
+    {
+      "name": "list_dir",
+      "description": "Lista os arquivos de um diretório",
+      "params": [
+        {"name": "path", "type": "string", "required": false, "default": "."}
+      ]
+    },
+    {
+      "name": "system_metrics",
+      "description": "Lê métricas do computador (uso de CPU, RAM, temperatura)",
+      "params": []
+    },
+    {
+      "name": "screenshot",
+      "description": "Captura a tela atual e salva em um arquivo de imagem",
+      "params": [
+        {"name": "filename", "type": "string", "required": false, "default": "screenshot.png"}
+      ],
+      "timeout_s": 15
+    },
+    {
+      "name": "web_search",
+      "description": "Busca informações na web e retorna os primeiros resultados",
+      "params": [
+        {"name": "query", "type": "string", "required": true}
+      ],
+      "timeout_s": 15
+    },
+    {
+      "name": "webcam_check",
+      "description": "Olha pela webcam e diz se o usuário está na frente do computador",
+      "params": [],
+      "timeout_s": 15
+    },
+    {
+      "name": "webcam_photo",
+      "description": "Tira uma foto pela webcam e salva em arquivo",
+      "params": [
+        {"name": "filename", "type": "string", "required": false, "default": "webcam.png"}
+      ],
+      "timeout_s": 15
+    },
+    {
+      "name": "open_url",
+      "description": "Abre um site no navegador do computador (ex: YouTube, notícias)",
+      "params": [
+        {"name": "url", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "jogo_da_velha",
+      "description": "Joga jogo da velha com o usuário (jogada=nova recomeça; jogada=1 a 9 marca a casa do usuário)",
+      "params": [
+        {"name": "jogada", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "save_preference",
+      "description": "Salva algo que o usuário demonstrou gostar (pra lembrar depois)",
+      "params": [
+        {"name": "categoria", "type": "string", "required": true},
+        {"name": "valor", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "list_preferences",
+      "description": "Lista o que a Alyssa já aprendeu sobre os gostos do usuário",
+      "params": []
+    },
+    {
+      "name": "screen_info",
+      "description": "Resolução da tela e posição atual do cursor (use antes de mover o mouse)",
+      "params": []
+    },
+    {
+      "name": "mouse_move",
+      "description": "Move o cursor do mouse para uma posição (x, y) na tela",
+      "params": [
+        {"name": "x", "type": "int", "required": true},
+        {"name": "y", "type": "int", "required": true}
+      ]
+    },
+    {
+      "name": "mouse_click",
+      "description": "Clica com o mouse na posição atual do cursor",
+      "params": [
+        {"name": "button", "type": "string", "required": false, "default": "left"}
+      ]
+    },
+    {
+      "name": "keyboard_type",
+      "description": "Digita um texto na janela em foco (como se fosse no teclado)",
+      "params": [
+        {"name": "text", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "keyboard_key",
+      "description": "Pressiona uma tecla ou combo na janela em foco (ex: enter, esc, ctrl+s, alt+tab)",
+      "params": [
+        {"name": "key", "type": "string", "required": true}
+      ]
+    }
+  ]
+}

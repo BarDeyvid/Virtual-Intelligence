@@ -92,6 +92,70 @@ namespace vision_foveal {
     };
 
     /**
+     * @class FrameCache
+     * @brief Frame caching + change detection to kill redundant vision work
+     *        (TODO Phase 3.1).
+     *
+     * Key insight: a FovealCapture depends ONLY on the crop region around the
+     * cursor. So the cache stays valid while (a) the cursor stays in the same
+     * cell and (b) the pixels inside the cached crop barely changed — even if
+     * the rest of the screen changed completely. Global screen change is still
+     * measured every frame and exposed via last_global_change_ratio(), which
+     * is the hook for the future vision-based proactivity trigger.
+     */
+    class FrameCache {
+    public:
+        struct Config {
+            bool enabled = true;
+            double crop_change_threshold = 0.02;   ///< Fraction of changed crop pixels that invalidates
+            int pixel_diff_threshold = 25;         ///< Intensity delta (0-255) for a pixel to count as changed
+            int cursor_cell_px = 32;               ///< Cursor movement beyond this invalidates
+            int signature_size = 32;               ///< Downscale size for the global change signature
+        };
+
+        struct Decision {
+            bool hit = false;
+            double crop_change_ratio = 0.0;        ///< Change inside the cached crop (0 when no cache)
+            double global_change_ratio = 0.0;      ///< Frame-to-frame change of the whole screen
+        };
+
+        explicit FrameCache(Config cfg = {}) : config(cfg) {}
+
+        /**
+         * @brief Evaluate whether the cached capture is still valid for this
+         *        frame + cursor. Also updates the global change signature.
+         */
+        Decision evaluate(const cv::Mat& frame, int cursor_x, int cursor_y);
+
+        /// Store a freshly computed capture as the new cache entry.
+        void store(const cv::Mat& frame, const FovealCapture& result);
+
+        const FovealCapture& cached_result() const { return cached; }
+
+        // Stats (for logs/UI)
+        uint64_t hits() const { return hit_count; }
+        uint64_t misses() const { return miss_count; }
+        double hit_rate() const {
+            uint64_t total = hit_count + miss_count;
+            return total > 0 ? static_cast<double>(hit_count) / total : 0.0;
+        }
+        double last_global_change_ratio() const { return last_global_change; }
+
+        void invalidate() { has_cache = false; }
+
+    private:
+        Config config;
+        bool has_cache = false;
+        FovealCapture cached;
+        cv::Mat cached_crop_gray;                  ///< Grayscale of the cached crop region
+        cv::Rect cached_crop_rect;
+        int cached_cursor_x = 0, cached_cursor_y = 0;
+        cv::Mat prev_signature;                    ///< Downscaled gray of the previous frame
+        double last_global_change = 0.0;
+        uint64_t hit_count = 0, miss_count = 0;
+    };
+
+    /**
      * @class FovealVision
      * @brief Cursor-focused vision analysis
      */
@@ -101,6 +165,7 @@ namespace vision_foveal {
         int edge_grid_size;               // Usually 8 (creates 8x8 edge grid)
         double canny_low_threshold;
         double canny_high_threshold;
+        FrameCache frame_cache;           // Frame cache + change detection (Phase 3.1)
         
         // Internal: Quantize color crop to tokens
         std::vector<int> quantize_colors(const cv::Mat& crop, int grid_size = 8);
@@ -128,6 +193,18 @@ namespace vision_foveal {
          * @return FovealCapture with zoom, edges, and tokens
          */
         FovealCapture analyze(const cv::Mat& frame, int cursor_x, int cursor_y);
+
+        /**
+         * @brief Cached variant of analyze() (TODO Phase 3.1).
+         * @details Returns the cached capture when the frame region around the
+         *          cursor didn't change; runs the full analysis otherwise.
+         *          Expected ~60-70% latency cut on static scenes.
+         */
+        FovealCapture analyze_cached(const cv::Mat& frame, int cursor_x, int cursor_y);
+
+        /// Access cache stats (hit rate, global change ratio for proactivity).
+        const FrameCache& get_frame_cache() const { return frame_cache; }
+        FrameCache& get_frame_cache() { return frame_cache; }
 
         /**
          * @brief Get high-detail color tokens for 64×64 crop (different from 8×8 grid)

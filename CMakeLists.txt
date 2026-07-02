@@ -103,7 +103,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/ToolExecutor.cpp includes/VisionEnhancer.cpp includes/PresenceDetector.cpp includes/InputController.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
@@ -114,6 +114,11 @@ set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
 set(TEST_VOICE tests/test_voice.cpp includes/voice/VoicePipeline.cpp)
 set(TEST_OPENCV test_cuda.cpp)
 set(TEST_FUSION_UTILS tests/test_fusion_utils.cpp)
+set(TEST_TOOL_EXECUTOR tests/test_tool_executor.cpp includes/ToolExecutor.cpp)
+set(TEST_PERSONALITY tests/test_personality.cpp)
+set(TEST_PROACTIVITY tests/test_proactivity.cpp)
+set(TEST_FRAME_CACHE tests/test_frame_cache.cpp includes/VisionEnhancer.cpp)
+set(TEST_COMPANION tests/test_companion.cpp includes/InputController.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
@@ -121,6 +126,13 @@ add_executable(alyssa_cli_with_voice ${Alyssa_CLI_WITH_VOICE_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
 add_executable(test_fusion_utils ${TEST_FUSION_UTILS})
+add_executable(test_tool_executor ${TEST_TOOL_EXECUTOR})
+target_link_libraries(test_tool_executor PRIVATE Threads::Threads)
+add_executable(test_personality ${TEST_PERSONALITY})
+add_executable(test_proactivity ${TEST_PROACTIVITY})
+add_executable(test_frame_cache ${TEST_FRAME_CACHE})
+target_link_libraries(test_frame_cache PRIVATE ${OpenCV_LIBS})
+add_executable(test_companion ${TEST_COMPANION})
 
 # --- Linking ---
 set(COMMON_LIBS
@@ -156,7 +168,12 @@ else()
 endif()
 
 # --- Post-Build Commands ---
-foreach(TARGET alyssa_cli alyssa_cli_with_voice)
+# IMPORTANTE: alyssa_cli e alyssa_cli_with_voice compartilham o MESMO diretório
+# de saída (build/<Config>/). Rodar a cópia de models/config/DLLs nos dois em
+# paralelo (-j) faz duas escritas simultâneas no mesmo arquivo → "Permission
+# denied". Solução: copiar UMA vez (no alyssa_cli) e forçar o voice a buildar
+# depois, então ele encontra tudo já no lugar.
+foreach(TARGET alyssa_cli)
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
             ${CMAKE_SOURCE_DIR}/models
@@ -189,3 +206,7 @@ foreach(TARGET alyssa_cli alyssa_cli_with_voice)
         )
     endif()
 endforeach()
+
+# Serializa o voice depois do cli: mesmo diretório de saída, sem cópias
+# concorrentes (inclui o applocal.ps1 do vcpkg, que também escreve DLLs lá).
+add_dependencies(alyssa_cli_with_voice alyssa_cli)

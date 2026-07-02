@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "check_interval_s": 60,
+  "boredom_threshold_s": 300,
+  "min_idle_for_mood_s": 120,
+  "cooldown_s": 600,
+  "startup_grace_s": 120,
+  "presence_detection": true,
+  "presence_check_interval_s": 90,
+  "min_away_for_welcome_s": 180,
+  "away_leisure": true,
+  "leisure_after_away_s": 240,
+  "max_cortisol_for_boredom": 0.7,
+  "stress_cortisol_threshold": 0.65,
+  "excitement_dopamine_threshold": 0.75
+}

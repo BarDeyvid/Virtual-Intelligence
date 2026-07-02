@@ -5,6 +5,100 @@
 
 namespace vision_foveal {
 
+    // =========================================================================
+    // FrameCache (Phase 3.1)
+    // =========================================================================
+
+    // Fração de pixels de 'a' que diferem de 'b' além do threshold de intensidade.
+    static double changed_pixel_ratio(const cv::Mat& a, const cv::Mat& b, int pixel_threshold) {
+        if (a.empty() || b.empty() || a.size() != b.size()) return 1.0;
+        cv::Mat diff;
+        cv::absdiff(a, b, diff);
+        cv::Mat changed;
+        cv::threshold(diff, changed, pixel_threshold, 255, cv::THRESH_BINARY);
+        return static_cast<double>(cv::countNonZero(changed)) / (a.rows * a.cols);
+    }
+
+    static cv::Mat to_gray(const cv::Mat& src) {
+        if (src.channels() == 1) return src;
+        cv::Mat gray;
+        cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
+        return gray;
+    }
+
+    FrameCache::Decision FrameCache::evaluate(const cv::Mat& frame, int cursor_x, int cursor_y) {
+        Decision decision;
+        if (frame.empty()) return decision;
+
+        // 1. Assinatura global (frame inteiro, reduzido): mede o quanto a CENA
+        //    mudou desde o último frame — alimenta o gatilho de proatividade,
+        //    independente de hit/miss do crop.
+        //    Ordem importa para o custo: subamostra PRIMEIRO (NEAREST lê só
+        //    signature_size² pixels) e converte pra cinza só o thumbnail.
+        //    Fazer cvtColor/INTER_AREA no frame inteiro custava mais que a
+        //    própria análise foveal.
+        cv::Mat small;
+        cv::resize(frame, small,
+                   cv::Size(config.signature_size, config.signature_size), 0, 0, cv::INTER_NEAREST);
+        cv::Mat signature = to_gray(small);
+        if (!prev_signature.empty()) {
+            last_global_change = changed_pixel_ratio(signature, prev_signature,
+                                                     config.pixel_diff_threshold);
+        }
+        decision.global_change_ratio = last_global_change;
+        prev_signature = signature;
+
+        if (!config.enabled || !has_cache) {
+            ++miss_count;
+            return decision;
+        }
+
+        // 2. Cursor saiu da célula? O crop mudou de lugar, cache inválido.
+        //    (Jitter de mouse dentro da célula não invalida.)
+        if (std::abs(cursor_x - cached_cursor_x) > config.cursor_cell_px ||
+            std::abs(cursor_y - cached_cursor_y) > config.cursor_cell_px) {
+            ++miss_count;
+            return decision;
+        }
+
+        // 3. Diff parcial: só a região do crop cacheado importa. Mudança fora
+        //    dela não invalida o resultado foveal.
+        cv::Rect bounded = cached_crop_rect & cv::Rect(0, 0, frame.cols, frame.rows);
+        if (bounded.width <= 0 || bounded.height <= 0 ||
+            bounded.size() != cached_crop_gray.size()) {
+            ++miss_count;
+            return decision;
+        }
+
+        cv::Mat current_crop_gray = to_gray(frame(bounded));
+        decision.crop_change_ratio = changed_pixel_ratio(current_crop_gray, cached_crop_gray,
+                                                         config.pixel_diff_threshold);
+
+        if (decision.crop_change_ratio <= config.crop_change_threshold) {
+            decision.hit = true;
+            ++hit_count;
+        } else {
+            ++miss_count;
+        }
+        return decision;
+    }
+
+    void FrameCache::store(const cv::Mat& frame, const FovealCapture& result) {
+        cached = result;
+        cached_cursor_x = result.cursor_screen_x;
+        cached_cursor_y = result.cursor_screen_y;
+        cached_crop_rect = cv::Rect(result.crop_x, result.crop_y,
+                                    result.crop_width, result.crop_height);
+
+        cv::Rect bounded = cached_crop_rect & cv::Rect(0, 0, frame.cols, frame.rows);
+        if (bounded.width > 0 && bounded.height > 0) {
+            cached_crop_gray = to_gray(frame(bounded)).clone();
+            has_cache = true;
+        } else {
+            has_cache = false;
+        }
+    }
+
     std::vector<int> FovealVision::quantize_colors(const cv::Mat& crop, int grid_size) {
         cv::Mat small;
         cv::resize(crop, small, cv::Size(grid_size, grid_size), 0, 0, cv::INTER_AREA);
@@ -123,6 +217,16 @@ namespace vision_foveal {
         // Detect edges and create edge grid
         detect_edges(result.color_crop, result);
         
+        return result;
+    }
+
+    FovealCapture FovealVision::analyze_cached(const cv::Mat& frame, int cursor_x, int cursor_y) {
+        FrameCache::Decision decision = frame_cache.evaluate(frame, cursor_x, cursor_y);
+        if (decision.hit) {
+            return frame_cache.cached_result();
+        }
+        FovealCapture result = analyze(frame, cursor_x, cursor_y);
+        frame_cache.store(frame, result);
         return result;
     }
 

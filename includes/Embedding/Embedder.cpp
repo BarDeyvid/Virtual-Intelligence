@@ -153,6 +153,10 @@ std::vector<std::vector<float>> Embedder::generate_embeddings(const std::vector<
         throw std::runtime_error("Embedder não inicializado. Chame initialize() primeiro.");
     }
 
+    // Contexto e batch internos são únicos: chamadas concorrentes (experts em
+    // paralelo, Fase 3.2) precisam ser serializadas aqui.
+    std::lock_guard<std::mutex> lock(infer_mtx);
+
     const int n_prompts = texts.size();
     if (n_prompts == 0) {
         return {};

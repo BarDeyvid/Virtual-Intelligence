@@ -9,5 +9,8 @@
     "editor.quickSuggestionsDelay": 0,
     "editor.acceptSuggestionOnEnter": "on",
     "C_Cpp.intelliSenseEngine": "default",
-    "C_Cpp.autocomplete": "default"
+    "C_Cpp.autocomplete": "default",
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    }
 }
