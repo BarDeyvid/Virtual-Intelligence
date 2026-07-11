@@ -1,0 +1,33 @@
+# Forces gameplayModel to emit exactly one structured Minecraft action per turn,
+# in the same [TAG] ... [TAG] ... convention ExpertBase::parse_expert_signal()
+# already parses for the other experts (see ExpertBase.hpp).
+#
+# [AÇÃO] <verbo> <argumentos> [CONFIANÇA] <0-1> [CONTEXTO] <texto livre>
+#
+# Targets are LABELS (B1, B2, E1...), not raw X/Y/Z: a small model asked to
+# free-generate coordinates doesn't reliably do arithmetic — observed
+# concretely mashing the digits of its own position string into a fake
+# target (position "(1.36368, -60, -9.9278)" -> invented target
+# "1368 60 99278"), on both the 1B and a larger E2B model alike. Labels turn
+# "generate three correct integers" into "copy one short token from a list
+# already in the prompt" — MinecraftSession assigns labels to nearby
+# blocks/entities and resolves them back to real coordinates in
+# ActionExecutor before anything reaches the sidecar.
+
+root       ::= "[AÇÃO] " action " [CONFIANÇA] " confidence " [CONTEXTO] " context "\n"
+
+action     ::= "mover " label | "minerar " label | "colocar " label " " word | "atacar " word | "craftar " word " " integer | "falar " sentence | "esperar"
+
+# Bounded lengths throughout: the grammar can only constrain shape, not
+# semantic sanity (a small quantized model still picks bad values inside a
+# valid shape), but unbounded [0-9]+/.+ let a single bad tick emit
+# arbitrarily long garbage — e.g. a ~30-digit "confidence" or a raw control
+# byte (ESC included) inside the free-text fields, which then gets printed
+# as-is by ActionExecutor's error logging. Capping length keeps every field
+# plausible and keeps regex matching downstream cheap and bounded too.
+label      ::= ("B" | "E") [0-9]
+integer    ::= "-"? [0-9] [0-9]{0,5}
+word       ::= [a-zA-Z_] [a-zA-Z0-9_]{0,31}
+sentence   ::= [^\x00-\x1F\x7F\[]{1,80}
+context    ::= [^\x00-\x1F\x7F]{1,80}
+confidence ::= ("0" | "1") ("." [0-9] [0-9]?)?

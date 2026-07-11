@@ -1,6 +1,6 @@
 #include "AlyssaCore.hpp"
 #include "WeightedFusion/WeightedFusion.hpp"
-#include "voice/ElevenLabsTTS.hpp"
+#include "voice/TTSBase.hpp"
 #include "AlyssaMemoryHandler.hpp"
 #include "IExpert.hpp"
 #include "EndocrineSystem.hpp"
@@ -93,10 +93,10 @@ public:
     /**
      * @brief Process user input with weighted fusion and TTS.
      * @param input User's text input.
-     * @param tts ElevenLabsTTS instance for voice synthesis.
+     * @param tts TTS backend (ElevenLabs, Kokoro, ...) for voice synthesis.
      * @return Fused response from multiple experts.
      */
-    std::string think_with_fusion(const std::string& input, ElevenLabsTTS& tts);
+    std::string think_with_fusion(const std::string& input, ITTS& tts);
 
     /**
      * @brief Process user input with weighted fusion without TTS.
@@ -240,6 +240,61 @@ public:
     }
 
     /**
+     * @brief Runs one gameplayModel inference tick (MinecraftSession).
+     * @param world_state_prompt Distilled world-state text (position, health,
+     *        inventory, nearby blocks/entities — see MinecraftSession::build_prompt).
+     * @return Raw grammar-constrained action signal, e.g.
+     *         "[AÇÃO] mover 10 64 -3 [CONFIANÇA] 0.8 [CONTEXTO] indo minerar".
+     * @details Thin public wrapper: run_expert() itself stays private so chat
+     *          experts can't be invoked from outside CoreIntegration's own flow.
+     *
+     *          run_expert() only clears the KV cache when active_expert_in_cache
+     *          changes (see its "Trocar contexto" block) — calling the SAME
+     *          expert every tick never trips that check, so the cache grows by
+     *          the full cumulative prompt on every call until llama_decode()
+     *          fails once n_ctx is exceeded. Each tick's action doesn't need
+     *          cross-tick KV continuity anyway, so force the clear every time.
+     *
+     *          IMPORTANT: run_expert() builds the prompt from
+     *          expert_histories[expert_id] (this map), NOT from the IExpert
+     *          object's own internal history member — IExpert::clear_history()
+     *          clears that other, unused vector. Clearing the wrong one here
+     *          previously let the real history grow forever until the prompt
+     *          itself exceeded n_batch and crashed with
+     *          "GGML_ASSERT(n_tokens_all <= cparams.n_batch) failed".
+     *
+     *          gameplayModel now runs on its own dedicated core (E2B), not
+     *          the shared 1B core_instance — clear_kv_cache() only clears the
+     *          latter, so it's a no-op for gameplayModel's actual KV cache.
+     *          clear_own_kv_cache() (IExpert.hpp) targets whichever core the
+     *          expert really uses; kept the clear_kv_cache() call too since
+     *          it also resets active_expert_in_cache tracking for the
+     *          shared-core experts, harmless here either way.
+     */
+    std::string run_gameplay_tick(const std::string& world_state_prompt) {
+        clear_kv_cache();
+        if (auto it = experts.find("gameplayModel"); it != experts.end()) {
+            it->second->clear_own_kv_cache();
+        }
+        free_chat_history(expert_histories["gameplayModel"]);
+        return run_expert("gameplayModel", world_state_prompt);
+    }
+
+    /**
+     * @brief Footprint em VRAM do modelo base (LLMResident, scheduler de VRAM).
+     * @return Bytes dos pesos do modelo 1B compartilhado, ou 0 se não inicializado.
+     * @details Cobre só os pesos do modelo base — o 4B vive dentro do expert
+     *          "alyssa" e o KV cache não entra na conta. Os números completos
+     *          (contexto, 4B, Whisper) estão em plano_scheduler/BASELINE.md;
+     *          se precisar do total real, some a partir de lá.
+     */
+    std::size_t llm_vram_footprint_bytes() {
+        if (!core_instance) return 0;
+        llama_model* m = core_instance->get_model();
+        return m ? static_cast<std::size_t>(llama_model_size(m)) : 0;
+    }
+
+    /**
      * @brief Clear all caches including KV cache and expert histories.
      */
     void clear_all_cache() {
@@ -270,7 +325,7 @@ private:
     std::string think_with_fusion_core(
         const std::string& input,
         bool use_tts,
-        ElevenLabsTTS* tts
+        ITTS* tts
     );
 
     // =========================================================================
@@ -297,11 +352,20 @@ private:
      * @param tts      TTS instance (nullptr when use_tts=false).
      * @return Final response with tool results incorporated.
      */
-    std::string resolve_tool_calls(std::string response, bool use_tts, ElevenLabsTTS* tts);
+    std::string resolve_tool_calls(std::string response, bool use_tts, ITTS* tts);
 
     // =========================================================================
     // Memory Compression & Resilience (Phase 4)
     // =========================================================================
+
+    /**
+     * @brief One-line snapshot of "now" injected into every Alyssa prompt.
+     * @details Awareness passiva: relógio local, janela em foco, presença
+     *          (snapshot do stream — nunca abre a webcam aqui) e CPU/RAM.
+     *          Fonte indisponível fica de fora da linha em vez de falhar.
+     * @return Linha "[AMBIENTE] ..." terminada em \n, pronta pra concatenar.
+     */
+    std::string build_ambient_context();
 
     /**
      * @brief Summarize an archived history chunk with the base 1B model (Phase 4.2).
@@ -345,7 +409,7 @@ private:
         const std::string& expert_id,
         const std::string& input,
         bool use_tts = false,
-        ElevenLabsTTS* tts = nullptr
+        ITTS* tts = nullptr
     );
 
     /**

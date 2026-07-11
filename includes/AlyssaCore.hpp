@@ -40,6 +40,8 @@ struct SimpleModelParameters {
     double top_p = 1.0;         /**< Top-p (nucleus) sampling parameter for diverse output. */
     int max_tokens = 512;       /**< Maximum number of tokens to generate. */
     int timeout_ms = 0;         /**< Generation time budget in ms; 0 = unlimited (Phase 4.3). */
+    std::string grammar;         /**< Optional GBNF grammar source; empty = unconstrained sampling. */
+    std::string grammar_root = "root"; /**< Start rule name within `grammar`. */
 };
 
 /**
@@ -157,6 +159,18 @@ inline AllModelConfigs load_config() {
                     }
                     if (params_json.contains("timeout_ms")) {
                         config.params.timeout_ms = params_json["timeout_ms"].get<int>();
+                    }
+                    if (params_json.contains("grammar_file")) {
+                        std::ifstream gfile(params_json["grammar_file"].get<std::string>());
+                        if (gfile.is_open()) {
+                            config.params.grammar.assign(
+                                std::istreambuf_iterator<char>(gfile), std::istreambuf_iterator<char>());
+                        } else {
+                            std::cerr << "ERRO: grammar_file não encontrado para " << config.id << std::endl;
+                        }
+                    }
+                    if (params_json.contains("grammar_root")) {
+                        config.params.grammar_root = params_json["grammar_root"].get<std::string>();
                     }
                 }
                 configs.push_back(config);
@@ -306,6 +320,20 @@ namespace alyssa_core {
             
             float top_p = (params.top_p > 0.0) ? static_cast<float>(params.top_p) : 1.0f;
             float temp = (params.temperature > 0.0) ? static_cast<float>(params.temperature) : 0.8f;
+
+            // Grammar goes first: it masks invalid-token logits to -inf so every
+            // downstream sampler (min_p/temp/penalties/dist) only ever sees the
+            // subset of tokens the GBNF grammar still allows at this position.
+            if (!params.grammar.empty()) {
+                llama_sampler* grammar = llama_sampler_init_grammar(
+                    vocab, params.grammar.c_str(), params.grammar_root.c_str());
+                if (grammar) {
+                    llama_sampler_chain_add(smpl.get(), grammar);
+                } else {
+                    std::cerr << "[AlyssaCore] Falha ao inicializar grammar (root=\""
+                              << params.grammar_root << "\"); gerando sem restrição." << std::endl;
+                }
+            }
 
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_min_p(0.05f, 1));
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_temp(temp));

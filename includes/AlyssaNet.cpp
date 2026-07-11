@@ -2,7 +2,7 @@
 
 #include "AlyssaNet.hpp"
 #include "AlyssaCore.hpp"
-#include "voice/ElevenLabsTTS.hpp"
+#include "voice/TTSBase.hpp"
 #include "log.hpp"
 #include "ExpertBase.hpp"
 #include "pc_metrics_reader.hpp"
@@ -143,11 +143,15 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         // 2. Buscar configurações dos modelos
         const SimpleModelConfig* base_1b_config = nullptr;
         const SimpleModelConfig* alyssa_4b_config = nullptr;
-        
+        const SimpleModelConfig* gameplay_config = nullptr;
+
         for (const auto& cfg : configs) {
+            if (cfg.id == "gameplayModel") {
+                gameplay_config = &cfg;
+            }
             if (cfg.id == "alyssa") {
                 alyssa_4b_config = &cfg;
-            } else if (cfg.model_path.find("1b") != std::string::npos || 
+            } else if (cfg.model_path.find("1b") != std::string::npos ||
                       cfg.model_path.find("1B") != std::string::npos ||
                       cfg.id != "alyssa") {
                 // Usar o primeiro modelo 1b que não seja alyssa como base
@@ -268,7 +272,13 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
                 std::cout << "[INFO] Especialista '" << cfg.id << "' (4b) será registrado separadamente" << std::endl;
                 continue;
             }
-            
+            // Pular gameplayModel (E2B) - também tem core próprio, registrado
+            // separadamente depois da Alyssa (ver passo 9 abaixo).
+            if (cfg.id == "gameplayModel") {
+                std::cout << "[INFO] Especialista '" << cfg.id << "' (E2B) será registrado separadamente" << std::endl;
+                continue;
+            }
+
             std::cout << "Configurando especialista: " << cfg.id 
                       << " (usando modelo base 1b, max_tokens=" << cfg.params.max_tokens << ")" << std::endl;
             
@@ -310,30 +320,33 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
                 core_instance->get_model(), fallback_ctx, base_1b_config->n_batch);
         }
         
-        // Criar especialista Alyssa que usa o core separado
-        class Alyssa4bExpert : public alyssa_experts::ExpertBase {
+        // Expert com core próprio (não usa o modelo base 1b compartilhado).
+        // Batizada de "Alyssa4bExpert" originalmente, mas nada aqui é
+        // específico da Alyssa — reaproveitada abaixo para gameplayModel
+        // (E2B) também, em vez de duplicar a mesma classe duas vezes.
+        class DedicatedCoreExpert : public alyssa_experts::ExpertBase {
         private:
-            std::unique_ptr<alyssa_core::AlyssaCore> alyssa_core;
-            
+            std::unique_ptr<alyssa_core::AlyssaCore> own_core;
+
         public:
-            Alyssa4bExpert(const SimpleModelConfig& cfg, std::unique_ptr<alyssa_core::AlyssaCore> core)
-                : ExpertBase(cfg), alyssa_core(std::move(core)) {
+            DedicatedCoreExpert(const SimpleModelConfig& cfg, std::unique_ptr<alyssa_core::AlyssaCore> core)
+                : ExpertBase(cfg), own_core(std::move(core)) {
             }
-            
+
             bool initialize(llama_model* shared_model) override {
                 // Não precisamos inicializar com o modelo compartilhado
                 // pois temos nosso próprio core
                 if (config.usa_LoRA && !config.lora_path.empty()) {
-                    lora = llama_adapter_lora_init(alyssa_core->get_model(), config.lora_path.c_str());
+                    lora = llama_adapter_lora_init(own_core->get_model(), config.lora_path.c_str());
                     if (!lora) {
-                        std::cerr << "Falha ao carregar LoRA para Alyssa: " << config.lora_path << std::endl;
+                        std::cerr << "Falha ao carregar LoRA para " << config.id << ": " << config.lora_path << std::endl;
                         return false;
                     }
-                    std::cout << "LoRA carregado para Alyssa: " << config.lora_path << std::endl;
+                    std::cout << "LoRA carregado para " << config.id << ": " << config.lora_path << std::endl;
                 }
                 return true;
             }
-            
+
             std::string run(
                 const std::string& input,
                 alyssa_core::AlyssaCore* core_instance,
@@ -342,11 +355,11 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
                 llama_adapter_lora** active_lora_in_context,
                 std::function<void(const std::string&)> stream_callback = nullptr
             ) override {
-                // Usar nosso próprio core (4b) em vez do core_instance passado
-                return ExpertBase::run(input, alyssa_core.get(), lora_override, 
+                // Usar nosso próprio core em vez do core_instance passado
+                return ExpertBase::run(input, own_core.get(), lora_override,
                                      current_history, active_lora_in_context, stream_callback);
             }
-            
+
             alyssa_fusion::ExpertContribution get_contribution(
                 const std::string& input,
                 alyssa_core::AlyssaCore* core_instance,
@@ -356,19 +369,57 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
                 llama_adapter_lora** active_lora_in_context,
                 std::function<void(const std::string&)> stream_callback = nullptr
             ) override {
-                // Usar nosso próprio core (4b) em vez do core_instance passado
-                return ExpertBase::get_contribution(input, alyssa_core.get(), embedder, lora_override,
+                // Usar nosso próprio core em vez do core_instance passado
+                return ExpertBase::get_contribution(input, own_core.get(), embedder, lora_override,
                                                   current_history, active_lora_in_context, stream_callback);
             }
+
+            void clear_own_kv_cache() override {
+                if (own_core) own_core->clear_kv();
+            }
         };
-        
+
         // Registrar especialista Alyssa com modelo 4b
-        auto alyssa_expert = std::make_unique<Alyssa4bExpert>(*alyssa_4b_config, std::move(alyssa_core));
+        auto alyssa_expert = std::make_unique<DedicatedCoreExpert>(*alyssa_4b_config, std::move(alyssa_core));
         if (alyssa_expert->initialize(nullptr)) {
             register_expert(std::move(alyssa_expert));
             std::cout << "[INFO] Especialista Alyssa (4b) registrado com sucesso" << std::endl;
         } else {
             std::cerr << "Falha ao inicializar especialista Alyssa" << std::endl;
+        }
+
+        // 9. gameplayModel (Minecraft, PoC Fase 6+): modelo próprio (E2B) em
+        // vez do 1b compartilhado — o 1b não tinha capacidade de raciocínio
+        // suficiente para seguir instruções do jogador ou julgar bem a ação
+        // dentro do formato imposto pela grammar. Mesmo fallback degradado da
+        // Alyssa 4B: se o E2B falhar ao carregar, cai para o 1b compartilhado
+        // em vez de derrubar o sistema inteiro.
+        if (gameplay_config) {
+            std::cout << "[INFO] Inicializando modelo separado para gameplayModel: "
+                      << gameplay_config->model_path << std::endl;
+
+            int gameplay_context_size = gameplay_config->n_ctx;
+            if (gameplay_context_size < 4096) gameplay_context_size = 4096;
+
+            std::unique_ptr<alyssa_core::AlyssaCore> gameplay_core;
+            try {
+                gameplay_core = std::make_unique<alyssa_core::AlyssaCore>(
+                    gameplay_config->model_path, gameplay_context_size);
+            } catch (const std::exception& e) {
+                std::cerr << "[Fallback] Falha ao carregar modelo do gameplayModel (" << e.what()
+                          << "). Usando modelo base 1B como fallback — qualidade reduzida." << std::endl;
+                int fallback_ctx = std::min(gameplay_context_size, 8192);
+                gameplay_core = std::make_unique<alyssa_core::AlyssaCore>(
+                    core_instance->get_model(), fallback_ctx, base_1b_config->n_batch);
+            }
+
+            auto gameplay_expert = std::make_unique<DedicatedCoreExpert>(*gameplay_config, std::move(gameplay_core));
+            if (gameplay_expert->initialize(nullptr)) {
+                register_expert(std::move(gameplay_expert));
+                std::cout << "[INFO] Especialista gameplayModel (E2B) registrado com sucesso" << std::endl;
+            } else {
+                std::cerr << "Falha ao inicializar especialista gameplayModel" << std::endl;
+            }
         }
 
         initialized = true;
@@ -793,6 +844,62 @@ std::string CoreIntegration::generate_fallback_response(const std::string& promp
     }
 }
 
+std::string CoreIntegration::build_ambient_context() {
+    std::ostringstream amb;
+
+    // Relógio local: dia da semana + hora
+    std::time_t now = std::time(nullptr);
+    std::tm tm_buf{};
+#ifdef _WIN32
+    localtime_s(&tm_buf, &now);
+#else
+    localtime_r(&now, &tm_buf);
+#endif
+    static const char* dias[] = {"domingo", "segunda", "terça", "quarta",
+                                 "quinta", "sexta", "sábado"};
+    char hhmm[6];
+    std::snprintf(hhmm, sizeof(hhmm), "%02d:%02d", tm_buf.tm_hour, tm_buf.tm_min);
+    amb << dias[tm_buf.tm_wday] << ", " << hhmm;
+
+    // Janela em foco: o que o usuário está fazendo agora
+#ifdef _WIN32
+    if (HWND fg = GetForegroundWindow()) {
+        wchar_t wtitle[256];
+        int wlen = GetWindowTextW(fg, wtitle, 256);
+        if (wlen > 0) {
+            char title[512];
+            int len = WideCharToMultiByte(CP_UTF8, 0, wtitle, wlen,
+                                          title, sizeof(title) - 1, nullptr, nullptr);
+            if (len > 0) {
+                title[len] = '\0';
+                amb << " · janela ativa: \"" << title << "\"";
+            }
+        }
+    }
+#endif
+
+    // Presença: só o snapshot do stream — check() bloqueia 1-2s e não entra aqui
+    if (presence_detector && presence_detector->is_streaming()) {
+        auto p = presence_detector->latest();
+        if (p.available) {
+            amb << " · usuário " << (p.present ? "presente" : "ausente");
+            if (p.brightness < 60.0) amb << " (sala escura)";
+        }
+    }
+
+    // CPU/RAM: reader estático para o delta de CPU funcionar entre turnos.
+    // Seguro: todos os chamadores rodam serializados sob brain_mtx.
+    static PCMetricsReader ambient_metrics;
+    float cpu = ambient_metrics.get_cpu_usage();
+    float ram = ambient_metrics.get_ram_usage();
+    if (cpu >= 0.0f && ram >= 0.0f) {
+        amb << " · CPU " << static_cast<int>(cpu + 0.5f)
+            << "% · RAM " << static_cast<int>(ram + 0.5f) << "%";
+    }
+
+    return "[AMBIENTE] " + amb.str() + "\n";
+}
+
 std::string CoreIntegration::generate_proactive_message(const std::string& reason) {
     if (!initialized || !core_instance) return "";
 
@@ -822,7 +929,8 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
     std::string prefs_line = alyssa_prefs::render_preferences_line();
     if (!prefs_line.empty()) prefs_line = "[MEMÓRIA DE GOSTOS] " + prefs_line + "\n\n";
 
-    std::string prompt = personality_context + hormonal_context + tools_context + prefs_line +
+    std::string prompt = personality_context + hormonal_context + build_ambient_context() +
+        tools_context + prefs_line +
         "[INICIATIVA PRÓPRIA] " + reason + "\n\n"
         "Escreva UMA mensagem curta e espontânea, como quem manda mensagem no chat "
         "sem ter sido chamada. Não cumprimente como se fosse a primeira conversa do dia "
@@ -844,7 +952,7 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
     return response;
 }
 
-std::string CoreIntegration::resolve_tool_calls(std::string response, bool use_tts, ElevenLabsTTS* tts) {
+std::string CoreIntegration::resolve_tool_calls(std::string response, bool use_tts, ITTS* tts) {
     if (!tool_executor) return response;
 
     const int max_rounds = tool_executor->max_rounds();
@@ -1135,7 +1243,7 @@ std::string CoreIntegration::run_expert(
     const std::string& expert_id,
     const std::string& input,
     bool use_tts,
-    ElevenLabsTTS* tts
+    ITTS* tts
 ) {
     if (!initialized) {
         return "Erro: Sistema não inicializado.";
@@ -1183,15 +1291,36 @@ std::string CoreIntegration::run_expert(
         stream_callback = [&](const std::string& piece) {
             printf("%s", piece.c_str());
             fflush(stdout);
-            
+
             sentence_buffer += piece;
-            size_t punctuation_pos = sentence_buffer.find_first_of(".!?");
-            
-            if (punctuation_pos != std::string::npos) {
-                std::string sentence = sentence_buffer.substr(0, punctuation_pos + 1);
-                sentence_buffer = sentence_buffer.substr(punctuation_pos + 1);
-                sentence.erase(0, sentence.find_first_not_of(" \t\n\r"));
-                
+
+            // Fatia por sentença COMPLETA: pontuação final seguida de espaço.
+            // Cortar em qualquer '.' picotava a fala — "..." virava três
+            // fronteiras e sobravam fragmentos de uma palavra ("Hotel", "é")
+            // falados isolados. Regras:
+            //   - fronteira = [.!?] com whitespace logo depois (o próximo
+            //     token de um "..." ainda pode ser outro ponto);
+            //   - sentença mínima de 12 bytes: fragmento curto ("É.") junta
+            //     com a próxima em vez de virar um utterance próprio.
+            constexpr size_t MIN_SENTENCE_BYTES = 12;
+            for (;;) {
+                size_t cut = std::string::npos;
+                for (size_t i = 0; i + 1 < sentence_buffer.size(); ++i) {
+                    const char c = sentence_buffer[i];
+                    if ((c == '.' || c == '!' || c == '?') &&
+                        std::isspace(static_cast<unsigned char>(sentence_buffer[i + 1])) &&
+                        i + 1 >= MIN_SENTENCE_BYTES) {
+                        cut = i;
+                        break;
+                    }
+                }
+                if (cut == std::string::npos) break;
+
+                std::string sentence = sentence_buffer.substr(0, cut + 1);
+                sentence_buffer.erase(0, cut + 1);
+                // Trim de espaços e de pontuação órfã herdada da sentença
+                // anterior (restos de "..." etc.).
+                sentence.erase(0, sentence.find_first_not_of(" \t\n\r.!?"));
                 if (!sentence.empty()) {
                     tts->synthesizeAndPlay(sentence);
                 }
@@ -1402,6 +1531,7 @@ std::string CoreIntegration::generate_fused_input(
     // entrada: modelos pequenos dão mais atenção ao fim do prompt.
     std::string fused_prompt = personality_context +
                                hormonal_context +
+                               build_ambient_context() +
                                thoughts +
                                tools_context +
                                "ENTRADA DO USUÁRIO: \"" + original_input + "\"\n\n" +
@@ -1425,7 +1555,7 @@ std::string CoreIntegration::generate_fused_input(
 std::string CoreIntegration::think_with_fusion_core(
     const std::string& input,
     bool use_tts,
-    ElevenLabsTTS* tts
+    ITTS* tts
 ) {
     if (!initialized || !core_instance || !fusion_engine) {
         return "Erro: Sistema não inicializado corretamente.";
@@ -1456,7 +1586,7 @@ std::string CoreIntegration::think_with_fusion_core(
             endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
         std::string fast_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
 
-        std::string fast_prompt = fast_personality + fast_tools +
+        std::string fast_prompt = fast_personality + fast_tools + build_ambient_context() +
             "[CONVERSA CASUAL] Responda curto e natural, como Alyssa: " + input;
 
         std::string fast_resp = run_expert("alyssa", fast_prompt, use_tts, tts);
@@ -1742,7 +1872,7 @@ std::string CoreIntegration::think_with_fusion_core(
 /**
  * @brief TTS-enabled wrapper over think_with_fusion_core.
  */
-std::string CoreIntegration::think_with_fusion(const std::string& input, ElevenLabsTTS& tts)
+std::string CoreIntegration::think_with_fusion(const std::string& input, ITTS& tts)
 {
     return think_with_fusion_core(input, true, &tts);
 }
@@ -1987,9 +2117,8 @@ void CoreIntegration::run_interactive_loop() {
         printf("\033[32m> \033[0m"); 
         std::getline(std::cin, user_input);
         if (user_input == "sair" || user_input.empty()) break;
-        
+
         // Processar input do usuário
-        ElevenLabsTTS tts;
         think_with_fusion_ttsless(user_input);
     }
 }

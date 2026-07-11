@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cstring>
 #include "json.hpp"
+#include "TTSBase.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
@@ -30,7 +31,7 @@ extern "C" {
 /**
  * @brief Class for text-to-speech synthesis using ElevenLabs API.
  */
-class ElevenLabsTTS {
+class ElevenLabsTTS : public ITTS {
 public:
     // Construtor
     /**
@@ -47,14 +48,14 @@ public:
     /**
      * @brief Destructor for ElevenLabsTTS class.
      */
-    ~ElevenLabsTTS();
+    ~ElevenLabsTTS() override;
 
     // Método principal para síntese e reprodução
     /**
      * @brief Synthesizes and plays the given text using TTS.
      * @param text Text to be synthesized and played.
      */
-    void synthesizeAndPlay(const std::string& text);
+    void synthesizeAndPlay(const std::string& text) override;
 
 private:
     // Configuração

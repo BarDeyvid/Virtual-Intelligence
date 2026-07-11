@@ -103,7 +103,7 @@ include_directories(
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/ToolExecutor.cpp includes/VisionEnhancer.cpp includes/PresenceDetector.cpp includes/InputController.cpp)
+set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/KokoroTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/ToolExecutor.cpp includes/VisionEnhancer.cpp includes/PresenceDetector.cpp includes/InputController.cpp includes/vram/VRAMResourceManager.cpp includes/vram/AlyssaResidents.cpp includes/vram/GpuMemoryProbe.cpp includes/minecraft/MinecraftBridge.cpp includes/minecraft/ActionExecutor.cpp includes/minecraft/MinecraftSession.cpp includes/minecraft/GameplayLog.cpp includes/TerminalSafety.cpp)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
@@ -119,6 +119,9 @@ set(TEST_PERSONALITY tests/test_personality.cpp)
 set(TEST_PROACTIVITY tests/test_proactivity.cpp)
 set(TEST_FRAME_CACHE tests/test_frame_cache.cpp includes/VisionEnhancer.cpp)
 set(TEST_COMPANION tests/test_companion.cpp includes/InputController.cpp)
+set(TEST_VRAM_MANAGER tests/test_vram_manager.cpp includes/vram/VRAMResourceManager.cpp includes/vram/GpuMemoryProbe.cpp)
+set(VRAM_BASELINE tests/vram_baseline.cpp)
+set(TEST_KOKORO tests/test_kokoro.cpp includes/voice/KokoroTTS.cpp)
 
 # --- Executables ---
 add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
@@ -133,6 +136,16 @@ add_executable(test_proactivity ${TEST_PROACTIVITY})
 add_executable(test_frame_cache ${TEST_FRAME_CACHE})
 target_link_libraries(test_frame_cache PRIVATE ${OpenCV_LIBS})
 add_executable(test_companion ${TEST_COMPANION})
+add_executable(test_vram_manager ${TEST_VRAM_MANAGER})
+target_link_libraries(test_vram_manager PRIVATE Threads::Threads)
+# Fase 0 do plano_scheduler: mede footprint/tempo de load real dos modelos.
+# Roda de dentro de build/Release (precisa de models/ e das DLLs já copiadas).
+add_executable(vram_baseline ${VRAM_BASELINE})
+target_link_libraries(vram_baseline PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${WHISPER_LIBRARY_FILE} Threads::Threads)
+# Fase 3 do plano_scheduler: mede load/RAM/RTF/latência do Kokoro TTS local.
+# Roda de dentro de build/Release (precisa de models/kokoro e libespeak-ng.dll).
+add_executable(test_kokoro ${TEST_KOKORO})
+target_link_libraries(test_kokoro PRIVATE ${ONNXRUNTIME_LIBRARY} ${PORTAUDIO_LIBRARY} Threads::Threads)
 
 # --- Linking ---
 set(COMMON_LIBS
@@ -161,8 +174,8 @@ if(NOT WIN32)
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
 else()
-    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component)
-    target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS})
+    target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component ws2_32)
+    target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS} ws2_32)
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
 endif()
@@ -203,6 +216,10 @@ foreach(TARGET alyssa_cli)
             # 3. Copiar TODAS as DLLs de dependências instaladas pelo vcpkg
             COMMAND ${CMAKE_COMMAND} -E echo "Copiando DLLs do vcpkg para $<TARGET_FILE_DIR:${TARGET}>..."
             COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/bin" "$<TARGET_FILE_DIR:${TARGET}>"
+
+            # 4. espeak-ng (G2P do Kokoro TTS): DLL carregada dinamicamente
+            # pelo KokoroTTS; os dados (espeak-ng-data) vão junto com models/.
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/third_party/espeak-ng/libespeak-ng.dll" "$<TARGET_FILE_DIR:${TARGET}>/"
         )
     endif()
 endforeach()

@@ -40,8 +40,9 @@ enum class TriggerType {
     Boredom,
     StressCheck,
     Excitement,
-    UserReturned,  ///< Webcam viu o usuário voltar depois de um tempo fora
-    AwayLeisure    ///< Usuário fora há um tempo: Alyssa se distrai sozinha
+    UserReturned,   ///< Webcam viu o usuário voltar depois de um tempo fora
+    AwayLeisure,    ///< Usuário fora há um tempo: Alyssa se distrai sozinha
+    FirstSighting   ///< Primeira leitura de presença do processo já veio com usuário à vista
 };
 
 /**
@@ -174,6 +175,11 @@ public:
         } else if (!present) {
             away_since = now;
             leisure_done_this_absence = false;
+        } else {
+            // Primeira leitura do processo já veio com o usuário à vista: não
+            // é uma "volta" (não houve ausência), mas ainda vale um oi — ela
+            // acabou de ligar e já te reconheceu.
+            first_sighting_pending = true;
         }
         user_present_ = present;
         had_presence_reading = true;
@@ -201,6 +207,20 @@ public:
                            TimePoint now = Clock::now()) {
         ProactiveTrigger trigger;
         if (!cfg.enabled) return trigger;
+
+        // -1. Primeiro avistamento: a webcam já viu o usuário na primeira
+        //     leitura do processo (ligou o app e já estava na frente do PC).
+        //     Passa por cima do cooldown, igual ao welcome-back — é um
+        //     evento único por sessão, não spam.
+        if (first_sighting_pending) {
+            first_sighting_pending = false;
+            trigger.type = TriggerType::FirstSighting;
+            trigger.reason =
+                "Você acabou de ligar e a webcam já viu o usuário na frente do PC. "
+                "Cumprimente ele(a) de um jeito casual e curto, como quem chega e já "
+                "encontra a pessoa ali.";
+            return trigger;
+        }
 
         // 0. Boas-vindas: usuário voltou depois de um tempo fora (webcam).
         //    Passa por cima do cooldown — voltar é um evento, não spam.
@@ -290,6 +310,7 @@ private:
     bool user_present_ = true;
     TimePoint away_since{};
     bool welcome_pending = false;
+    bool first_sighting_pending = false;
     bool leisure_done_this_absence = false;
     long long last_away_seconds = 0;
 };

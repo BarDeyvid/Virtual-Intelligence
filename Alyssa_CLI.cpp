@@ -9,12 +9,20 @@
 #include <mutex>
 #include <atomic>
 #include <chrono>
+#include <ctime>
 #include "EndocrineSystem.hpp"
 
 #include "AlyssaNet.hpp"
 #include "ProactivityEngine.hpp"
 #include "llama.h"
 #include "includes/log.hpp"
+#include "minecraft/MinecraftSession.hpp"
+#include "TerminalSafety.hpp"
+
+// wingdi.h (via OpenCV) define RGB(r,g,b) como macro e quebra ftxui::Color::RGB
+#ifdef RGB
+#undef RGB
+#endif
 
 using namespace ftxui;
 
@@ -33,6 +41,8 @@ struct AppState {
     EndocrineState hormones;
     std::string personality_state;   ///< Linha "energia alta, de bom humor..." (Fase 5.3)
     std::vector<EndocrineState> hormone_history; ///< Amostras a cada 10s, cap 180 = 30min (Fase 5.1)
+    cv::Mat presence_preview;        ///< Último frame RGB da checagem de presença (aba Vision)
+    std::string presence_status;     ///< Linha de status da última checagem de presença
     bool is_processing = false;
     int tab_selected = 0;
     std::mutex mtx;          ///< Guards chat_history, system_logs, hormones, is_processing
@@ -135,7 +145,50 @@ Element RenderHormone(std::string name, float val, Color col) {
     });
 }
 
+std::string now_hms() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm_buf{};
+#ifdef _WIN32
+    localtime_s(&tm_buf, &t);
+#else
+    localtime_r(&t, &tm_buf);
+#endif
+    char buf[16];
+    std::strftime(buf, sizeof(buf), "%H:%M:%S", &tm_buf);
+    return buf;
+}
+
+/**
+ * @brief Desenha o preview RGB da webcam no terminal (aba Vision).
+ *
+ * Meia-célula por pixel: cada '▀' usa foreground = pixel de cima e
+ * background = pixel de baixo, dobrando a resolução vertical. Como a célula
+ * do terminal é ~1:2 (largura:altura), o pixel resultante fica ~quadrado.
+ */
+Element RenderWebcamPreview(const cv::Mat& img) {
+    Elements rows;
+    for (int y = 0; y + 1 < img.rows; y += 2) {
+        Elements row;
+        row.reserve(img.cols);
+        for (int x = 0; x < img.cols; ++x) {
+            const auto& top = img.at<cv::Vec3b>(y, x);
+            const auto& bot = img.at<cv::Vec3b>(y + 1, x);
+            row.push_back(text("▀")
+                | color(Color::RGB(top[0], top[1], top[2]))
+                | bgcolor(Color::RGB(bot[0], bot[1], bot[2])));
+        }
+        rows.push_back(hbox(std::move(row)));
+    }
+    return vbox(std::move(rows));
+}
+
 int main() {
+    // Must run before ScreenInteractive touches the terminal (alt-screen,
+    // hidden cursor): if any thread later throws uncaught, this makes sure
+    // the terminal gets restored before the process dies instead of leaving
+    // raw escape sequences bled into the console.
+    alyssa_safety::install_crash_guard();
+
     auto screen = ScreenInteractive::Fullscreen();
     llama_log_set(ui_log_callback, &screen);
     ggml_backend_load_all();
@@ -157,13 +210,42 @@ int main() {
     alyssa_proactivity::ProactivityEngine proactivity(
         alyssa_proactivity::load_proactivity_config());
 
+    // Minecraft (Fase 6, PoC): gameplayModel roda em loop próprio; "/mc start"
+    // e "/mc stop" no chat ligam/desligam. Não existe até o primeiro start.
+    std::unique_ptr<alyssa_minecraft::MinecraftSession> minecraft_session;
+
     std::string input_buffer;
     Component input_box = Input(&input_buffer, " Escreva para Alyssa...");
-    
+
     auto on_enter = [&]() {
         if (input_buffer.empty() || g_state.is_processing) return;
         std::string msg = input_buffer;
         input_buffer = "";
+
+        if (msg == "/mc start" || msg == "/mc stop") {
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            if (msg == "/mc start") {
+                if (minecraft_session && minecraft_session->is_running()) {
+                    g_state.system_logs.push_back("[Minecraft] Já está rodando.");
+                } else {
+                    minecraft_session = std::make_unique<alyssa_minecraft::MinecraftSession>(
+                        alyssa_brain, g_state.brain_mtx);
+                    bool ok = minecraft_session->start();
+                    g_state.system_logs.push_back(ok
+                        ? "[Minecraft] Loop iniciado."
+                        : "[Minecraft] Falha ao conectar no sidecar (rode `node index.js` em minecraft-bridge/).");
+                    if (!ok) minecraft_session.reset();
+                }
+            } else {
+                if (minecraft_session) {
+                    minecraft_session->stop();
+                    minecraft_session.reset();
+                }
+                g_state.system_logs.push_back("[Minecraft] Loop parado.");
+            }
+            return;
+        }
+
         proactivity.note_user_activity();
         {
             std::lock_guard<std::mutex> lock(g_state.mtx);
@@ -172,33 +254,143 @@ int main() {
         }
 
         std::thread([&, msg]() {
-            std::string resp;
-            {
-                // Serialise all CoreIntegration calls: a second Enter before the
-                // first finishes will block here instead of corrupting shared state.
-                std::lock_guard<std::mutex> brain_lock(g_state.brain_mtx);
-                resp = alyssa_brain.think_with_fusion_ttsless(msg);
-            }
-            auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
+            // Detached thread: an uncaught exception here calls std::terminate()
+            // immediately, with no chance for FTXUI to restore the terminal.
+            try {
+                std::string resp;
+                {
+                    // Serialise all CoreIntegration calls: a second Enter before the
+                    // first finishes will block here instead of corrupting shared state.
+                    std::lock_guard<std::mutex> brain_lock(g_state.brain_mtx);
+                    resp = alyssa_brain.think_with_fusion_ttsless(msg);
+                }
+                auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
 
-            {
+                {
+                    std::lock_guard<std::mutex> lock(g_state.mtx);
+                    g_state.hormones.cortisol = (float)profile.cortisol;
+                    g_state.hormones.dopamine = (float)profile.dopamine;
+                    g_state.hormones.oxytocin = (float)profile.oxytocin;
+                    g_state.hormones.serotonin = (float)profile.serotonin;
+                    g_state.hormones.adrenaline = (float)profile.adrenaline;
+                    g_state.hormones.current_state = profile.get_emotional_state();
+                    g_state.personality_state = alyssa_brain.get_current_personality_state();
+
+                    g_state.chat_history.push_back({"Alyssa", resp});
+                    g_state.is_processing = false;
+                    screen.PostEvent(Event::Custom);
+                }
+            } catch (const std::exception& e) {
                 std::lock_guard<std::mutex> lock(g_state.mtx);
-                g_state.hormones.cortisol = (float)profile.cortisol;
-                g_state.hormones.dopamine = (float)profile.dopamine;
-                g_state.hormones.oxytocin = (float)profile.oxytocin;
-                g_state.hormones.serotonin = (float)profile.serotonin;
-                g_state.hormones.adrenaline = (float)profile.adrenaline;
-                g_state.hormones.current_state = profile.get_emotional_state();
-                g_state.personality_state = alyssa_brain.get_current_personality_state();
-
-                g_state.chat_history.push_back({"Alyssa", resp});
+                g_state.system_logs.push_back(std::string("[Chat] Falha ao processar mensagem: ") + e.what());
                 g_state.is_processing = false;
                 screen.PostEvent(Event::Custom);
             }
         }).detach();
     };
 
-    std::vector<std::string> tab_values = {" 💬 Chat ", " 🧠 Endocrine ", " 📝 Logs ", " 🛠 Tools "};
+    // ========================================================================
+    // Vision preview (aba 👁): guarda o que a Alyssa viu na última checagem
+    // ========================================================================
+    auto store_presence_result = [&](const alyssa_vision::PresenceResult& presence) {
+        std::lock_guard<std::mutex> lock(g_state.mtx);
+        if (!presence.available) {
+            g_state.presence_status = "Falha na checagem às " + now_hms() + ": " + presence.error;
+            return;
+        }
+        g_state.presence_preview = presence.preview;
+        g_state.presence_status = (presence.present
+            ? "Te vejo! " + std::to_string(presence.face_count) + " rosto(s) detectado(s)"
+            : "Ninguém à vista")
+            + " · " + now_hms()
+            + " · brilho " + std::to_string(static_cast<int>(presence.brightness)) + "/255";
+    };
+
+    // Dispara um gatilho de proatividade agora, se houver um pendente e o
+    // cérebro estiver livre. Usado tanto pelo poll periódico (check_interval_s,
+    // gatilhos de humor) quanto pelo reconhecimento instantâneo de presença
+    // (on_stream_frame) — responsividade em primeiro lugar: o welcome-back
+    // não espera o próximo tick do poll.
+    auto fire_proactive = [&]() {
+        if (g_state.is_processing) return;
+
+        auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
+        auto trigger = proactivity.check(profile);
+        if (trigger.type == alyssa_proactivity::TriggerType::None) return;
+
+        std::string msg;
+        {
+            std::unique_lock<std::mutex> brain_lock(g_state.brain_mtx, std::try_to_lock);
+            if (!brain_lock.owns_lock()) return; // cérebro ocupado, tenta na próxima chance
+
+            {
+                std::lock_guard<std::mutex> lock(g_state.mtx);
+                if (g_state.is_processing) return; // corrida: usuário chegou primeiro
+                g_state.is_processing = true;
+                screen.PostEvent(Event::Custom);
+            }
+
+            msg = alyssa_brain.generate_proactive_message(trigger.reason);
+        }
+        proactivity.note_proactive_message();
+
+        auto updated = alyssa_brain.get_endocrine_system()->get_hormone_profile();
+        {
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            g_state.hormones.cortisol = (float)updated.cortisol;
+            g_state.hormones.dopamine = (float)updated.dopamine;
+            g_state.hormones.oxytocin = (float)updated.oxytocin;
+            g_state.hormones.serotonin = (float)updated.serotonin;
+            g_state.hormones.adrenaline = (float)updated.adrenaline;
+            g_state.hormones.current_state = updated.get_emotional_state();
+            g_state.personality_state = alyssa_brain.get_current_personality_state();
+
+            if (!msg.empty()) {
+                g_state.chat_history.push_back({"Alyssa", msg});
+            }
+            g_state.is_processing = false;
+            screen.PostEvent(Event::Custom);
+        }
+    };
+
+    // Streaming ao vivo always-on: cada frame publicado pelo stream cai aqui
+    // (thread do stream). Atualiza a aba Vision a cada frame e alimenta a
+    // proatividade (throttled a 1x/s). O welcome-back dispara na hora, direto
+    // daqui, em vez de esperar o próximo tick do poll de check_interval_s.
+    auto on_stream_frame = [&]() {
+        auto presence = alyssa_brain.get_presence_detector()->latest();
+        store_presence_result(presence);
+        screen.PostEvent(Event::Custom);
+
+        if (!proactivity.config().presence_detection || !presence.available) return;
+
+        static auto last_feed = std::chrono::steady_clock::time_point{};
+        auto now = std::chrono::steady_clock::now();
+        if (now - last_feed < std::chrono::seconds(1)) return;
+        last_feed = now;
+
+        bool was_present = proactivity.user_present();
+        proactivity.note_presence(presence.present);
+        if (presence.present && !was_present) {
+            // Usuário voltou: oxitocina sobe (rever quem se gosta)
+            alyssa_brain.get_endocrine_system()->trigger_social_response(0.3);
+        }
+        {
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            g_state.system_logs.push_back(
+                std::string("[Presence] ") +
+                (presence.present ? "usuário presente (" + std::to_string(presence.face_count) + " rosto(s))"
+                                  : "ninguém na frente do PC"));
+        }
+        // Chama sempre que presente (não só na transição): user_present()
+        // retorna true por padrão antes da 1ª leitura, então o "primeiro
+        // avistamento" nunca bateria como transição ausente->presente.
+        // check() é barato quando não há nada pendente — só gera/fala quando
+        // um gatilho real (welcome-back ou 1º avistamento) está armado.
+        if (presence.present) fire_proactive();
+    };
+
+    std::vector<std::string> tab_values = {" 💬 Chat ", " 🧠 Endocrine ", " 👁 Vision ", " 📝 Logs ", " 🛠 Tools "};
     auto tab_menu = Menu(&tab_values, &g_state.tab_selected);
 
     auto main_container = Container::Vertical({
@@ -275,6 +467,33 @@ int main() {
             }) | flex;
         }
         else if (g_state.tab_selected == 2) {
+            // Aba Vision: o frame exato da última checagem de presença
+            Elements v;
+            std::lock_guard<std::mutex> lock(g_state.mtx);
+            auto* detector = alyssa_brain.get_presence_detector();
+            if (!detector || !detector->is_ready()) {
+                v.push_back(text(" Detecção de presença indisponível (webcam ou cascade ausente).") | dim);
+            } else {
+                const bool live = detector->is_streaming();
+                if (g_state.presence_preview.empty()) {
+                    v.push_back(text(live ? " Ligando a webcam..." : " Iniciando o stream...") | dim);
+                } else if (live) {
+                    v.push_back(hbox({
+                        text(" ● AO VIVO ") | bold | color(Color::Red),
+                        text(g_state.presence_status) | bold | color(Color::Cyan),
+                    }));
+                } else {
+                    v.push_back(text(" " + g_state.presence_status) | bold | color(Color::Cyan));
+                }
+                v.push_back(text(" A webcam fica ligada só enquanto esta aba está aberta (720p, ~30 FPS)") | dim);
+                if (!g_state.presence_preview.empty()) {
+                    v.push_back(separator() | dim);
+                    v.push_back(RenderWebcamPreview(g_state.presence_preview) | hcenter);
+                }
+            }
+            content = vbox(std::move(v)) | vscroll_indicator | frame | flex;
+        }
+        else if (g_state.tab_selected == 3) {
             Elements log_lines;
             std::lock_guard<std::mutex> lock(g_state.mtx);
             for (auto& l : g_state.system_logs) log_lines.push_back(text(l));
@@ -344,11 +563,7 @@ int main() {
     std::atomic<bool> proactivity_running{true};
     std::thread proactivity_thread([&]() {
         const int interval = proactivity.config().check_interval_s;
-        const bool use_presence = proactivity.config().presence_detection &&
-                                  alyssa_brain.get_presence_detector() != nullptr;
-        const int presence_interval = proactivity.config().presence_check_interval_s;
         int elapsed = 0;
-        int presence_elapsed = 0;
 
         int hormone_sample_elapsed = 0;
 
@@ -356,93 +571,63 @@ int main() {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (!proactivity_running) break;
 
-            // Amostragem da timeline de hormônios (Fase 5.1): a cada 10s
-            if (++hormone_sample_elapsed >= 10) {
-                hormone_sample_elapsed = 0;
-                auto sample = alyssa_brain.get_endocrine_system()->get_hormone_profile();
-                std::lock_guard<std::mutex> lock(g_state.mtx);
-                EndocrineState s;
-                s.cortisol   = (float)sample.cortisol;
-                s.dopamine   = (float)sample.dopamine;
-                s.oxytocin   = (float)sample.oxytocin;
-                s.serotonin  = (float)sample.serotonin;
-                s.adrenaline = (float)sample.adrenaline;
-                g_state.hormone_history.push_back(s);
-                if (g_state.hormone_history.size() > 180) {
-                    g_state.hormone_history.erase(g_state.hormone_history.begin());
+            // A single bad iteration must not reach std::terminate() — this
+            // thread is detached-equivalent by the time main() cleans it up
+            // (joined, but only after screen.Loop() returns), so an uncaught
+            // exception here would kill the process before that ever happens.
+            try {
+                // Streaming da webcam always-on: fica ligado o tempo todo, não só
+                // com a aba Vision aberta. Se o throttle de VRAM (LISTENING/
+                // SPEAKING) ou uma falha momentânea derrubou o stream, este tick
+                // religa sozinho.
+                if (auto* det = alyssa_brain.get_presence_detector(); det && det->is_ready()) {
+                    if (!det->is_streaming()) det->start_stream(on_stream_frame);
                 }
-            }
 
-            // Checagem de presença via webcam (independente do check de gatilhos)
-            if (use_presence && ++presence_elapsed >= presence_interval) {
-                presence_elapsed = 0;
-                auto presence = alyssa_brain.get_presence_detector()->check();
-                if (presence.available) {
-                    bool was_present = proactivity.user_present();
-                    proactivity.note_presence(presence.present);
-                    if (presence.present && !was_present) {
-                        // Usuário voltou: oxitocina sobe (rever quem se gosta)
-                        alyssa_brain.get_endocrine_system()->trigger_social_response(0.3);
-                    }
-                    {
-                        std::lock_guard<std::mutex> lock(g_state.mtx);
-                        g_state.system_logs.push_back(
-                            std::string("[Presence] ") +
-                            (presence.present ? "usuário presente (" + std::to_string(presence.face_count) + " rosto(s))"
-                                              : "ninguém na frente do PC"));
-                    }
-                }
-            }
-
-            if (++elapsed < interval) continue;
-            elapsed = 0;
-
-            if (g_state.is_processing) continue;
-
-            auto profile = alyssa_brain.get_endocrine_system()->get_hormone_profile();
-            auto trigger = proactivity.check(profile);
-            if (trigger.type == alyssa_proactivity::TriggerType::None) continue;
-
-            std::string msg;
-            {
-                std::unique_lock<std::mutex> brain_lock(g_state.brain_mtx, std::try_to_lock);
-                if (!brain_lock.owns_lock()) continue; // cérebro ocupado, tenta no próximo ciclo
-
-                {
+                // Amostragem da timeline de hormônios (Fase 5.1): a cada 10s
+                if (++hormone_sample_elapsed >= 10) {
+                    hormone_sample_elapsed = 0;
+                    auto sample = alyssa_brain.get_endocrine_system()->get_hormone_profile();
                     std::lock_guard<std::mutex> lock(g_state.mtx);
-                    if (g_state.is_processing) continue; // corrida: usuário chegou primeiro
-                    g_state.is_processing = true;
-                    screen.PostEvent(Event::Custom);
+                    EndocrineState s;
+                    s.cortisol   = (float)sample.cortisol;
+                    s.dopamine   = (float)sample.dopamine;
+                    s.oxytocin   = (float)sample.oxytocin;
+                    s.serotonin  = (float)sample.serotonin;
+                    s.adrenaline = (float)sample.adrenaline;
+                    g_state.hormone_history.push_back(s);
+                    if (g_state.hormone_history.size() > 180) {
+                        g_state.hormone_history.erase(g_state.hormone_history.begin());
+                    }
                 }
 
-                msg = alyssa_brain.generate_proactive_message(trigger.reason);
-            }
-            proactivity.note_proactive_message();
+                // Presença via webcam agora é alimentada em tempo real pelo
+                // on_stream_frame (throttled a 1x/s) — não precisa mais de um
+                // poll separado aqui.
 
-            auto updated = alyssa_brain.get_endocrine_system()->get_hormone_profile();
-            {
+                if (++elapsed < interval) continue;
+                elapsed = 0;
+
+                fire_proactive(); // gatilhos de humor (tédio/estresse/empolgação); presença já é reativa
+            } catch (const std::exception& e) {
                 std::lock_guard<std::mutex> lock(g_state.mtx);
-                g_state.hormones.cortisol = (float)updated.cortisol;
-                g_state.hormones.dopamine = (float)updated.dopamine;
-                g_state.hormones.oxytocin = (float)updated.oxytocin;
-                g_state.hormones.serotonin = (float)updated.serotonin;
-                g_state.hormones.adrenaline = (float)updated.adrenaline;
-                g_state.hormones.current_state = updated.get_emotional_state();
-                g_state.personality_state = alyssa_brain.get_current_personality_state();
-
-                if (!msg.empty()) {
-                    g_state.chat_history.push_back({"Alyssa", msg});
-                }
-                g_state.is_processing = false;
-                screen.PostEvent(Event::Custom);
+                g_state.system_logs.push_back(std::string("[Proactivity] Falha no tick: ") + e.what());
             }
         }
     });
 
-    screen.Loop(final_ui);
+    try {
+        screen.Loop(final_ui);
+    } catch (const std::exception& e) {
+        std::cerr << "[main] Exceção não tratada na UI, encerrando de forma controlada: "
+                  << e.what() << std::endl;
+    }
 
     proactivity_running = false;
     if (proactivity_thread.joinable()) proactivity_thread.join();
+
+    // Se o usuário saiu com a aba Vision aberta, o stream ainda está rodando
+    if (auto* det = alyssa_brain.get_presence_detector()) det->stop_stream();
 
     // Restaura os streams antes da destruição (os destrutores logam)
     std::cout.rdbuf(old_cout);

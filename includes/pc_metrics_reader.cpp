@@ -230,9 +230,15 @@ public:
         float ram_usage = get_ram_usage();
         float ram_usage_rounded = std::round(ram_usage * 10) / 10.0f;
 
+#ifdef _WIN32
+        // "sensors" é do lm-sensors (Linux); no Windows soltava
+        // "'sensors' is not recognized..." no console a cada turno.
+        float nvme_temp_rounded = -1.0f;
+#else
         std::string sensor_data = execute_command("sensors");
         float nvme_temp = extract_temperature(sensor_data, "Composite");
         float nvme_temp_rounded = std::round(nvme_temp * 10) / 10.0f;
+#endif
 
         std::stringstream ss;
         ss << "\n[DADOS DO AMBIENTE]";

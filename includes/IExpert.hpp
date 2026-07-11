@@ -112,5 +112,17 @@ namespace alyssa_experts {
          * @details Frees allocated memory for message content.
          */
         virtual void clear_history() = 0;
+
+        /**
+         * @brief Clear this expert's OWN KV cache, if it owns a dedicated core.
+         * @details CoreIntegration::clear_kv_cache() only clears the shared
+         *          1B core_instance — an expert with its own dedicated
+         *          AlyssaCore (e.g. Alyssa's 4B, gameplayModel's E2B) needs
+         *          its cache cleared separately, or repeated same-expert
+         *          calls (like MinecraftSession's tick loop) grow it
+         *          unbounded until llama_decode() fails past n_batch.
+         *          No-op by default (plain ExpertBase shares the base core).
+         */
+        virtual void clear_own_kv_cache() {}
     };
 }

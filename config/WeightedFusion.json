@@ -47,6 +47,12 @@
       "boosted_experts": ["creativeModel", "museModel"],
       "weight_multiplier": 1.2,
       "semantic_similarity_threshold": 0.65
+    },
+    "gameplay": {
+      "keywords": ["minecraft", "minerar", "construir", "bloco", "inventário", "craftar", "jogar", "mob", "diamante"],
+      "boosted_experts": ["gameplayModel", "strategicModel"],
+      "weight_multiplier": 1.4,
+      "semantic_similarity_threshold": 0.6
     }
   },
   "expert_keyword_mapping": {
@@ -93,6 +99,10 @@
     "museModel": {
       "keywords": ["possibilidade", "oportunidade", "potencial", "esperança"],
       "base_weight": 0.11
+    },
+    "gameplayModel": {
+      "keywords": ["minecraft", "minerar", "construir", "bloco", "craftar", "sobreviver"],
+      "base_weight": 0.0
     }
   },
   "weight_parameters": {

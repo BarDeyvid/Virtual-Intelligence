@@ -63,6 +63,14 @@ namespace alyssa_experts {
                 if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
                     return matches[0];
                 }
+            } else if (expert_id == "gameplayModel") {
+                // Formato imposto pela grammar GBNF (config/grammars/gameplay_action.gbnf);
+                // sem fallback genérico aqui — uma ação malformada não deve chegar ao ActionExecutor.
+                std::regex pattern(R"(\[AÇÃO\]\s*(\w+)\s*(.*?)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[CONTEXTO\]\s*(.+))");
+                if (std::regex_search(raw_response, matches, pattern) && matches.size() >= 2) {
+                    return matches[0];
+                }
+                return "[AÇÃO] esperar [CONFIANÇA] 0 [CONTEXTO] resposta malformada, aguardando";
             }
             
             // ===== ESTRATÉGIA 2: Padrões genéricos flexíveis =====

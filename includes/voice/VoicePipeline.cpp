@@ -1,5 +1,7 @@
 #include "VoicePipeline.hpp"
 
+#include <algorithm>
+
 // --- Construtor e Destrutor ---
 
 /**
@@ -7,30 +9,40 @@
  * 
  * Loads the Whisper model and initializes PortAudio with the provided configuration options.
  */
-VoicePipeline::VoicePipeline(const std::string& model_path, Options options)
-    : m_options(options) {
-        
+VoicePipeline::VoicePipeline(const std::string& model_path, Options options,
+                             bool defer_model_load)
+    : m_options(options), m_model_path(model_path) {
+
     m_vad_min_samples = (size_t)(m_options.vad_min_duration_ms / 1000.0 * SAMPLE_RATE);
-    
-    // 1. Carregar Modelo Whisper
-    std::cout << "Carregando modelo de: " << model_path << std::endl;
-    struct whisper_context_params cparams = whisper_context_default_params();
-    m_ctx = whisper_init_from_file_with_params(model_path.c_str(), cparams);
-    if (m_ctx == nullptr) {
-        throw std::runtime_error("ERRO: Falha ao carregar o modelo Whisper.");
+
+    // 1. Carregar Modelo Whisper (a menos que o scheduler de VRAM vá decidir)
+    if (!defer_model_load) {
+        if (!load_model()) {
+            throw std::runtime_error("ERRO: Falha ao carregar o modelo Whisper.");
+        }
+    } else {
+        std::cout << "[Whisper] Load adiado (gerenciado pelo VRAMResourceManager)." << std::endl;
     }
-    std::cout << "Modelo carregado com sucesso.\n" << std::endl;
 
     // 2. Inicializar PortAudio
     PaError err = Pa_Initialize();
     if (err != paNoError) {
-        whisper_free(m_ctx);
+        unload_model();
         throw std::runtime_error("ERRO: Falha ao inicializar PortAudio.");
     }
 
     // 3. Preparar buffer de áudio
     m_audio_data.buffer.resize(m_buffer_size_samples);
     std::fill(m_audio_data.buffer.begin(), m_audio_data.buffer.end(), 0.0f);
+
+    // 4. Silero VAD (streaming). Sem ele o RMS não distingue fala de ruído,
+    //    então a janela curta de silêncio vira commit prematuro — alarga.
+    if (!_load_vad_model() && m_options.vad_silence_ms < 1000) {
+        std::cout << "[VAD] Silero indisponível — fallback RMS com "
+                     "vad_silence_ms alargado de " << m_options.vad_silence_ms
+                  << "ms para 1000ms." << std::endl;
+        m_options.vad_silence_ms = 1000;
+    }
 }
 
 /**
@@ -40,12 +52,45 @@ VoicePipeline::VoicePipeline(const std::string& model_path, Options options)
  */
 VoicePipeline::~VoicePipeline() {
     stop(); // Garante que tudo parou
-    
-    if (m_ctx) {
-        whisper_free(m_ctx);
+
+    unload_model();
+    if (m_vad_ctx) {
+        whisper_vad_free(m_vad_ctx);
+        m_vad_ctx = nullptr;
     }
     Pa_Terminate();
     std::cout << "VoicePipeline encerrada." << std::endl;
+}
+
+// --- Residência do modelo (scheduler de VRAM) --------------------------------
+
+/**
+ * @brief Loads the Whisper model into VRAM (blocking, idempotent).
+ */
+bool VoicePipeline::load_model() {
+    std::lock_guard<std::mutex> lock(m_model_mtx);
+    if (m_ctx) return true; // idempotente
+
+    std::cout << "[Whisper] Carregando modelo de: " << m_model_path << std::endl;
+    struct whisper_context_params cparams = whisper_context_default_params();
+    m_ctx = whisper_init_from_file_with_params(m_model_path.c_str(), cparams);
+    if (m_ctx == nullptr) {
+        std::cerr << "[Whisper] ERRO: falha ao carregar " << m_model_path << std::endl;
+        return false;
+    }
+    std::cout << "[Whisper] Modelo carregado." << std::endl;
+    return true;
+}
+
+/**
+ * @brief Unloads the Whisper model from VRAM (blocking, idempotent).
+ */
+void VoicePipeline::unload_model() {
+    std::lock_guard<std::mutex> lock(m_model_mtx); // espera transcrição em curso
+    if (!m_ctx) return;
+    whisper_free(m_ctx);
+    m_ctx = nullptr;
+    std::cout << "[Whisper] Modelo descarregado da VRAM." << std::endl;
 }
 
 // --- Controles Públicos ---
@@ -206,16 +251,28 @@ void VoicePipeline::resume() {
 void VoicePipeline::_vad_loop_func() {
     size_t last_read_pos = 0;
     std::vector<float> speech_buffer;
+    // Pré-rolo: últimos vad_preroll_ms de áudio ANTES do VAD disparar — vão
+    // prepended ao segmento, senão a primeira sílaba chega cortada ao Whisper.
+    std::vector<float> preroll;
+    const size_t preroll_max = (size_t)(m_options.vad_preroll_ms / 1000.0 * SAMPLE_RATE);
+
     auto last_speech_time = std::chrono::steady_clock::now();
-    const auto silence_duration = std::chrono::milliseconds(m_options.vad_silence_ms);
+    const auto silence_fast = std::chrono::milliseconds(m_options.vad_silence_ms);
+    const auto silence_extended = std::chrono::milliseconds(
+        std::max(m_options.vad_silence_extended_ms, m_options.vad_silence_ms));
+
+    // Endpoint adaptativo: o probe é consultado UMA vez por episódio de
+    // silêncio; se disser "incompleto", a janela alarga para silence_extended.
+    bool probe_asked = false;
+    bool probe_says_incomplete = false;
 
     std::cout << "🎤 VAD loop thread iniciada." << std::endl;
 
     while (m_running) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Poll 10x/s
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Poll 20x/s
 
-        if (m_is_paused) { 
-            continue; 
+        if (m_is_paused) {
+            continue;
         }
 
         size_t current_write_pos = m_audio_data.write_pos;
@@ -235,15 +292,52 @@ void VoicePipeline::_vad_loop_func() {
 
         // Lógica VAD
         if (_is_speech(chunk)) {
+            // Início de fala: avisa o scheduler ANTES da transcrição existir —
+            // o load JIT do Whisper corre em paralelo com o usuário falando.
+            if (speech_buffer.empty()) {
+                if (m_on_speech_start) {
+                    m_on_speech_start();
+                }
+                speech_buffer = std::move(preroll);
+                preroll.clear();
+            }
             speech_buffer.insert(speech_buffer.end(), chunk.begin(), chunk.end());
             last_speech_time = std::chrono::steady_clock::now();
+            probe_asked = false;
+            probe_says_incomplete = false;
         } else if (!speech_buffer.empty()) {
-            auto now = std::chrono::steady_clock::now();
-            if ((now - last_speech_time > silence_duration) && (speech_buffer.size() > m_vad_min_samples)) {
-                // Silêncio detectado, enviar o buffer
-                std::cout << "[VAD] Segmento de " << (speech_buffer.size() / (float)SAMPLE_RATE) << "s detectado. Enviando...\n";
-                m_input_queue.push(speech_buffer);
+            auto silence = std::chrono::steady_clock::now() - last_speech_time;
+
+            auto required = silence_fast;
+            if (m_endpoint_probe) {
+                if (!probe_asked && silence >= silence_fast) {
+                    probe_says_incomplete = !m_endpoint_probe(speech_buffer);
+                    probe_asked = true;
+                }
+                if (probe_says_incomplete) {
+                    required = silence_extended;
+                }
+            }
+
+            if (silence > required) {
+                if (speech_buffer.size() > m_vad_min_samples) {
+                    std::cout << "[VAD] Segmento de " << (speech_buffer.size() / (float)SAMPLE_RATE) << "s detectado. Enviando...\n";
+                    m_input_queue.push(speech_buffer);
+                }
+                // Segmentos curtos demais são falso-gatilho: descarta em vez
+                // de deixar grudar no próximo turno.
                 speech_buffer.clear();
+                probe_asked = false;
+                probe_says_incomplete = false;
+                if (m_vad_ctx) {
+                    whisper_vad_reset_state(m_vad_ctx); // novo enunciado, LSTM zerado
+                }
+            }
+        } else {
+            // Fora de fala: mantém o pré-rolo deslizante.
+            preroll.insert(preroll.end(), chunk.begin(), chunk.end());
+            if (preroll.size() > preroll_max) {
+                preroll.erase(preroll.begin(), preroll.end() - preroll_max);
             }
         }
     }
@@ -260,12 +354,37 @@ void VoicePipeline::_vad_loop_func() {
 std::string VoicePipeline::_process_transcription(const std::vector<float>& audio_buffer) {
     if (audio_buffer.empty()) return "";
 
-    struct whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+    // Segura o modelo durante toda a transcrição: o scheduler não consegue
+    // descarregar no meio (unload_model espera este lock).
+    std::lock_guard<std::mutex> model_lock(m_model_mtx);
+
+    // Fallback JIT: se o scheduler ainda não carregou (ou já descarregou),
+    // carrega aqui mesmo — latência maior neste turno, mas nunca perde fala.
+    if (!m_ctx) {
+        std::cout << "[Whisper] Modelo fora da VRAM no momento da transcrição "
+                     "— load JIT síncrono (fallback)." << std::endl;
+        struct whisper_context_params cparams = whisper_context_default_params();
+        m_ctx = whisper_init_from_file_with_params(m_model_path.c_str(), cparams);
+        if (!m_ctx) {
+            std::cerr << "[Whisper] ERRO: fallback de load falhou." << std::endl;
+            return "";
+        }
+    }
+
+    // Beam search: mais tolerante a sotaque que greedy (mantém hipóteses
+    // concorrentes até o fim do segmento). Custo extra é pequeno com VAD
+    // limitando os segmentos a fala real.
+    struct whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH);
+    params.beam_search.beam_size = m_options.beam_size;
+    params.greedy.best_of        = m_options.beam_size; // usado nos fallbacks de temperatura
     params.print_progress   = false;
     params.print_realtime   = false;
     params.print_timestamps = false;
     params.n_threads        = m_options.n_threads;
     params.language         = m_options.language.c_str();
+    if (!m_options.initial_prompt.empty()) {
+        params.initial_prompt = m_options.initial_prompt.c_str();
+    }
 
     // std::cout << "\n[PROCESSANDO " << (audio_buffer.size() / (float)SAMPLE_RATE) << "s...]\n";
 
@@ -288,12 +407,49 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
 }
 
 /**
- * @brief Performs simple Voice Activity Detection.
- * 
- * Determines if the given audio chunk contains speech based on RMS threshold.
+ * @brief Loads the Silero VAD model (CPU-only).
+ *
+ * Roda fora do orçamento do VRAMResourceManager de propósito: o modelo tem
+ * ~2MB e em CPU custa ~1ms por chunk — não vale um resident.
+ */
+bool VoicePipeline::_load_vad_model() {
+    if (m_options.vad_model_path.empty()) return false;
+
+    struct whisper_vad_context_params vparams = whisper_vad_default_context_params();
+    vparams.use_gpu = false;
+    m_vad_ctx = whisper_vad_init_from_file_with_params(m_options.vad_model_path.c_str(), vparams);
+    if (!m_vad_ctx) {
+        std::cerr << "[VAD] Silero não carregou de '" << m_options.vad_model_path
+                  << "' (baixe ggml-silero-v5.1.2.bin para models/)." << std::endl;
+        return false;
+    }
+    std::cout << "[VAD] Silero VAD carregado (CPU, streaming)." << std::endl;
+    return true;
+}
+
+/**
+ * @brief Performs Voice Activity Detection.
+ *
+ * Silero (probabilidade por janela de 512 samples, estado LSTM preservado
+ * entre chunks) quando carregado; senão o limiar RMS antigo.
  */
 bool VoicePipeline::_is_speech(const std::vector<float>& audio_chunk) {
     if (audio_chunk.empty()) return false;
+
+    if (m_vad_ctx) {
+        if (whisper_vad_detect_speech_no_reset(m_vad_ctx, audio_chunk.data(),
+                                               (int)audio_chunk.size())) {
+            const int    n_probs = whisper_vad_n_probs(m_vad_ctx);
+            const float* probs   = whisper_vad_probs(m_vad_ctx);
+            float max_p = 0.0f;
+            for (int i = 0; i < n_probs; ++i) {
+                max_p = std::max(max_p, probs[i]);
+            }
+            return max_p >= m_options.vad_threshold;
+        }
+        // inferência do Silero falhou neste chunk — decide pelo RMS abaixo
+    }
+
     double sum_sq = std::inner_product(audio_chunk.begin(), audio_chunk.end(), audio_chunk.begin(), 0.0);
     double rms = std::sqrt(sum_sq / audio_chunk.size());
     return rms > m_options.vad_rms_threshold;

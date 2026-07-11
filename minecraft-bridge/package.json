@@ -1,0 +1,14 @@
+{
+  "name": "alyssa-minecraft-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sidecar: connects Alyssa's C++ core to a Minecraft server via mineflayer, exposed as a local newline-delimited JSON TCP socket.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.37.1",
+    "mineflayer-pathfinder": "^2.4.5"
+  }
+}

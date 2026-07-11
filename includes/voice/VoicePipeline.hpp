@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -36,18 +37,40 @@ public:
         std::string language = "pt"; ///< Language setting
 
         // VAD (Voice Activity Detection) settings
-        float vad_rms_threshold = 0.02f;       ///< RMS threshold for detecting speech
-        int vad_silence_ms = 1000;             ///< Silence duration in ms to consider end of a speech segment
+        float vad_rms_threshold = 0.02f;       ///< RMS threshold for detecting speech (fallback se o Silero não carregar)
+        int vad_silence_ms = 450;              ///< Silence duration in ms to consider end of a speech segment
         int vad_min_duration_ms = 200;         ///< Minimum speech duration in ms to process
+
+        // Silero VAD (streaming, via whisper.cpp). Se o arquivo não existir o
+        // pipeline cai no RMS antigo e alarga vad_silence_ms para >= 1000ms
+        // (o RMS não é confiável o bastante para janela curta).
+        std::string vad_model_path = "models/ggml-silero-v5.1.2.bin";
+        float vad_threshold = 0.5f;            ///< Probabilidade mínima do Silero para considerar fala
+        int vad_silence_extended_ms = 1500;    ///< Janela alargada quando o endpoint probe diz "frase incompleta"
+        int vad_preroll_ms = 300;              ///< Áudio pré-fala prepended ao segmento (não corta a 1ª sílaba)
+
+        // Decodificação Whisper
+        int beam_size = 5;                     ///< Beam search (mais robusto a sotaque que greedy)
+        /// Prompt de condicionamento: puxa o decoder para pt-BR informal
+        /// falado no Sul do Brasil (sotaque de colônia, influência de
+        /// imigração alemã/francesa). Vazio = desliga.
+        std::string initial_prompt =
+            "Transcrição de uma conversa informal em português brasileiro, "
+            "falada no Sul do Brasil com sotaque de influência alemã e "
+            "francesa. Falamos sobre tecnologia, programação, jogos e o "
+            "dia a dia.";
     };
 
     /**
      * @brief Constructor. Loads the Whisper model and initializes PortAudio.
-     * 
+     *
      * @param model_path Path to the GGML model file (e.g., "models/ggml-base.bin")
      * @param options Configuration options for VoicePipeline
+     * @param defer_model_load true = não carrega o modelo agora (o
+     *        VRAMResourceManager decide quando, via load_model/unload_model).
      */
-    VoicePipeline(const std::string& model_path, Options options = {4, "pt", 0.02f, 1000, 200});
+    VoicePipeline(const std::string& model_path, Options options = {},
+                  bool defer_model_load = false);
 
     /**
      * @brief Destructor. Stops all processes and releases resources.
@@ -84,6 +107,48 @@ public:
      */
     void resume();
 
+    // --- Residência do modelo (scheduler de VRAM, plano_scheduler/) ---------
+
+    /**
+     * @brief Carrega o modelo Whisper para a VRAM (bloqueante e idempotente).
+     * @return true se o modelo está carregado ao retornar.
+     * @details Chamado pelo WhisperResident em thread própria. Seguro contra
+     *          transcrição concorrente (mutex do modelo).
+     */
+    bool load_model();
+
+    /**
+     * @brief Descarrega o modelo Whisper da VRAM (bloqueante e idempotente).
+     * @details Espera qualquer transcrição em andamento terminar. A captura
+     *          de áudio e o VAD continuam rodando — só a transcrição passa a
+     *          exigir um novo load (JIT).
+     */
+    void unload_model();
+
+    /// true quando o contexto Whisper está carregado.
+    bool model_loaded() const { return m_ctx != nullptr; }
+
+    /**
+     * @brief Callback disparado quando o VAD detecta INÍCIO de fala.
+     * @details Gancho do scheduler: request_state(LISTENING) pode começar o
+     *          load do Whisper enquanto o usuário ainda está falando.
+     *          Chamado na thread do VAD — deve ser barato/não bloqueante.
+     */
+    void set_on_speech_start(std::function<void()> cb) { m_on_speech_start = std::move(cb); }
+
+    /**
+     * @brief Probe de endpoint semântico (turn detection adaptativo).
+     * @details Chamado na thread do VAD quando o silêncio passa de
+     *          vad_silence_ms. Recebe o áudio do turno até aqui e responde:
+     *          true  = frase completa → commita o turno já;
+     *          false = usuário provavelmente vai continuar ("eu tava pensando
+     *          em...") → espera vad_silence_extended_ms antes de commitar.
+     *          Sem probe registrado, commita sempre em vad_silence_ms.
+     *          Gancho para um modelo tipo smart-turn (ONNX/CPU) no futuro.
+     */
+    void set_endpoint_probe(std::function<bool(const std::vector<float>&)> probe) {
+        m_endpoint_probe = std::move(probe);
+    }
 
 private:
     // --- Estruturas Internas ---
@@ -205,14 +270,20 @@ private:
     std::string _process_transcription(const std::vector<float>& audio_buffer);
     
     /**
-     * @brief Simple Voice Activity Detection (VAD) logic.
-     * 
-     * Determines if the given audio chunk contains speech based on RMS threshold.
-     * 
+     * @brief Voice Activity Detection (VAD) logic.
+     *
+     * Usa o Silero VAD (streaming) quando carregado; senão cai no limiar RMS.
+     *
      * @param audio_chunk Audio samples
      * @return true if speech is detected, false otherwise
      */
     bool _is_speech(const std::vector<float>& audio_chunk);
+
+    /**
+     * @brief Carrega o modelo Silero VAD (CPU, ~2MB).
+     * @return true se o contexto VAD está pronto.
+     */
+    bool _load_vad_model();
 
     /**
      * @brief Static PortAudio callback function.
@@ -234,7 +305,12 @@ private:
                             void *userData);
 
     Options m_options;                 ///< Configuration options
+    std::string m_model_path;          ///< Caminho do .bin (para load JIT do scheduler)
     struct whisper_context* m_ctx = nullptr;  ///< Whisper model context
+    mutable std::mutex m_model_mtx;    ///< Serializa load/unload/transcrição do modelo
+    std::function<void()> m_on_speech_start; ///< Gancho do scheduler (VAD thread)
+    std::function<bool(const std::vector<float>&)> m_endpoint_probe; ///< Endpoint semântico (VAD thread)
+    struct whisper_vad_context* m_vad_ctx = nullptr; ///< Silero VAD (CPU); nullptr = fallback RMS
     PaStream* m_stream = nullptr;      ///< PortAudio stream
 
     AudioData m_audio_data;            ///< Internal audio buffer storage

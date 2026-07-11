@@ -90,6 +90,10 @@ vcpkg/installed/
 vcpkg/packages/
 vcpkg_installed/
 
+# --- Node.js (minecraft-bridge sidecar) ---
+node_modules/
+npm-debug.log*
+
 # --- macOS ---
 .DS_Store
 
