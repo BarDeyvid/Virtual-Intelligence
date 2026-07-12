@@ -1,0 +1,5 @@
+# Router adaptativo (plano-router-e-voz-gameplay.md, seção A): classifica a
+# mensagem numa rota de processamento ANTES de pagar o comitê inteiro.
+# Saída de ~6 tokens no 1B ≈ ~100ms — contra ~1s+ de comitê compulsório.
+root ::= "[ROTA] " rota "\n"?
+rota ::= "direto" | "emocional" | "analitico" | "criativo" | "memoria" | "comite"

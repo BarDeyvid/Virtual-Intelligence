@@ -8,10 +8,13 @@
 #include "PersonalityCore.hpp"
 #include "PresenceDetector.hpp"
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include "vision/VisionManager.hpp"
+#include "vision/VisionSnapshot.hpp"
 
 /**
  * @class CoreIntegration
@@ -38,6 +41,35 @@ private:
     ///        members are destroyed in reverse order, so the pool contexts are
     ///        freed before the model they borrow from.
     std::vector<std::unique_ptr<alyssa_core::AlyssaCore>> expert_context_pool;
+
+    /// Config do gameplayModel guardada no boot; o load real (E2B, ~3GB de
+    /// VRAM) só acontece em ensure_gameplay_expert() no primeiro /mc start.
+    std::unique_ptr<SimpleModelConfig> deferred_gameplay_config;
+    int gameplay_fallback_n_batch = 512; ///< n_batch do 1B p/ fallback do gameplay
+
+    // --- Router adaptativo (docs/plano-router-e-voz-gameplay.md, seção A) ---
+    bool router_adaptive = false;   ///< "router_mode":"adaptive" no ConfigsLLM.json
+    std::string router_grammar;     ///< config/grammars/router.gbnf carregada no boot
+
+    /**
+     * @brief Pre-pass de roteamento: classifica o input numa rota de processamento.
+     * @details Roda no 1B compartilhado (core_instance) com grammar — ~100ms,
+     *          sem tocar no core/histórico da Alyssa. v1 deliberadamente no
+     *          1B: se logs/router_decisions.jsonl mostrar roteamento ruim,
+     *          upgrade pro E2B é trocar o core da chamada.
+     * @return "direto" | "emocional" | "analitico" | "criativo" | "memoria"
+     *         | "comite" (fallback seguro em qualquer erro).
+     */
+    std::string run_router_prepass(const std::string& input);
+
+    /**
+     * @brief Resposta em MODO DIRETO: personalidade+tools+input, sem comitê.
+     * @details Compartilhado entre o router (rota direto/memoria) e o
+     *          fallback de coerência baixa do comitê (que já existia).
+     */
+    std::string generate_direct_response(const std::string& respond_to,
+                                         const std::string& raw_input,
+                                         bool use_tts, ITTS* tts);
 
     std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;    ///< Weighted fusion engine
     std::shared_ptr<Embedder> embedder;                             ///< Embedding generator for semantic analysis
@@ -118,7 +150,29 @@ public:
      * @return Short proactive message, or empty string when not initialized.
      */
     std::string generate_proactive_message(const std::string& reason);
-    
+
+    /**
+     * @brief One-line snapshot of "now" injected into every Alyssa prompt.
+     * @details Awareness passiva: relógio local, janela em foco, presença
+     *          (snapshot do stream — nunca abre a webcam aqui) e CPU/RAM.
+     *          Fonte indisponível fica de fora da linha em vez de falhar.
+     *          Público também para o alyssad expor no `status` do protocolo.
+     *          Não é thread-safe contra si mesma (reader de CPU com estado):
+     *          chame apenas com o cérebro ocioso ou de dentro de um turno.
+     * @return Linha "[AMBIENTE] ..." terminada em \n, pronta pra concatenar.
+     */
+    std::string build_ambient_context();
+
+    /**
+     * @brief Sink externo de streaming da resposta (evento `token` do alyssad).
+     * @details Recebe cada pedaço gerado pelo expert "alyssa" (fast path,
+     *          fusão e follow-ups de tool call — nunca o comitê). Independe
+     *          de TTS: os dois sinks coexistem no mesmo callback interno.
+     *          Chamado da thread de inferência; o consumidor cuida da própria
+     *          sincronização. nullptr (default) = desligado.
+     */
+    std::function<void(const std::string&)> on_response_chunk;
+
     // =========================================================================
     // Expert Management Methods
     // =========================================================================
@@ -281,6 +335,29 @@ public:
     }
 
     /**
+     * @brief Tick de gameplay com VOZ: o prompt contém "<__media__>" que vira
+     *        o enunciado do jogador (16kHz float). ASR+decisão numa inferência.
+     * @details Caminho do plano B (docs/plano-router-e-voz-gameplay.md): monta
+     *          o prompt no turn format do Gemma 4 na mão (system + user com
+     *          marcador), grammar do gameplay idem tick normal. mmproj carrega
+     *          lazy no primeiro uso (~557MB). Retorna "" se áudio indisponível
+     *          (chamador cai no tick de texto).
+     */
+    std::string run_gameplay_tick_audio(const std::string& world_state_prompt_with_marker,
+                                        const std::vector<float>& audio_16k);
+
+    /**
+     * @brief Carrega o gameplayModel (E2B, ~3GB) se ainda não estiver na VRAM.
+     * @return true se o expert está registrado ao retornar.
+     * @details O load é LAZY: initialize() só guarda a config. Chamado pelo
+     *          MinecraftSession::start() — na maioria das sessões o Minecraft
+     *          nunca liga e os 3GB ficam livres pro scheduler. Mexe no mapa
+     *          de experts: chame com o cérebro ocioso (segurando brain_mtx),
+     *          nunca durante um think_with_fusion*.
+     */
+    bool ensure_gameplay_expert();
+
+    /**
      * @brief Footprint em VRAM do modelo base (LLMResident, scheduler de VRAM).
      * @return Bytes dos pesos do modelo 1B compartilhado, ou 0 se não inicializado.
      * @details Cobre só os pesos do modelo base — o 4B vive dentro do expert
@@ -304,6 +381,17 @@ public:
         }
         std::cout << "[Orquestrador] Todos os caches limpos." << std::endl;
     }
+
+    // Vision pipeline
+    void start_vision_pipeline();
+    void stop_vision_pipeline();
+    /// true = VisionManager está com a câmera (presença NÃO deve religar o stream)
+    bool vision_pipeline_running() const;
+    const alyssa_vision::VisionSnapshot& get_latest_vision() const;
+
+    void set_vision_callback(std::function<void(const alyssa_vision::VisionSnapshot&)> cb);
+
+
 
 private:
     // =========================================================================
@@ -359,15 +447,6 @@ private:
     // =========================================================================
 
     /**
-     * @brief One-line snapshot of "now" injected into every Alyssa prompt.
-     * @details Awareness passiva: relógio local, janela em foco, presença
-     *          (snapshot do stream — nunca abre a webcam aqui) e CPU/RAM.
-     *          Fonte indisponível fica de fora da linha em vez de falhar.
-     * @return Linha "[AMBIENTE] ..." terminada em \n, pronta pra concatenar.
-     */
-    std::string build_ambient_context();
-
-    /**
      * @brief Summarize an archived history chunk with the base 1B model (Phase 4.2).
      * @param text Concatenated messages (and previous rolling summary, if any).
      * @return Short summary, or empty string on failure (compression then
@@ -405,11 +484,20 @@ private:
      * @param tts Pointer to TTS instance (can be nullptr).
      * @return Expert's response as string.
      */
+    /**
+     * @param history_user_text Se não-nulo, substitui o `input` na entrada
+     *        de histórico do usuário deste turno. O prompt completo
+     *        (personalidade+pensamentos+tools+ambiente) é andaime do turno:
+     *        arquivado inteiro, re-templata a cada turno seguinte até o
+     *        prompt estourar o n_ctx — e vaza instrução nas respostas.
+     *        Aqui vai só o que o usuário disse de fato.
+     */
     std::string run_expert(
         const std::string& expert_id,
         const std::string& input,
         bool use_tts = false,
-        ITTS* tts = nullptr
+        ITTS* tts = nullptr,
+        const std::string* history_user_text = nullptr
     );
 
     /**
@@ -491,6 +579,13 @@ private:
     alyssa_endocrine::EndocrineSystem* get_endocrine_system() const {
         return endocrine_system.get();
     }
+
+    std::unique_ptr<alyssa_vision::VisionManager> vision_manager_;
+    alyssa_vision::VisionSnapshot latest_vision_;
+    mutable std::mutex vision_mtx_;
+    void on_vision_snapshot(const alyssa_vision::VisionSnapshot& snap);
+
+    std::function<void(const alyssa_vision::VisionSnapshot&)> on_vision_callback_;
 
 public:
     /**
