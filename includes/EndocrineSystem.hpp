@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <cmath>
 
+namespace alyssa_vision {
+    struct VisionSnapshot;
+}
+
 namespace alyssa_endocrine {
 
 /**
@@ -63,6 +67,8 @@ public:
      * @details Initializes hormone levels to baseline values.
      */
     EndocrineSystem();
+    
+    void update_from_vision(const alyssa_vision::VisionSnapshot& snap);
     
     /**
      * @brief Get current hormone profile.
@@ -188,6 +194,7 @@ public:
      * @return true if oxytocin > 0.6
      */
     bool is_socially_engaged() const { return current_levels.oxytocin > 0.6; }
+
 };
 
 } // namespace alyssa_endocrine

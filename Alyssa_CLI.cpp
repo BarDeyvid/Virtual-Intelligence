@@ -204,12 +204,18 @@ int main() {
 
     CoreIntegration alyssa_brain;
     alyssa_brain.set_user_name("Deyvid");
-    alyssa_brain.initialize("models/gemma-3-4b-it-q4_0.gguf");
-
+    alyssa_brain.initialize("models/gemma-4-E2B_q4_0-it.gguf");
+    alyssa_brain.start_vision_pipeline();
+    
+    
     // Proactivity Engine (Fase 2.2): Alyssa puxa assunto sozinha
     alyssa_proactivity::ProactivityEngine proactivity(
         alyssa_proactivity::load_proactivity_config());
-
+        
+    alyssa_brain.set_vision_callback([&](const alyssa_vision::VisionSnapshot& snap) {
+        proactivity.process_vision(snap);
+    });
+    
     // Minecraft (Fase 6, PoC): gameplayModel roda em loop próprio; "/mc start"
     // e "/mc stop" no chat ligam/desligam. Não existe até o primeiro start.
     std::unique_ptr<alyssa_minecraft::MinecraftSession> minecraft_session;
@@ -579,8 +585,11 @@ int main() {
                 // Streaming da webcam always-on: fica ligado o tempo todo, não só
                 // com a aba Vision aberta. Se o throttle de VRAM (LISTENING/
                 // SPEAKING) ou uma falha momentânea derrubou o stream, este tick
-                // religa sozinho.
-                if (auto* det = alyssa_brain.get_presence_detector(); det && det->is_ready()) {
+                // religa sozinho — EXCETO quando o VisionManager está com a
+                // câmera: duas capturas no mesmo device congelam o driver
+                // (crash de 2026-07-12; a presença degrada pro snapshot).
+                if (auto* det = alyssa_brain.get_presence_detector();
+                    det && det->is_ready() && !alyssa_brain.vision_pipeline_running()) {
                     if (!det->is_streaming()) det->start_stream(on_stream_frame);
                 }
 

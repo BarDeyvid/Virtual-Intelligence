@@ -1,4 +1,5 @@
 #include "EndocrineSystem.hpp"
+#include "vision/VisionSnapshot.hpp"
 #include <sstream>
 #include <iostream>
 
@@ -243,5 +244,43 @@ void EndocrineSystem::trigger_social_response(double intensity) {
     current_levels.serotonin = std::min(MAX_HORMONE, current_levels.serotonin + intensity * 0.3);
 }
 
-} // namespace alyssa_endocrine
+void EndocrineSystem::update_from_vision(const alyssa_vision::VisionSnapshot& snap) {
+    if (!snap.valid) return;
 
+    // User present -> oxytocin
+    if (snap.face_detected && snap.user_identity == "Deyvid") {
+        current_levels.oxytocin = std::min(1.0, current_levels.oxytocin + 0.03);
+    } else if (snap.face_detected) {
+        current_levels.cortisol = std::min(1.0, current_levels.cortisol + 0.05);
+    }
+
+    // Expression-based modulation
+    if (snap.expression == "happy") {
+        current_levels.dopamine = std::min(1.0, current_levels.dopamine + 0.05);
+    } else if (snap.expression == "tired") {
+        current_levels.serotonin = std::min(1.0, current_levels.serotonin + 0.03);
+    } else if (snap.expression == "angry") {
+        current_levels.cortisol = std::min(1.0, current_levels.cortisol + 0.07);
+    }
+
+    // Gestures
+    if (snap.gesture == "thumbsup") {
+        current_levels.dopamine = std::min(1.0, current_levels.dopamine + 0.08);
+    }
+
+    // Motion -> adrenaline
+    if (snap.motion_level > 0.3) {
+        current_levels.adrenaline = std::min(1.0, current_levels.adrenaline + 0.03);
+    }
+
+    // Clamp all to [MIN_HORMONE, MAX_HORMONE]
+    #define CLAMP_HORMONE(h) h = std::max(MIN_HORMONE, std::min(MAX_HORMONE, h))
+    CLAMP_HORMONE(current_levels.cortisol);
+    CLAMP_HORMONE(current_levels.dopamine);
+    CLAMP_HORMONE(current_levels.oxytocin);
+    CLAMP_HORMONE(current_levels.serotonin);
+    CLAMP_HORMONE(current_levels.adrenaline);
+    #undef CLAMP_HORMONE
+}
+
+} // namespace alyssa_endocrine
