@@ -164,6 +164,29 @@ namespace alyssa_experts {
         }
 
         /**
+         * @brief Formata mensagens no turn format do Gemma 4 (arch "gemma4").
+         * @details Espelha o Jinja embutido no GGUF para o caso texto-puro sem
+         *          tools: system/user/model entre "<|turn>role\n" e "<turn|>\n",
+         *          terminando com o generation prompt "<|turn>model\n". Os
+         *          marcadores são tokens especiais — o tokenize precisa rodar
+         *          com parse_special=true (generate_raw já roda). Sem BOS aqui
+         *          (o tokenizer adiciona). Usado porque a API C de template do
+         *          llama.cpp não reconhece o Jinja do Gemma 4.
+         */
+        static std::string format_gemma4_prompt(const std::vector<llama_chat_message>& msgs) {
+            std::string out;
+            for (const auto& m : msgs) {
+                std::string role = (m.role && *m.role) ? m.role : "user";
+                if (role == "assistant") role = "model";
+                out += "<|turn>" + role + "\n";
+                if (m.content) out += m.content;
+                out += "<turn|>\n";
+            }
+            out += "<|turn>model\n";
+            return out;
+        }
+
+        /**
          * @brief Main execution method for expert inference.
          * @param input Text input for the expert.
          * @param core_instance Pointer to AlyssaCore instance for generation.
@@ -215,33 +238,47 @@ namespace alyssa_experts {
                                       current_history.begin(), current_history.end());
 
             // 3. Aplica template
-            std::vector<char> formatted(core_instance->get_n_ctx() * 2); // Buffer maior
             const char* tmpl = llama_model_chat_template(core_instance->get_model(), nullptr);
+            std::string prompt;
 
-            int len = llama_chat_apply_template(
-                tmpl, messages_to_template.data(), messages_to_template.size(), 
-                true, formatted.data(), formatted.size()
-            );
+            if (tmpl && std::string(tmpl).find("<|turn>") != std::string::npos) {
+                // Gemma 4: o GGUF embute um Jinja de 16KB (tools/thinking) que
+                // a API C llama_chat_apply_template não reconhece (ela só faz
+                // sniffing de templates conhecidos) → len<0 e o turno inteiro
+                // morria em "Erro ao processar template". Formato real do
+                // template: "<|turn>role\n...<turn|>\n", assistant vira
+                // "model", generation prompt é "<|turn>model\n". BOS fica de
+                // fora: o tokenize do generate_raw roda com add_special=true.
+                prompt = format_gemma4_prompt(messages_to_template);
+            } else {
+                std::vector<char> formatted(core_instance->get_n_ctx() * 2); // Buffer maior
+                int len = llama_chat_apply_template(
+                    tmpl, messages_to_template.data(), messages_to_template.size(),
+                    true, formatted.data(), formatted.size()
+                );
+
+                if (len < 0) {
+                    // Tentar com buffer maior
+                    formatted.resize(-len);
+                    len = llama_chat_apply_template(
+                        tmpl, messages_to_template.data(), messages_to_template.size(),
+                        true, formatted.data(), formatted.size()
+                    );
+                }
+
+                if (len >= 0) {
+                    prompt.assign(formatted.begin(), formatted.begin() + len);
+                }
+            }
 
             // Free the system prompt message we pushed into messages_to_template
             if (system_prompt_index != -1) {
                 free(const_cast<char*>(messages_to_template[system_prompt_index].content));
             }
 
-            if (len < 0) {
-                // Tentar com buffer maior
-                formatted.resize(-len);
-                len = llama_chat_apply_template(
-                    tmpl, messages_to_template.data(), messages_to_template.size(),
-                    true, formatted.data(), formatted.size()
-                );
-            }
-
-            if (len < 0) {
+            if (prompt.empty()) {
                 return "Erro ao processar template de conversa.";
             }
-
-            std::string prompt(formatted.begin(), formatted.begin() + len);
 
             // 4. Executa geração
             // llama_adapter_lora** final_lora = (lora_override != nullptr) ? lora_override : lora;
