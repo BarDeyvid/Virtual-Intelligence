@@ -1,0 +1,62 @@
+{
+  "_doc": "Modo goal-driven da Gaia (progressão de aprendizado). Cada objetivo entra no prompt como [OBJETIVO ATUAL]; a conclusão é checada pelo INVENTÁRIO a cada tick (match exact ou suffix no nome do item). Ao concluir: comemora via 'falar', loga goal_done no GameplayLog e avança. No boot, objetivos já satisfeitos pelo inventário atual são pulados. enabled:false desliga tudo.",
+  "enabled": true,
+  "goals": [
+    {
+      "id": "madeira",
+      "objetivo": "Colete 8 troncos de madeira: procure blocos *_log nos rótulos e minere eles. Se não houver árvore visível, mova-se para explorar.",
+      "done_item": "_log",
+      "done_count": 8,
+      "match": "suffix"
+    },
+    {
+      "id": "tabuas",
+      "objetivo": "Crafte 16 tábuas de madeira (craftar oak_planks 4, ou o tipo da madeira que você tem).",
+      "done_item": "_planks",
+      "done_count": 16,
+      "match": "suffix"
+    },
+    {
+      "id": "mesa",
+      "objetivo": "Crafte uma mesa de trabalho (craftar crafting_table 1).",
+      "done_item": "crafting_table",
+      "done_count": 1,
+      "match": "exact"
+    },
+    {
+      "id": "gravetos",
+      "objetivo": "Crafte 8 gravetos (craftar stick 4).",
+      "done_item": "stick",
+      "done_count": 8,
+      "match": "exact"
+    },
+    {
+      "id": "picareta",
+      "objetivo": "Coloque a crafting_table no chão (colocar rótulo crafting_table) e crafte uma picareta de madeira (craftar wooden_pickaxe 1) perto dela.",
+      "done_item": "wooden_pickaxe",
+      "done_count": 1,
+      "match": "exact"
+    },
+    {
+      "id": "pedra",
+      "objetivo": "Equipe a picareta (equipar wooden_pickaxe) e minere 8 de pedra (blocos stone/cobblestone nos rótulos).",
+      "done_item": "cobblestone",
+      "done_count": 8,
+      "match": "exact"
+    },
+    {
+      "id": "ferramentas_pedra",
+      "objetivo": "Crafte uma picareta de pedra (craftar stone_pickaxe 1) e uma espada de pedra (craftar stone_sword 1).",
+      "done_item": "stone_sword",
+      "done_count": 1,
+      "match": "exact"
+    },
+    {
+      "id": "comida",
+      "objetivo": "Consiga comida: ataque uma vaca, porco ou galinha (rótulos E) e pegue o drop andando até ele.",
+      "done_item": "beef",
+      "done_count": 1,
+      "match": "suffix"
+    }
+  ]
+}

@@ -197,6 +197,8 @@ int main(int argc, char** argv) {
 #endif
     bool play = false;
     bool audition = false;
+    std::string say_text;
+    std::string say_out = "say.wav";
     KokoroTTS::Config cfg;
     cfg.verbose_timing = false; // o teste imprime as métricas por conta própria
     for (int i = 1; i < argc; ++i) {
@@ -206,9 +208,26 @@ int main(int argc, char** argv) {
         else if (arg == "--model" && i + 1 < argc) cfg.model_path = argv[++i];
         else if (arg == "--threads" && i + 1 < argc) cfg.intra_threads = std::atoi(argv[++i]);
         else if (arg == "--voice" && i + 1 < argc) cfg.voice_blend = parse_voice_spec(argv[++i]);
+        else if (arg == "--say" && i + 1 < argc) say_text = argv[++i];
+        else if (arg == "--out" && i + 1 < argc) say_out = argv[++i];
     }
 
     if (audition) return run_audition(cfg);
+
+    // --say "frase" [--out x.wav]: sintetiza texto arbitrário e salva (sem
+    // tocar, a menos que --play). Gera áudio de teste pro caminho de voz do
+    // gameplay (test_gameplay_audio) sem precisar de microfone.
+    if (!say_text.empty()) {
+        KokoroTTS tts(cfg);
+        if (!tts.load()) return 1;
+        const std::vector<float> wav = tts.synthesize(say_text);
+        if (wav.empty()) { std::cerr << "síntese vazia" << std::endl; return 1; }
+        write_wav(say_out, wav, KokoroTTS::SAMPLE_RATE);
+        std::cout << "\"" << say_text << "\" → " << say_out
+                  << " (" << wav.size() / (float)KokoroTTS::SAMPLE_RATE << "s)" << std::endl;
+        if (play) play_samples(wav);
+        return 0;
+    }
 
     if (!cfg.voice_blend.empty() && play) {
         // Modo blend custom: só sintetiza, toca e salva — sem benchmark.
