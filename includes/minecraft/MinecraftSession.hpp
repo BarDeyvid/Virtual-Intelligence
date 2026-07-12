@@ -53,6 +53,16 @@ public:
 
     bool is_running() const { return running; }
 
+    /**
+     * @brief Enunciado de voz do jogador pro PRÓXIMO tick (16kHz mono float).
+     * @details Slot de 1: comando falado é perecível — um novo substitui o
+     *          antigo em vez de enfileirar. O tick anexa
+     *          "[VOZ DO JOGADOR] <__media__>" ao prompt e roda o caminho de
+     *          áudio (run_gameplay_tick_audio). Thread-safe (voice_mtx);
+     *          chamado do on_segment do VoicePipeline (modo vad_only).
+     */
+    void set_pending_voice(std::vector<float> audio_16k);
+
 private:
     void tick_loop(int tick_interval_ms);
 
@@ -89,6 +99,37 @@ private:
     // handle_chat_events synchronously), so no locking needed here.
     std::string active_directive;
     int active_directive_ticks_left = 0;
+
+    // Voz do jogador (plano B4): escrito pela thread do VAD via
+    // set_pending_voice, consumido (swap) pelo tick_loop.
+    std::mutex voice_mtx;
+    std::vector<float> pending_voice;
+
+    // Última reação do reflexo do sidecar (plano C1) — vira "[REFLEXO] ..."
+    // no prompt do tick seguinte. Só a thread do worker toca.
+    std::string pending_reflex_note;
+
+    // ---- Modo goal-driven (config/gameplay_goals.json) ----
+    // Progressão de aprendizado: um objetivo por vez no prompt, conclusão
+    // checada pelo inventário a cada tick. Só a thread do worker toca.
+    struct GameplayGoal {
+        std::string id;
+        std::string objetivo;
+        std::string done_item;
+        int done_count = 1;
+        bool suffix_match = false;
+    };
+    std::vector<GameplayGoal> goals;
+    size_t goal_idx = 0;
+
+    /// Carrega config/gameplay_goals.json (ausente/enabled:false = sem goals).
+    void load_goals();
+
+    /// Conta itens do inventário que casam com o objetivo (exact/suffix).
+    static int count_in_inventory(const nlohmann::json& world_state, const GameplayGoal& g);
+
+    /// Avança objetivos satisfeitos (comemora via 'falar' + loga goal_done).
+    void advance_goals(const nlohmann::json& world_state);
 
     // "esperar" is the shortest, least-committal valid completion in the
     // grammar — observed the model collapsing into picking it every single

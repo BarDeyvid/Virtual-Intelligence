@@ -31,6 +31,10 @@
 
 using json = nlohmann::json;
 
+// Encoder multimodal (áudio nativo do Gemma 4). Forward declaration em escopo
+// GLOBAL — o tipo real vive em tools/mtmd/mtmd.h; só AlyssaCoreAudio.cpp o vê.
+struct mtmd_context;
+
 /**
  * @struct SimpleModelParameters
  * @brief Structure to hold parameters for the model generation.
@@ -206,6 +210,10 @@ namespace alyssa_core {
         int n_batch;                      /**< Size of the batch. */
         bool owns_model = true;           /**< false = context-only wrapper over a shared model. */
         bool last_timed_out = false;      /**< Set when generate_raw() hits its time budget. */
+        ::mtmd_context* mtmd_ctx = nullptr; /**< Encoder de áudio (mmproj); nullptr = sem áudio. */
+
+        /// Libera o mtmd_ctx (definido em AlyssaCoreAudio.cpp; no-op se nulo).
+        void free_audio();
 
     public:
         /**
@@ -271,6 +279,7 @@ namespace alyssa_core {
          * @brief Destructor for AlyssaCore.
          */
         ~AlyssaCore() {
+            free_audio(); // antes do ctx/model: o mtmd referencia o modelo
             if (ctx) llama_free(ctx);
             if (model && owns_model) llama_model_free(model);
             if (owns_model) std::cout << "Modelo BASE e Contexto liberados." << std::endl;
@@ -291,6 +300,37 @@ namespace alyssa_core {
         llama_context* get_context() { return ctx; }
         int get_n_ctx() { return n_ctx; }
         int get_n_batch() { return n_batch; }
+
+        // =====================================================================
+        // Áudio nativo via mtmd (Gemma 4 E2B — voz direto no gameplay).
+        // Implementação em includes/AlyssaCoreAudio.cpp: o resto da classe é
+        // header-only, mas os corpos que tocam mtmd ficam fora do header pra
+        // só quem linka mtmd.lib pagar por eles (docs/plano-router-e-voz-
+        // gameplay.md, B2).
+        // =====================================================================
+
+        /**
+         * @brief Carrega o encoder de áudio (mmproj) pra este core. Lazy e
+         *        idempotente; ~557MB de VRAM (Q8). false = áudio indisponível.
+         */
+        bool init_audio(const std::string& mmproj_path);
+
+        /// true quando init_audio() já carregou o encoder.
+        bool audio_ready() const { return mtmd_ctx != nullptr; }
+
+        /**
+         * @brief Como generate_raw(), mas o prompt contém UM marcador
+         *        <__media__> que vira o áudio (16kHz mono float).
+         * @details O prompt deve vir já no turn format do Gemma 4
+         *          (ExpertBase::format_gemma4_prompt) — NUNCA o template do
+         *          GGUF (minja 0xC0000409) nem o do Gemma 3 (saída vazia em
+         *          áudio real; ver docs/gemma4-migration.md).
+         */
+        std::string generate_with_audio(
+            const std::string& prompt_with_marker,
+            const std::vector<float>& audio_16k,
+            const SimpleModelParameters& params,
+            std::function<void(const std::string& piece)> stream_callback = nullptr);
 
         /// true when the last generate_raw() hit its time budget (Phase 4.3).
         bool last_generation_timed_out() const { return last_timed_out; }

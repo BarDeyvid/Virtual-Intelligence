@@ -24,7 +24,7 @@
 
 #include "json.hpp"
 #include "EndocrineSystem.hpp"
-
+#include "vision/VisionSnapshot.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -143,6 +143,8 @@ public:
         last_proactive = start - std::chrono::seconds(backdate_s);
     }
 
+    void process_vision(const alyssa_vision::VisionSnapshot& snap);
+
     /// Call whenever the user sends input.
     void note_user_activity(TimePoint now = Clock::now()) {
         last_activity = now;
@@ -251,10 +253,8 @@ public:
                     trigger.type = TriggerType::AwayLeisure;
                     trigger.reason =
                         "O usuário saiu do computador faz " + std::to_string(away_s / 60) +
-                        " minuto(s) e você está sozinha. Escolha UMA coisa pra se distrair "
-                        "de acordo com seus interesses — por exemplo, abra o YouTube ou outro "
-                        "site que você curte usando a ferramenta open_url — e comente pra si "
-                        "mesma, em uma frase curta, o que vai fazer.";
+                        " minuto(s) e você está sozinha. Que tal explorar algo interessante na internet ou abrir um site que você gosta? "
+                        "Seja breve e casual, como quem se distrai sozinha por alguns instantes.";
                 }
             }
             return trigger;
@@ -305,7 +305,7 @@ private:
     TimePoint last_activity;
     TimePoint last_proactive;
 
-    // Estado de presença (webcam)
+    // Presence state
     bool had_presence_reading = false;
     bool user_present_ = true;
     TimePoint away_since{};
@@ -313,6 +313,15 @@ private:
     bool first_sighting_pending = false;
     bool leisure_done_this_absence = false;
     long long last_away_seconds = 0;
-};
 
+    // Vision trigger state
+    struct PendingTrigger {
+        std::string type;
+        std::string reason;
+    };
+    
+    PendingTrigger pending_trigger_;
+    bool user_was_present_ = false;
+    std::chrono::steady_clock::time_point last_vision_trigger_;
+    };
 } // namespace alyssa_proactivity

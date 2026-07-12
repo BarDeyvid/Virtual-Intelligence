@@ -20,9 +20,8 @@
 #include <string>
 #include <utility>
 
-// ── Optional CUDA Provider headers ──────────────────────
 #ifdef _WIN32
-#include <dml_provider_factory.h>
+#include <windows.h>
 #endif
 
 namespace vi = virtual_intelligence;
@@ -117,9 +116,9 @@ bool vi::HandTracker::Initialize() noexcept {
 
         return true;
 
-    } catch (const Ort::Exception& ex) {
+    } catch (const Ort::Exception&) {
         return false;
-    } catch (const std::exception& ex) {
+    } catch (const std::exception&) {
         return false;
     }
 }
@@ -221,12 +220,46 @@ bool vi::HandTracker::LoadModel(
     Ort::Session&      session) noexcept
 {
     try {
+#ifdef _WIN32
+        // Convert UTF-8 path to wide string
+        int size_needed = MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(),
+                                              static_cast<int>(model_path.size()),
+                                              nullptr, 0);
+        std::wstring wide_path(size_needed, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(),
+                            static_cast<int>(model_path.size()),
+                            &wide_path[0], size_needed);
+        session = Ort::Session(env_, wide_path.c_str(), session_options_);
+#else
         session = Ort::Session(env_, model_path.c_str(), session_options_);
+#endif
         return true;
     } catch (const Ort::Exception&) {
         return false;
     }
 }
+
+std::string vi::HandTracker::classify_gesture(const HandLandmarks& lm) {
+    if (lm.screen.size() < 21) return "none";
+
+    auto is_extended = [&](int tip_idx, int knuckle_idx) {
+        return lm.screen[tip_idx].y < lm.screen[knuckle_idx].y;
+    };
+
+    bool thumb_up = is_extended(4, 3);
+    bool index_up = is_extended(8, 6);
+    bool middle_up = is_extended(12, 10);
+    bool ring_up = is_extended(16, 14);
+    bool pinky_up = is_extended(20, 18);
+
+    if (thumb_up && !index_up && !middle_up && !ring_up && !pinky_up) return "thumbsup";
+    if (index_up && middle_up && !ring_up && !pinky_up) return "peace";
+    if (index_up && !middle_up && !ring_up && !pinky_up) return "point";
+    if (index_up && middle_up && ring_up && pinky_up) return "stop";
+
+    return "none";
+}
+
 
 // ── SetupSessionIO ──────────────────────────────────────
 void vi::HandTracker::SetupSessionIO(
@@ -563,7 +596,7 @@ void vi::HandTracker::ComputeRoi(
 
     // Side length (in original image): largest dimension * scale factor
     double side = static_cast<double>(
-        std::max(palm.bbox.width, palm.bbox.height) * kRoiScale);
+        (std::max)(palm.bbox.width, palm.bbox.height) * kRoiScale);
 
     double half_out = static_cast<double>(kLandmarkInputSize) * 0.5;
     double angle    = static_cast<double>(palm.rotation);  // radians

@@ -13,6 +13,7 @@
 #include "vram/GpuMemoryProbe.hpp"
 #include "ProactivityEngine.hpp"
 #include "TerminalSafety.hpp"
+#include "minecraft/MinecraftSession.hpp"
 
 void log_callback(ggml_log_level level, const char * text, void * user_data) {
     (void)level;
@@ -21,8 +22,18 @@ void log_callback(ggml_log_level level, const char * text, void * user_data) {
     fflush(stderr);
 }
 
-int main() {
+int main(int argc, char** argv) {
     alyssa_safety::install_crash_guard();
+
+    // --minecraft (plano B4): o microfone vira COMANDO DE GAMEPLAY — VAD corta
+    // o enunciado e o áudio vai direto pro E2B da Gaia via <__media__> (sem
+    // Whisper, sem chat de voz; o chat in-game continua respondido). Rode o
+    // sidecar antes: `node index.js` em minecraft-bridge/.
+    bool minecraft_mode = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--minecraft") minecraft_mode = true;
+    }
+
     try {
         llama_log_set(log_callback, nullptr);
         ggml_backend_load_all();
@@ -70,7 +81,13 @@ int main() {
         VoicePipeline::Options stt_opts;
         stt_opts.n_threads      = 4;
         stt_opts.vad_silence_ms = 450;
-        VoicePipeline stt("models/ggml-large-v3.bin", stt_opts,
+        stt_opts.vad_only       = minecraft_mode; // gameplay: só VAD, zero Whisper
+        // large-v3-turbo q8_0 (medido 2026-07-12, docs/benchmarks-2026-07-11.md):
+        // load 925ms vs 2803ms do large-v3 cheio (o load JIT some dentro da
+        // fala), transcrição ~2x mais rápida, 874MB vs 3GB de VRAM, saída
+        // idêntica no áudio de teste pt-BR. O .bin antigo continua em models/
+        // como rollback.
+        VoicePipeline stt("models/ggml-large-v3-turbo-q8_0.bin", stt_opts,
                           /*defer_model_load=*/true);
 
         // =====================================================================
@@ -97,8 +114,11 @@ int main() {
         auto llm_resident = std::make_shared<LLMResident>(
             [&alyssa_brain] { return alyssa_brain.llm_vram_footprint_bytes(); });
         vram_manager.register_resident(llm_resident);
+        // turbo-q8: ~874MB de pesos + ~200MB de estado/compute. Segue JIT por
+        // ora (regra pós-incidente 2026-07-04: TIER1_HOT só p/ o LLM), mas com
+        // ~1.1GiB virou candidato a voltar a HOT se a pressão real permitir.
         auto whisper_resident = std::make_shared<WhisperResident>(
-            &stt, 3468 * MiB, ResidencyTier::TIER2_JIT); // 3.5GiB: caro demais p/ residir (incidente 2026-07-04)
+            &stt, 1100 * MiB, ResidencyTier::TIER2_JIT);
         vram_manager.register_resident(whisper_resident);
         // Fase 3: lambdas plugadas no TTSResident — o scheduler não muda.
         // footprint_bytes = 0 porque o ORT do vcpkg é CPU-only (a sessão vive
@@ -257,6 +277,28 @@ int main() {
             }
         });
 
+        // Minecraft por voz (plano B4): sessão + roteamento dos enunciados.
+        std::unique_ptr<alyssa_minecraft::MinecraftSession> minecraft_session;
+        if (minecraft_mode) {
+            minecraft_session = std::make_unique<alyssa_minecraft::MinecraftSession>(
+                alyssa_brain, brain_mtx);
+            if (!minecraft_session->start()) {
+                std::cerr << "[Minecraft] Sidecar fora do ar (node index.js em "
+                             "minecraft-bridge/) — encerrando." << std::endl;
+                return 1;
+            }
+            stt.set_on_segment([&minecraft_session](const std::vector<float>& audio,
+                                                    const std::string&, long long) {
+                if (minecraft_session && minecraft_session->is_running()) {
+                    std::cout << "[Minecraft] Voz capturada ("
+                              << audio.size() / 16000.0 << "s) → próximo tick" << std::endl;
+                    minecraft_session->set_pending_voice(audio);
+                }
+            });
+            std::cout << "\n=== MODO MINECRAFT: fale comandos (\"ataca o zumbi\", "
+                         "\"vai pra árvore\") — a Gaia ouve direto ===\n" << std::endl;
+        }
+
         if (!stt.start()) {
             std::cerr << "Falha ao inciar Pipeline TTS." << std::endl;
             return 1;
@@ -280,7 +322,9 @@ int main() {
         std::string user_input;
 
         while (true) {
-            printf("\033[32m> \033[0m");
+            // No modo minecraft não há transcrição de chat — o prompt "> " a
+            // cada 50ms só afogava o console.
+            if (!minecraft_mode) printf("\033[32m> \033[0m");
             if (stt.get_last_result(user_input)) {
                 std::lock_guard<std::mutex> lock(brain_mtx);
                 is_processing = true;

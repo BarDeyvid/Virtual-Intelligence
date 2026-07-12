@@ -124,5 +124,14 @@ namespace alyssa_experts {
          *          No-op by default (plain ExpertBase shares the base core).
          */
         virtual void clear_own_kv_cache() {}
+
+        /**
+         * @brief Core dedicado deste expert, se ele tiver um próprio.
+         * @return nullptr para experts do modelo 1B compartilhado; o
+         *         AlyssaCore próprio no DedicatedCoreExpert (alyssa, gameplay).
+         *         Usado pelo caminho de voz do gameplay: generate_with_audio
+         *         precisa do core cru, sem o andaime de histórico do run().
+         */
+        virtual alyssa_core::AlyssaCore* dedicated_core() { return nullptr; }
     };
 }

@@ -34,10 +34,42 @@ endif()
 find_library(PORTAUDIO_LIBRARY portaudio)
 
 # 5. ONNX Runtime
-find_library(ONNXRUNTIME_LIBRARY onnxruntime)
+find_library(ONNXRUNTIME_LIBRARY onnxruntime
+    HINTS "$ENV{ONNXRUNTIME_DIR}/lib"
+          "$ENV{ONNXRUNTIME_DIR}/lib64"
+          "$ENV{ONNXRUNTIME_ROOT}/lib"
+          "$ENV{ONNXRUNTIME_ROOT}/lib64"
+          "C:/Program Files/onnxruntime/lib"
+          "C:/Program Files (x86)/onnxruntime/lib"
+)
 if (NOT ONNXRUNTIME_LIBRARY)
-    message(FATAL_ERROR "Could not find libonnxruntime.so.")
+    message(FATAL_ERROR "Could not find ONNX Runtime library. Set ONNXRUNTIME_DIR or ONNXRUNTIME_ROOT to the root of your ONNX Runtime installation.")
 endif()
+
+# --- Find ONNX Runtime include directory ---
+find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
+    HINTS "$ENV{ONNXRUNTIME_DIR}/include"
+          "$ENV{ONNXRUNTIME_ROOT}/include"
+          "$ENV{ONNXRUNTIME_DIR}/include/onnxruntime"
+          "$ENV{ONNXRUNTIME_ROOT}/include/onnxruntime"
+          "C:/Program Files/onnxruntime/include"
+          "C:/Program Files (x86)/onnxruntime/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/onnxruntime/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/../onnxruntime/include"
+)
+if(NOT ONNXRUNTIME_INCLUDE_DIR AND ONNXRUNTIME_LIBRARY)
+    get_filename_component(ONNXRUNTIME_LIB_DIR "${ONNXRUNTIME_LIBRARY}" DIRECTORY)
+    find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
+        HINTS
+            "${ONNXRUNTIME_LIB_DIR}/../include"
+            "${ONNXRUNTIME_LIB_DIR}/../../include"
+            "${ONNXRUNTIME_LIB_DIR}/../../../include"
+    )
+endif()
+if(NOT ONNXRUNTIME_INCLUDE_DIR)
+    message(FATAL_ERROR "Could not find ONNX Runtime include directory. Set ONNXRUNTIME_DIR or ONNXRUNTIME_ROOT to the root of your ONNX Runtime installation, or install headers in a standard include location.")
+endif()
+
 
 # 6. Protocol Buffers (using imported targets from protobuf-config.cmake)
 if(NOT TARGET protobuf::libprotobuf)
@@ -52,9 +84,10 @@ set(AI_LIBS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Llama.cpp & Whisper.cpp Setup
 set(LLAMA_INCLUDE_DIR 
-    "${AI_LIBS_ROOT}/llama.cpp/include" 
+    "${AI_LIBS_ROOT}/llama.cpp/include"
     "${AI_LIBS_ROOT}/llama.cpp/ggml/include"
     "${AI_LIBS_ROOT}/llama.cpp/ggml/include/ggml"
+    "${AI_LIBS_ROOT}/llama.cpp/tools/mtmd"
 )
 # --- CUDA Build Paths (use build_cuda if CUDA is available, fallback to build) ---
 if(DEFINED ENV{CUDA_PATH} OR EXISTS "${AI_LIBS_ROOT}/llama.cpp/build_cuda")
@@ -76,6 +109,8 @@ find_library(GGML_LIBRARY_FILE ggml PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LI
 find_library(GGML_BASE_LIBRARY_FILE ggml-base PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LIBS_ROOT}/llama.cpp/build/ggml/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
 find_library(GGML_CPU_LIBRARY_FILE ggml-cpu PATHS "${LLAMA_BUILD_DIR}/ggml/src" "${AI_LIBS_ROOT}/llama.cpp/build/ggml/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
 find_library(WHISPER_LIBRARY_FILE whisper PATHS "${WHISPER_BUILD_DIR}/src" "${AI_LIBS_ROOT}/whisper.cpp/build/src" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
+# mtmd: encoder multimodal (áudio nativo do Gemma 4 — voz no gameplay, plano B)
+find_library(MTMD_LIBRARY_FILE mtmd PATHS "${LLAMA_BUILD_DIR}/tools/mtmd" "${AI_LIBS_ROOT}/llama.cpp/build/tools/mtmd" PATH_SUFFIXES Release Debug NO_DEFAULT_PATH)
 
 message(STATUS "LLAMA lib: ${LLAMA_LIBRARY_FILE}")
 message(STATUS "GGML lib: ${GGML_LIBRARY_FILE}")
@@ -99,15 +134,50 @@ include_directories(
     ${WHISPER_INCLUDE_DIR}
     ${SQLITE3_INCLUDE_DIR}
     ${CURL_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS} 
+    ${OpenCV_INCLUDE_DIRS}
+    ${ONNXRUNTIME_INCLUDE_DIR}
 )
 
 # --- Common Source Files ---
-set(COMMON_SOURCES includes/AlyssaNet.cpp includes/OpenCVExpert.hpp includes/pc_metrics_reader.cpp includes/EmotionLexiconLoader.cpp includes/AlyssaMemoryHandler.cpp includes/Embedding/Embedder.cpp includes/EndocrineSystem.cpp includes/WeightedFusion/WeightedFusion.cpp includes/voice/ElevenLabsTTS.cpp includes/voice/KokoroTTS.cpp includes/voice/VoicePipeline.cpp includes/log.cpp includes/ToolExecutor.cpp includes/VisionEnhancer.cpp includes/PresenceDetector.cpp includes/InputController.cpp includes/vram/VRAMResourceManager.cpp includes/vram/AlyssaResidents.cpp includes/vram/GpuMemoryProbe.cpp includes/minecraft/MinecraftBridge.cpp includes/minecraft/ActionExecutor.cpp includes/minecraft/MinecraftSession.cpp includes/minecraft/GameplayLog.cpp includes/TerminalSafety.cpp)
+set(COMMON_SOURCES 
+    includes/AlyssaNet.cpp 
+    includes/AlyssaCoreAudio.cpp 
+    includes/OpenCVExpert.hpp 
+    includes/pc_metrics_reader.cpp 
+    includes/EmotionLexiconLoader.cpp 
+    includes/AlyssaMemoryHandler.cpp 
+    includes/Embedding/Embedder.cpp 
+    includes/EndocrineSystem.cpp 
+    includes/WeightedFusion/WeightedFusion.cpp 
+    includes/voice/ElevenLabsTTS.cpp 
+    includes/voice/KokoroTTS.cpp 
+    includes/voice/VoicePipeline.cpp 
+    includes/log.cpp 
+    includes/ToolExecutor.cpp 
+    includes/VisionEnhancer.cpp 
+    includes/PresenceDetector.cpp 
+    includes/InputController.cpp 
+    includes/vram/VRAMResourceManager.cpp 
+    includes/vram/AlyssaResidents.cpp 
+    includes/vram/GpuMemoryProbe.cpp 
+    includes/minecraft/MinecraftBridge.cpp 
+    includes/minecraft/ActionExecutor.cpp 
+    includes/minecraft/MinecraftSession.cpp 
+    includes/minecraft/GameplayLog.cpp 
+    includes/TerminalSafety.cpp
+
+    # NEW: add vision sources
+    includes/vision/VisionManager.cpp
+    includes/vision/FaceRecognizer.cpp
+    includes/vision/ScreenContext.cpp
+    includes/HandTracker.cpp
+    includes/ProactivityEngine.cpp
+)
 
 # --- Source Files ---
 set(Alyssa_CLI_SOURCES Alyssa_CLI.cpp ${COMMON_SOURCES})
 set(Alyssa_CLI_WITH_VOICE_SOURCES Alyssa_CLI_WITH_VOICE.cpp ${COMMON_SOURCES})
+set(ALYSSAD_SOURCES alyssad.cpp ${COMMON_SOURCES})
 
 # Tests Sources
 set(TEST_TTS tests/test_elevenlabs.cpp includes/voice/ElevenLabsTTS.cpp)
@@ -122,10 +192,14 @@ set(TEST_COMPANION tests/test_companion.cpp includes/InputController.cpp)
 set(TEST_VRAM_MANAGER tests/test_vram_manager.cpp includes/vram/VRAMResourceManager.cpp includes/vram/GpuMemoryProbe.cpp)
 set(VRAM_BASELINE tests/vram_baseline.cpp)
 set(TEST_KOKORO tests/test_kokoro.cpp includes/voice/KokoroTTS.cpp)
+set(TEST_ASR_AB tests/test_asr_ab.cpp includes/voice/VoicePipeline.cpp)
+set(TEST_GAMEPLAY_AUDIO tests/test_gameplay_audio.cpp includes/AlyssaCoreAudio.cpp)
 
 # --- Executables ---
-add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})
+add_executable(alyssa_cli ${Alyssa_CLI_SOURCES})   # no extra vision files needed
 add_executable(alyssa_cli_with_voice ${Alyssa_CLI_WITH_VOICE_SOURCES})
+# Daemon headless: brain atrás de NDJSON/TCP (docs/alyssad-protocol.md)
+add_executable(alyssad ${ALYSSAD_SOURCES})
 add_executable(test_elevenlabs ${TEST_TTS})
 add_executable(test_voice ${TEST_VOICE})
 add_executable(test_fusion_utils ${TEST_FUSION_UTILS})
@@ -140,17 +214,25 @@ add_executable(test_vram_manager ${TEST_VRAM_MANAGER})
 target_link_libraries(test_vram_manager PRIVATE Threads::Threads)
 # Fase 0 do plano_scheduler: mede footprint/tempo de load real dos modelos.
 # Roda de dentro de build/Release (precisa de models/ e das DLLs já copiadas).
-add_executable(vram_baseline ${VRAM_BASELINE})
-target_link_libraries(vram_baseline PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${WHISPER_LIBRARY_FILE} Threads::Threads)
+add_executable(vram_baseline ${VRAM_BASELINE} includes/AlyssaCoreAudio.cpp)
+target_link_libraries(vram_baseline PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${MTMD_LIBRARY_FILE} ${WHISPER_LIBRARY_FILE} Threads::Threads)
 # Fase 3 do plano_scheduler: mede load/RAM/RTF/latência do Kokoro TTS local.
 # Roda de dentro de build/Release (precisa de models/kokoro e libespeak-ng.dll).
 add_executable(test_kokoro ${TEST_KOKORO})
 target_link_libraries(test_kokoro PRIVATE ${ONNXRUNTIME_LIBRARY} ${PORTAUDIO_LIBRARY} Threads::Threads)
+# A/B de ASR pro sotaque (Whisper in-process vs Gemma E2B via llama-mtmd-cli).
+# Roda de dentro de build/Release (models/ + DLLs + path relativo do mtmd-cli).
+add_executable(test_asr_ab ${TEST_ASR_AB})
+target_link_libraries(test_asr_ab PRIVATE ${WHISPER_LIBRARY_FILE} ${PORTAUDIO_LIBRARY} Threads::Threads)
+# Aceite do plano B: WAV → [VOZ DO JOGADOR] <__media__> → [AÇÃO] via grammar.
+add_executable(test_gameplay_audio ${TEST_GAMEPLAY_AUDIO})
+target_link_libraries(test_gameplay_audio PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${MTMD_LIBRARY_FILE} Threads::Threads)
 
 # --- Linking ---
 set(COMMON_LIBS
     ${LLAMA_LIBRARY_FILE}
     ${GGML_LIBRARY_FILE}
+    ${MTMD_LIBRARY_FILE}
     ${WHISPER_LIBRARY_FILE}
     ${ONNXRUNTIME_LIBRARY}
     protobuf::libprotobuf
@@ -171,13 +253,19 @@ set(COMMON_LIBS
 if(NOT WIN32)
     target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component dl stdc++fs)
     target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS} dl stdc++fs)
+    target_link_libraries(alyssad PRIVATE ${COMMON_LIBS} dl stdc++fs)
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads dl stdc++fs spdlog::spdlog)
 else()
     target_link_libraries(alyssa_cli PRIVATE ${COMMON_LIBS} ftxui::screen ftxui::dom ftxui::component ws2_32)
     target_link_libraries(alyssa_cli_with_voice PRIVATE ${COMMON_LIBS} ws2_32)
+    target_link_libraries(alyssad PRIVATE ${COMMON_LIBS} ws2_32)
     target_link_libraries(test_voice PRIVATE ${WHISPER_LIBRARY_FILE} protobuf::libprotobuf protobuf::libprotobuf-lite ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
     target_link_libraries(test_elevenlabs PRIVATE protobuf::libprotobuf protobuf::libprotobuf-lite ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWRESAMPLE_LIBRARY} Threads::Threads spdlog::spdlog)
+endif()
+
+if(NOT WIN32)
+    list(APPEND COMMON_SOURCES includes/HyprlandContext.cpp)
 endif()
 
 # --- Post-Build Commands ---
@@ -227,3 +315,4 @@ endforeach()
 # Serializa o voice depois do cli: mesmo diretório de saída, sem cópias
 # concorrentes (inclui o applocal.ps1 do vcpkg, que também escreve DLLs lá).
 add_dependencies(alyssa_cli_with_voice alyssa_cli)
+add_dependencies(alyssad alyssa_cli)

@@ -186,5 +186,10 @@ namespace hyprland {
          * @brief Time since last update (ms)
          */
         long get_update_age_ms() const;
+
+        int get_cursor_x() const { return cursor_x; }
+        int get_cursor_y() const { return cursor_y; }
+        int get_active_workspace_id() const { return active_workspace_id; }
+
     };
 }

@@ -1,0 +1,16 @@
+{#- Turn format REAL do Gemma 4 (<|turn>role ... <turn|>), versão mínima que
+    o minja do llama.cpp consegue parsear — o Jinja oficial de 16KB embutido
+    no GGUF (tools/thinking) derruba o minja com 0xC0000409. Usado pelo
+    llama-mtmd-cli/llama-server via --jinja --chat-template-file. -#}
+{{- bos_token -}}
+{%- for message in messages -%}
+{%- if message['role'] == 'assistant' -%}
+<|turn>model
+{% else -%}
+<|turn>{{ message['role'] }}
+{% endif -%}
+{{- message['content'] | trim }}<turn|>
+{% endfor -%}
+{%- if add_generation_prompt -%}
+<|turn>model
+{% endif -%}

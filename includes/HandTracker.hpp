@@ -63,6 +63,7 @@ struct HandTrackerConfig {
 // ═══════════════════════════════════════════════════════════
 class HandTracker {
 public:
+    HandTracker() = default;
     explicit HandTracker(const HandTrackerConfig& cfg) noexcept;
     ~HandTracker() = default;
 
@@ -97,6 +98,10 @@ public:
         const cv::Mat&       frame,
         const PalmDetection& palm,
         HandLandmarks&       out_landmarks) noexcept;
+
+    static std::string classify_gesture(const HandLandmarks& lm);
+    
+    void set_config(const HandTrackerConfig& cfg) { config_ = cfg; }
 
 private:
     // ── Configuration ────────────────────────────────────

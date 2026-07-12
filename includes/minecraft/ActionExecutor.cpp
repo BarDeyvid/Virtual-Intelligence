@@ -157,6 +157,17 @@ std::vector<json> ActionExecutor::process_pending_events() {
             endocrine.trigger_stress_response(std::min(1.0, amount / 20.0));
         } else if (kind == "chat") {
             endocrine.trigger_social_response(0.3);
+        } else if (kind == "reflex") {
+            // Reflexo disparou = ameaça/urgência real — mas o loop de reflexo
+            // roda a 250ms e um combate dispara VÁRIOS eventos por segundo;
+            // sem rate-limit o cortisol crava em ~0.96 em segundos (visto ao
+            // vivo em 2026-07-12). Um nudge a cada 5s no máximo.
+            static auto last_reflex_nudge = std::chrono::steady_clock::time_point{};
+            auto now = std::chrono::steady_clock::now();
+            if (now - last_reflex_nudge > std::chrono::seconds(5)) {
+                last_reflex_nudge = now;
+                endocrine.trigger_stress_response(0.15);
+            }
         }
     }
     return events;

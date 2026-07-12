@@ -2,6 +2,7 @@
 #include "minecraft/MinecraftSession.hpp"
 
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -38,12 +39,25 @@ MinecraftSession::~MinecraftSession() {
 bool MinecraftSession::start(const std::string& bridge_host, int bridge_port, int tick_interval_ms) {
     if (running) return true;
 
+    // gameplayModel é lazy (3GB de E2B só quando o Minecraft realmente liga).
+    // brain_mtx segura o load contra um turno de chat em andamento.
+    {
+        std::lock_guard<std::mutex> brain_lock(brain_mtx);
+        if (!core.ensure_gameplay_expert()) {
+            std::cerr << "[MinecraftSession] gameplayModel indisponível "
+                         "(config ausente ou load falhou)." << std::endl;
+            return false;
+        }
+    }
+
     if (!bridge.connect(bridge_host, bridge_port)) {
         std::cerr << "[MinecraftSession] Não foi possível conectar ao sidecar em "
                   << bridge_host << ":" << bridge_port
                   << " (rode `node index.js` dentro de minecraft-bridge/ primeiro)." << std::endl;
         return false;
     }
+
+    load_goals(); // modo goal-driven (config/gameplay_goals.json), se existir
 
     running = true;
     worker = std::thread(&MinecraftSession::tick_loop, this, tick_interval_ms);
@@ -83,6 +97,18 @@ std::string MinecraftSession::build_prompt(const nlohmann::json& world_state, La
     out << "Posição: (" << pos_x << ", " << pos_y << ", " << pos_z << ")\n";
     out << "Vida: " << world_state.value("health", 0.0) << "/20  Fome: "
         << world_state.value("food", 0.0) << "/20\n";
+
+    // Dia/noite decide se mob hostil é ameaça plausível; o sidecar sempre
+    // mandou time_of_day/is_raining, só nunca chegava ao modelo. Uma linha
+    // curta (~6 tokens) — cabe no orçamento de prefill do tick.
+    long tod = static_cast<long>(world_state.value("time_of_day", 0.0));
+    const char* phase = (tod < 12000) ? "dia"
+                      : (tod < 13000) ? "anoitecendo"
+                      : (tod < 23000) ? "noite (mobs hostis aparecem)"
+                                       : "amanhecendo";
+    out << "Hora do jogo: " << phase;
+    if (world_state.value("is_raining", false)) out << " · chovendo";
+    out << "\n";
 
     out << "Inventário: ";
     auto inventory = world_state.value("inventory", nlohmann::json::array());
@@ -140,6 +166,70 @@ std::string MinecraftSession::build_prompt(const nlohmann::json& world_state, La
     return out.str();
 }
 
+void MinecraftSession::set_pending_voice(std::vector<float> audio_16k) {
+    std::lock_guard<std::mutex> lk(voice_mtx);
+    pending_voice = std::move(audio_16k);
+}
+
+void MinecraftSession::load_goals() {
+    goals.clear();
+    goal_idx = 0;
+    std::ifstream f("config/gameplay_goals.json");
+    if (!f.is_open()) return;
+    try {
+        nlohmann::json j = nlohmann::json::parse(f);
+        if (!j.value("enabled", false)) return;
+        for (const auto& g : j.value("goals", nlohmann::json::array())) {
+            GameplayGoal goal;
+            goal.id           = g.value("id", "?");
+            goal.objetivo     = g.value("objetivo", "");
+            goal.done_item    = g.value("done_item", "");
+            goal.done_count   = g.value("done_count", 1);
+            goal.suffix_match = (g.value("match", "exact") == "suffix");
+            if (!goal.objetivo.empty() && !goal.done_item.empty()) goals.push_back(goal);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[Goals] gameplay_goals.json inválido: " << e.what() << std::endl;
+        goals.clear();
+    }
+    if (!goals.empty()) {
+        std::cout << "[Goals] Modo goal-driven: " << goals.size()
+                  << " objetivos carregados." << std::endl;
+    }
+}
+
+int MinecraftSession::count_in_inventory(const nlohmann::json& world_state,
+                                         const GameplayGoal& g) {
+    int total = 0;
+    for (const auto& item : world_state.value("inventory", nlohmann::json::array())) {
+        const std::string name = item.value("name", "");
+        const bool match = g.suffix_match
+            ? (name.size() >= g.done_item.size() &&
+               name.compare(name.size() - g.done_item.size(),
+                            g.done_item.size(), g.done_item) == 0)
+            : (name == g.done_item);
+        if (match) total += item.value("count", 0);
+    }
+    return total;
+}
+
+void MinecraftSession::advance_goals(const nlohmann::json& world_state) {
+    // Loop (não if): no boot, objetivos já satisfeitos pelo inventário atual
+    // são pulados em cascata — retomar uma sessão não repete o tutorial.
+    while (goal_idx < goals.size() &&
+           count_in_inventory(world_state, goals[goal_idx]) >= goals[goal_idx].done_count) {
+        const auto& done = goals[goal_idx];
+        std::cout << "[Goals] Objetivo concluído: " << done.id << std::endl;
+        GameplayLog::instance().log("goal_done", {{"id", done.id}});
+        goal_idx++;
+
+        std::string msg = (goal_idx < goals.size())
+            ? "Consegui: " + done.id + "! Próximo objetivo: " + goals[goal_idx].id
+            : "Terminei todos os meus objetivos! Tô jogando livre agora.";
+        bridge.send_action("falar", {msg});
+    }
+}
+
 void MinecraftSession::tick_loop(int tick_interval_ms) {
     while (running) {
         auto tick_start = std::chrono::steady_clock::now();
@@ -153,17 +243,34 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
             GameplayLog::instance().log("world_state", {{"data", world_state}});
 
             if (!world_state.empty()) {
+                advance_goals(world_state); // checa/comemora/avança objetivos
+
                 std::unique_lock<std::mutex> brain_lock(brain_mtx, std::try_to_lock);
                 if (brain_lock.owns_lock()) {
                     LabelMap labels;
                     EntityLabelMap entity_names;
                     std::string prompt = build_prompt(world_state, labels, entity_names);
 
+                    // Objetivo atual em TODO tick: é o que dá direção ao
+                    // comportamento (e mata o "cavar terra por cavar").
+                    if (goal_idx < goals.size()) {
+                        prompt += "[OBJETIVO ATUAL] " + goals[goal_idx].objetivo + "\n";
+                    }
+
                     if (active_directive_ticks_left > 0) {
                         prompt += "[INSTRUÇÃO DO JOGADOR] " + active_directive + "\n";
                         if (--active_directive_ticks_left == 0) {
                             active_directive.clear();
                         }
+                    }
+
+                    // Reflexo do sidecar (plano C1): o estrategista precisa
+                    // saber que o "corpo" já reagiu sozinho, senão decide às
+                    // cegas por cima da fuga/ataque automático.
+                    if (!pending_reflex_note.empty()) {
+                        prompt += "[REFLEXO] Reação automática recente: " +
+                                  pending_reflex_note + "\n";
+                        pending_reflex_note.clear();
                     }
 
                     // Escalating pressure after repeated "esperar" — see the
@@ -174,9 +281,40 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
                             std::to_string(consecutive_esperar_count) +
                             " vezes seguidas. Escolha uma ação real agora (mover, minerar, atacar) — não esperar de novo.\n";
                     }
-                    GameplayLog::instance().log("prompt", {{"text", prompt}});
+                    // Voz do jogador (plano B4): consome o slot e tenta o
+                    // caminho de áudio; falha (sem mmproj etc.) degrada pro
+                    // tick de texto normal sem a linha de voz.
+                    std::vector<float> voice;
+                    {
+                        std::lock_guard<std::mutex> vlk(voice_mtx);
+                        voice.swap(pending_voice);
+                    }
 
-                    std::string signal = core.run_gameplay_tick(prompt);
+                    std::string signal;
+                    if (!voice.empty()) {
+                        // Instrução dominante: sem isso o modelo ouvia e
+                        // seguia cavando terra como se nada tivesse sido dito.
+                        std::string voiced_prompt = prompt +
+                            "[VOZ DO JOGADOR] O jogador acabou de FALAR com você pelo microfone "
+                            "(áudio anexo). Se for um comando de jogo, a sua ação DEVE obedecê-lo "
+                            "AGORA — ignore qualquer outro plano. Se não for comando, responda "
+                            "com 'falar'. <__media__>\n";
+                        GameplayLog::instance().log("prompt",
+                            {{"text", voiced_prompt}, {"voice_samples", voice.size()}});
+                        signal = core.run_gameplay_tick_audio(voiced_prompt, voice);
+                        if (signal.empty()) {
+                            std::cerr << "[MinecraftSession] Caminho de voz indisponível; "
+                                         "tick segue sem áudio." << std::endl;
+                        } else {
+                            // No console: é o feedback que diz se ela OBEDECEU
+                            // (o GameplayLog guarda, mas ninguém olha ao vivo).
+                            std::cout << "[Gaia ouviu] " << signal << std::endl;
+                        }
+                    }
+                    if (signal.empty()) {
+                        GameplayLog::instance().log("prompt", {{"text", prompt}});
+                        signal = core.run_gameplay_tick(prompt);
+                    }
                     GameplayLog::instance().log("signal", {{"text", signal}});
 
                     if (signal.find("[AÇÃO] esperar") != std::string::npos) {
@@ -193,9 +331,16 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
                 }
             }
 
-            // Drena eventos (dano/morte/chat) mesmo em ticks sem ação nova.
+            // Drena eventos (dano/morte/chat/reflexo) mesmo em ticks sem ação.
             auto events = action_executor.process_pending_events();
             handle_chat_events(events);
+            for (const auto& ev : events) {
+                if (ev.value("event", "") == "reflex") {
+                    auto d = ev.value("data", nlohmann::json::object());
+                    pending_reflex_note =
+                        d.value("action", "?") + " — " + d.value("reason", "");
+                }
+            }
         } catch (const std::exception& e) {
             std::cerr << "[MinecraftSession] Tick falhou, seguindo para o próximo: "
                       << e.what() << std::endl;
