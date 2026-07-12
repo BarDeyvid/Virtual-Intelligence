@@ -1,6 +1,9 @@
 #include "VoicePipeline.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <iomanip>
 
 // --- Construtor e Destrutor ---
 
@@ -13,10 +16,22 @@ VoicePipeline::VoicePipeline(const std::string& model_path, Options options,
                              bool defer_model_load)
     : m_options(options), m_model_path(model_path) {
 
+    // Log do whisper.cpp é global e por default cospe INFO/DEBUG no stderr —
+    // o Silero VAD loga 3 linhas POR CHUNK (20x/s) e afoga o terminal.
+    // Só WARN pra cima passa (mesmo padrão do llama_log_set no AlyssaNet).
+    whisper_log_set([](enum ggml_log_level level, const char* text, void*) {
+        if (level >= GGML_LOG_LEVEL_WARN) {
+            fprintf(stderr, "%s", text);
+        }
+    }, nullptr);
+
     m_vad_min_samples = (size_t)(m_options.vad_min_duration_ms / 1000.0 * SAMPLE_RATE);
 
-    // 1. Carregar Modelo Whisper (a menos que o scheduler de VRAM vá decidir)
-    if (!defer_model_load) {
+    // 1. Carregar Modelo Whisper (a menos que o scheduler de VRAM vá decidir,
+    //    ou que o pipeline seja só VAD — gameplay por voz não transcreve)
+    if (m_options.vad_only) {
+        std::cout << "[Whisper] Modo vad_only: sem transcrição, sem modelo." << std::endl;
+    } else if (!defer_model_load) {
         if (!load_model()) {
             throw std::runtime_error("ERRO: Falha ao carregar o modelo Whisper.");
         }
@@ -111,6 +126,12 @@ bool VoicePipeline::start() {
     if (inputParameters.device == paNoDevice) {
         std::cerr << "ERRO: Nenhum dispositivo de entrada de áudio encontrado." << std::endl;
         return false;
+    }
+
+    // Sempre dizer QUAL mic abriu: "não tá me escutando" quase sempre é o
+    // Windows apontando o default pra outro dispositivo (webcam, virtual).
+    if (const PaDeviceInfo* dev = Pa_GetDeviceInfo(inputParameters.device)) {
+        std::cout << "[Audio] Microfone: \"" << dev->name << "\"" << std::endl;
     }
     
     inputParameters.channelCount = 1;
@@ -209,10 +230,23 @@ void VoicePipeline::_whisper_worker_func() {
         if (m_input_queue.pop(audio_segment)) { // Bloqueia até ter um item
             if (!m_running) break;
 
+            // vad_only: o consumidor quer o ÁUDIO (gameplay por voz), não texto.
+            if (m_options.vad_only) {
+                if (m_on_segment) m_on_segment(audio_segment, "", 0);
+                continue;
+            }
+
+            auto t0 = std::chrono::steady_clock::now();
             std::string transcription = _process_transcription(audio_segment);
-            
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - t0).count();
+
             if (!transcription.empty()) {
                 m_output_queue.push(transcription);
+            }
+            // Mesmo com texto vazio: o A/B quer o áudio de todo segmento.
+            if (m_on_segment) {
+                m_on_segment(audio_segment, transcription, ms);
             }
         }
     }
@@ -236,10 +270,11 @@ void VoicePipeline::pause() {
  */
 void VoicePipeline::resume() {
     std::cout << "[VAD] Retomado." << std::endl;
-    // Limpa qualquer áudio capturado durante a pausa
-    if (m_running) {
-        m_audio_data.write_pos = 0; 
-    }
+    // Não mexe no write_pos: o last_read_pos da thread de VAD ficaria stale
+    // e o primeiro poll pós-resume leria o buffer circular INTEIRO (até 30s
+    // de áudio velho, incluindo a própria voz do TTS) como um chunk só.
+    // Em vez disso a thread de VAD re-sincroniza o cursor dela.
+    m_sync_read_pos = true;
     m_is_paused = false;
 }
 
@@ -261,6 +296,12 @@ void VoicePipeline::_vad_loop_func() {
     const auto silence_extended = std::chrono::milliseconds(
         std::max(m_options.vad_silence_extended_ms, m_options.vad_silence_ms));
 
+    // Medidor de nível: uma linha a cada ~5s dizendo se o mic entrega áudio
+    // e se o VAD está vendo fala. Diagnóstico do "não tá me escutando" —
+    // se o rms fica ~0.000x, o problema é dispositivo/nível, não o VAD.
+    auto last_meter_time = std::chrono::steady_clock::now();
+    double meter_peak = 0.0;
+
     // Endpoint adaptativo: o probe é consultado UMA vez por episódio de
     // silêncio; se disser "incompleto", a janela alarga para silence_extended.
     bool probe_asked = false;
@@ -272,6 +313,17 @@ void VoicePipeline::_vad_loop_func() {
         std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Poll 20x/s
 
         if (m_is_paused) {
+            continue;
+        }
+
+        // Pós-resume: pula direto pro presente e descarta o que ficou no
+        // buffer de antes/durante a pausa (inclusive um segmento de fala
+        // que tenha ficado pela metade).
+        if (m_sync_read_pos.exchange(false)) {
+            last_read_pos = m_audio_data.write_pos;
+            speech_buffer.clear();
+            preroll.clear();
+            if (m_vad_ctx) whisper_vad_reset_state(m_vad_ctx);
             continue;
         }
 
@@ -289,6 +341,16 @@ void VoicePipeline::_vad_loop_func() {
             std::copy(m_audio_data.buffer.begin(), m_audio_data.buffer.begin() + current_write_pos, chunk.begin() + (m_buffer_size_samples - last_read_pos));
         }
         last_read_pos = current_write_pos;
+
+        // Atualiza o medidor (pico do chunk) e loga a cada ~5s
+        for (float s : chunk) meter_peak = std::max(meter_peak, (double)std::fabs(s));
+        if (std::chrono::steady_clock::now() - last_meter_time > std::chrono::seconds(5)) {
+            std::cout << "[Audio] nível: pico " << std::fixed << std::setprecision(3)
+                      << meter_peak << (speech_buffer.empty() ? "" : " (capturando fala)")
+                      << std::endl;
+            meter_peak = 0.0;
+            last_meter_time = std::chrono::steady_clock::now();
+        }
 
         // Lógica VAD
         if (_is_speech(chunk)) {
@@ -382,6 +444,11 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
     params.print_timestamps = false;
     params.n_threads        = m_options.n_threads;
     params.language         = m_options.language.c_str();
+    // Cada segmento do VAD é um enunciado independente: sem no_context o
+    // transcript anterior vira prompt do próximo e uma alucinação se
+    // auto-alimenta por vários turnos. Também garante que o initial_prompt
+    // (sotaque) não seja diluído pelo histórico.
+    params.no_context       = true;
     if (!m_options.initial_prompt.empty()) {
         params.initial_prompt = m_options.initial_prompt.c_str();
     }
@@ -402,6 +469,33 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
     
     full_text.erase(0, full_text.find_first_not_of(" \t\n\r\f\v"));
     full_text.erase(full_text.find_last_not_of(" \t\n\r\f\v") + 1);
+
+    // Alucinações clássicas do Whisper em segmentos de ruído/quase-silêncio
+    // (vêm do treino em legendas de vídeo). Se a transcrição INTEIRA é uma
+    // dessas, é lixo — melhor turno perdido que a Alyssa respondendo a
+    // "não se esqueça de se inscrever no canal".
+    static const char* kHallucinations[] = {
+        "legendas pela comunidade amara.org",
+        "legendas pela comunidade",
+        "amara.org",
+        "obrigado por assistir",
+        "obrigada por assistir",
+        "não se esqueça de se inscrever",
+        "inscreva-se no canal",
+        "curta e compartilhe",
+        "tchau, tchau!",
+        "até o próximo vídeo",
+    };
+    std::string lowered = full_text;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return (char)std::tolower(c); });
+    for (const char* h : kHallucinations) {
+        if (lowered == h) {
+            std::cout << "[Whisper] Alucinação conhecida descartada: \""
+                      << full_text << "\"" << std::endl;
+            return "";
+        }
+    }
 
     return full_text;
 }
@@ -479,11 +573,7 @@ int VoicePipeline::_pa_callback(const void *inputBuffer, void *outputBuffer,
 int VoicePipeline::_pa_callback_impl(const void* input, unsigned long frameCount) {
     const int16_t *input_i16 = (const int16_t*)input;
 
-    if (!m_audio_data.stream_ready) {
-        return paContinue;
-    }
-
-    if (!m_audio_data.stream_ready || m_is_paused) { 
+    if (!m_audio_data.stream_ready || m_is_paused) {
         return paContinue;
     }
 

@@ -49,16 +49,23 @@ public:
         int vad_silence_extended_ms = 1500;    ///< Janela alargada quando o endpoint probe diz "frase incompleta"
         int vad_preroll_ms = 300;              ///< Áudio pré-fala prepended ao segmento (não corta a 1ª sílaba)
 
+        /// true = pipeline vira só captura+VAD: não transcreve nem carrega o
+        /// Whisper; cada enunciado sai por on_segment com texto vazio. É o
+        /// modo do gameplay por voz (o áudio vai direto pro E2B via mtmd).
+        bool vad_only = false;
+
         // Decodificação Whisper
         int beam_size = 5;                     ///< Beam search (mais robusto a sotaque que greedy)
         /// Prompt de condicionamento: puxa o decoder para pt-BR informal
         /// falado no Sul do Brasil (sotaque de colônia, influência de
-        /// imigração alemã/francesa). Vazio = desliga.
+        /// imigração alemã/francesa). Os nomes próprios no fim são a parte
+        /// mais valiosa: sem eles "Alyssa" virou "Taliça" no teste de
+        /// 2026-07-12 — o decoder só acerta nome que já viu. Vazio = desliga.
         std::string initial_prompt =
             "Transcrição de uma conversa informal em português brasileiro, "
             "falada no Sul do Brasil com sotaque de influência alemã e "
-            "francesa. Falamos sobre tecnologia, programação, jogos e o "
-            "dia a dia.";
+            "francesa. O Deyvid conversa com a Alyssa sobre tecnologia, "
+            "programação, Minecraft e o dia a dia.";
     };
 
     /**
@@ -91,11 +98,30 @@ public:
 
     /**
      * @brief Gets the last transcription result from the output queue (non-blocking).
-     * 
+     *
      * @param result String to store the transcription result
      * @return true if a new result was obtained, false if the queue was empty
      */
     bool get_last_result(std::string& result);
+
+    /**
+     * @brief Transcrição one-shot de um buffer já pronto (16kHz mono float).
+     * @details Mesmo caminho da pipeline (beam, initial_prompt, filtro de
+     *          alucinação), sem VAD nem microfone — pra ferramentas que já
+     *          têm o enunciado cortado (test_asr_ab, futuro `listen` do
+     *          alyssad). Bloqueante; serializado contra o worker pelo mutex
+     *          do modelo.
+     * @param audio16k Amostras a 16kHz mono.
+     * @param ms_out Duração da transcrição em ms.
+     * @return Texto transcrito ("" para vazio/alucinação).
+     */
+    std::string transcribe_buffer(const std::vector<float>& audio16k, long long& ms_out) {
+        auto t0 = std::chrono::steady_clock::now();
+        std::string text = _process_transcription(audio16k);
+        ms_out = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0).count();
+        return text;
+    }
 
     /**
      * @brief Pauses audio processing (VAD and callback).
@@ -135,6 +161,19 @@ public:
      *          Chamado na thread do VAD — deve ser barato/não bloqueante.
      */
     void set_on_speech_start(std::function<void()> cb) { m_on_speech_start = std::move(cb); }
+
+    /**
+     * @brief Callback pós-transcrição com o ÁUDIO do segmento junto.
+     * @details Recebe (amostras 16kHz float, texto do Whisper, duração ms da
+     *          transcrição). Dispara para TODO segmento que passou no VAD —
+     *          inclusive quando o texto veio vazio (filtro de alucinação),
+     *          pra outro ASR poder tentar o mesmo áudio. Roda na thread do
+     *          worker: um callback lento atrasa a PRÓXIMA transcrição, não a
+     *          captura. Uso: A/B de ASR (test_asr_ab) e coleta de dataset.
+     */
+    void set_on_segment(std::function<void(const std::vector<float>&, const std::string&, long long)> cb) {
+        m_on_segment = std::move(cb);
+    }
 
     /**
      * @brief Probe de endpoint semântico (turn detection adaptativo).
@@ -309,6 +348,7 @@ private:
     struct whisper_context* m_ctx = nullptr;  ///< Whisper model context
     mutable std::mutex m_model_mtx;    ///< Serializa load/unload/transcrição do modelo
     std::function<void()> m_on_speech_start; ///< Gancho do scheduler (VAD thread)
+    std::function<void(const std::vector<float>&, const std::string&, long long)> m_on_segment; ///< A/B de ASR / dataset (worker thread)
     std::function<bool(const std::vector<float>&)> m_endpoint_probe; ///< Endpoint semântico (VAD thread)
     struct whisper_vad_context* m_vad_ctx = nullptr; ///< Silero VAD (CPU); nullptr = fallback RMS
     PaStream* m_stream = nullptr;      ///< PortAudio stream
@@ -325,6 +365,7 @@ private:
     // Controle de Threads
     std::atomic<bool> m_running{false};                ///< Atomic flag indicating if the pipeline is running
     std::atomic<bool> m_is_paused{false};              ///< Atomic flag indicating if processing is paused
+    std::atomic<bool> m_sync_read_pos{false};          ///< resume() pede pra VAD re-sincronizar o cursor de leitura
     std::thread m_worker_thread;                      ///< Thread for Whisper processing
     std::thread m_vad_thread;                         ///< Thread for VAD and audio segmenting
 };
