@@ -50,8 +50,17 @@ public:
     /// sidecar's {"ok":bool,"message":string} result (or a synthesized
     /// failure if the signal didn't parse, or referenced an unknown
     /// mover/minerar/colocar label).
+    ///
+    /// banned_signature: "verb arg1 arg2..." (resolved args) that is
+    /// currently forbidden — a resolved action matching it is refused
+    /// WITHOUT touching the sidecar, with {"banned": true} in the result.
+    /// MinecraftSession sets this after repeated identical failures: the
+    /// overnight run of 2026-07-16 proved prompt warnings alone don't break
+    /// a 1B model out of a loop (391 stagnation loops, one target retried
+    /// 21x straight) — a deterministic refusal does.
     nlohmann::json execute(const std::string& gameplay_signal, const LabelMap& labels,
-                            const EntityLabelMap& entity_names);
+                            const EntityLabelMap& entity_names,
+                            const std::string& banned_signature = "");
 
     /// Drains sidecar events (damage/death/chat) accumulated since the last
     /// call and applies the matching endocrine response to each. Call this

@@ -56,6 +56,8 @@ bool MinecraftSession::start(const std::string& bridge_host, int bridge_port, in
                   << " (rode `node index.js` dentro de minecraft-bridge/ primeiro)." << std::endl;
         return false;
     }
+    bridge_host_ = bridge_host;
+    bridge_port_ = bridge_port;
 
     load_goals(); // modo goal-driven (config/gameplay_goals.json), se existir
 
@@ -63,8 +65,36 @@ bool MinecraftSession::start(const std::string& bridge_host, int bridge_port, in
     worker = std::thread(&MinecraftSession::tick_loop, this, tick_interval_ms);
     std::cout << "[MinecraftSession] Loop iniciado (tick a cada " << tick_interval_ms << "ms)." << std::endl;
     GameplayLog::instance().log("session_start",
-        {{"host", bridge_host}, {"port", bridge_port}, {"tick_interval_ms", tick_interval_ms}});
+        {{"host", bridge_host}, {"port", bridge_port}, {"tick_interval_ms", tick_interval_ms},
+         {"config", read_gameplay_config_snapshot()}});
     return true;
+}
+
+nlohmann::json MinecraftSession::read_gameplay_config_snapshot() {
+    // Re-reads ConfigsLLM.json instead of asking CoreIntegration: the loaded
+    // SimpleModelConfig isn't exposed, and for A/B-comparing runs what
+    // matters is exactly what the config file said when the session started
+    // (temperatura/top_p/grammar on-off are THE knobs the analysis is meant
+    // to compare across runs — see the telemetry plan discussed 2026-07-12).
+    nlohmann::json snapshot = nlohmann::json::object();
+    std::ifstream f("config/ConfigsLLM.json");
+    if (!f.is_open()) return snapshot;
+    try {
+        nlohmann::json j = nlohmann::json::parse(f);
+        for (const auto& m : j.value("models", nlohmann::json::array())) {
+            if (m.value("id", "") != "gameplayModel") continue;
+            snapshot["model_path"] = m.value("model_path", "");
+            auto params = m.value("parametros", nlohmann::json::object());
+            snapshot["temperatura"] = params.value("temperatura", 0.0);
+            snapshot["top_p"] = params.value("top_p", 0.0);
+            snapshot["max_tokens"] = params.value("max_tokens", 0);
+            snapshot["grammar"] = params.contains("grammar_file");
+            break;
+        }
+    } catch (const std::exception&) {
+        // Config unreadable = empty snapshot; never worth failing start() over.
+    }
+    return snapshot;
 }
 
 void MinecraftSession::stop() {
@@ -97,6 +127,17 @@ std::string MinecraftSession::build_prompt(const nlohmann::json& world_state, La
     out << "Posição: (" << pos_x << ", " << pos_y << ", " << pos_z << ")\n";
     out << "Vida: " << world_state.value("health", 0.0) << "/20  Fome: "
         << world_state.value("food", 0.0) << "/20\n";
+
+    // Subsolo profundo = beco sem saída pra maioria dos objetivos (sem
+    // madeira, sem comida, sem mesa) e o modelo não infere isso sozinho:
+    // na run de 14h de 2026-07-17 ela ficou ~13h numa caverna moendo
+    // falhas de mineração porque nada no prompt dizia "sai daí". A dica só
+    // aparece no subsolo (~10 tokens) e aponta pro verbo 'subir'.
+    if (pos_y < 50) {
+        out << "[SITUAÇÃO] Você está no subsolo (y=" << pos_y
+            << "). Madeira, comida e mesa de trabalho só existem na superfície — "
+               "se o objetivo precisar delas, use a ação 'subir'.\n";
+    }
 
     // Dia/noite decide se mob hostil é ameaça plausível; o sidecar sempre
     // mandou time_of_day/is_raining, só nunca chegava ao modelo. Uma linha
@@ -230,6 +271,51 @@ void MinecraftSession::advance_goals(const nlohmann::json& world_state) {
     }
 }
 
+void MinecraftSession::note_action_outcome(const nlohmann::json& result) {
+    // Signature = verb + resolved args (e.g. "colocar -5 72 183 crafting_table")
+    // — ActionExecutor echoes these back precisely so a retry against the
+    // exact same target is recognizable without re-parsing the raw signal.
+    std::ostringstream sig;
+    sig << result.value("verb", "?");
+    for (const auto& arg : result.value("args", nlohmann::json::array())) {
+        if (arg.is_string()) sig << ' ' << arg.get<std::string>();
+    }
+    std::string signature = sig.str();
+
+    const bool ok = result.value("ok", false);
+    std::string message = result.value("message", "");
+    if (message.size() > 120) message = message.substr(0, 117) + "...";
+    last_action_note = signature + (ok ? " → OK" : " → FALHOU: " + message);
+
+    if (ok) {
+        consecutive_failure_count = 0;
+        last_failure_signature.clear();
+        return;
+    }
+
+    // Recusa de ação banida: já é a consequência do loop, não evidência
+    // nova de falha — contá-la re-armaria o ban indefinidamente.
+    if (result.value("banned", false)) return;
+
+    if (signature == last_failure_signature) {
+        ++consecutive_failure_count;
+    } else {
+        consecutive_failure_count = 1;
+        last_failure_signature = signature;
+    }
+    last_failure_reason = result.value("message", "");
+
+    // Escalação determinística: [AVISO] no prompt (>=2 falhas) provou não
+    // bastar — na run noturna o 1B repetiu o mesmo alvo 21x. Na 3ª falha
+    // idêntica a assinatura fica proibida por 10 ticks no ActionExecutor.
+    if (consecutive_failure_count >= 3) {
+        ban_signature = signature;
+        ban_ticks_left = 10;
+        GameplayLog::instance().log("action_ban_set",
+            {{"signature", signature}, {"ticks", ban_ticks_left}});
+    }
+}
+
 void MinecraftSession::tick_loop(int tick_interval_ms) {
     while (running) {
         auto tick_start = std::chrono::steady_clock::now();
@@ -237,12 +323,55 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
         // A single bad tick (bad JSON, a regex edge case, an inference error)
         // must not take down the whole app via std::terminate() — this thread
         // has no exception handler above it, and neither does main().
-        GameplayLog::instance().log("tick_start");
+        GameplayLog::instance().set_tick(++tick_counter);
         try {
-            nlohmann::json world_state = bridge.get_world_state();
-            GameplayLog::instance().log("world_state", {{"data", world_state}});
+            // MinecraftBridge marks itself disconnected both on a real dead
+            // sidecar AND on a merely-slow action that outran its read
+            // timeout (see MinecraftBridge::read_line's doc comment) — either
+            // way, nothing else ever retries the TCP connect, so without this
+            // the session goes dark (empty world state) for good after one
+            // hiccup. Retried once per tick; a refused/unreachable connect()
+            // fails fast, so this doesn't stall the loop.
+            bool reconnect_failed = false;
+            if (!bridge.is_connected()) {
+                if (!reconnect_notified) {
+                    std::cerr << "[MinecraftSession] Sidecar desconectado; tentando reconectar em "
+                              << bridge_host_ << ":" << bridge_port_
+                              << " (a cada tick, silenciosamente)..." << std::endl;
+                    reconnect_notified = true;
+                }
+                if (bridge.connect(bridge_host_, bridge_port_)) {
+                    std::cout << "[MinecraftSession] Reconectado ao sidecar." << std::endl;
+                    GameplayLog::instance().log("bridge_reconnected");
+                    reconnect_notified = false;
+                } else {
+                    reconnect_failed = true;
+                }
+            }
 
-            if (!world_state.empty()) {
+            nlohmann::json world_state = bridge.get_world_state();
+
+            if (world_state.empty()) {
+                // ONE entry per idle tick, nothing else. An outage used to
+                // log alternating tick_start/world_state lines — a period-2
+                // pattern the repeat-collapser can't touch, since it only
+                // folds IMMEDIATELY consecutive identical lines (170 idle
+                // ticks = 340 log lines observed live 2026-07-12). A single
+                // byte-identical line per idle tick collapses into one
+                // "repeated: N" marker covering the whole outage.
+                GameplayLog::instance().log("tick_idle",
+                    {{"reconnect_failed", reconnect_failed}});
+            } else {
+                // Goal recorded per tick so the analyzer can attribute every
+                // action/latency/failure to the goal that was active at the
+                // time (per-goal timing needs this, goal_done alone doesn't
+                // say when the attempt started).
+                GameplayLog::instance().log("tick_start",
+                    goal_idx < goals.size()
+                        ? nlohmann::json{{"goal", goals[goal_idx].id}}
+                        : nlohmann::json::object());
+                GameplayLog::instance().log("world_state", {{"data", world_state}});
+
                 advance_goals(world_state); // checa/comemora/avança objetivos
 
                 std::unique_lock<std::mutex> brain_lock(brain_mtx, std::try_to_lock);
@@ -255,6 +384,13 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
                     // comportamento (e mata o "cavar terra por cavar").
                     if (goal_idx < goals.size()) {
                         prompt += "[OBJETIVO ATUAL] " + goals[goal_idx].objetivo + "\n";
+                    }
+
+                    // Feedback da última ação em TODO tick — ver o doc do
+                    // membro last_action_note no header (sem isso o modelo
+                    // nunca fica sabendo que a ação anterior falhou nem porquê).
+                    if (!last_action_note.empty()) {
+                        prompt += "[ÚLTIMA AÇÃO] " + last_action_note + "\n";
                     }
 
                     if (active_directive_ticks_left > 0) {
@@ -280,6 +416,20 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
                         prompt += "[AVISO] Você escolheu esperar " +
                             std::to_string(consecutive_esperar_count) +
                             " vezes seguidas. Escolha uma ação real agora (mover, minerar, atacar) — não esperar de novo.\n";
+                    }
+
+                    // "Obsessive spirit" watcher — same idea as the esperar
+                    // escalation above, generalized to any action: the exact
+                    // same verb+target failing for the exact same reason
+                    // repeatedly (e.g. "colocar" against a spot that's
+                    // occupied, "craftar" the wrong wood species) is a
+                    // pattern a human reading the log spots instantly but
+                    // she has no memory of her own last failure to react to.
+                    if (consecutive_failure_count >= 2) {
+                        prompt += "[AVISO] Você tentou '" + last_failure_signature + "' " +
+                            std::to_string(consecutive_failure_count) +
+                            " vezes seguidas e sempre falhou pelo mesmo motivo (" + last_failure_reason +
+                            "). Pare de repetir exatamente a mesma coisa — tente um alvo ou uma ação diferente.\n";
                     }
                     // Voz do jogador (plano B4): consome o slot e tenta o
                     // caminho de áudio; falha (sem mmproj etc.) degrada pro
@@ -323,7 +473,11 @@ void MinecraftSession::tick_loop(int tick_interval_ms) {
                         consecutive_esperar_count = 0;
                     }
 
-                    action_executor.execute(signal, labels, entity_names);
+                    note_action_outcome(action_executor.execute(signal, labels, entity_names,
+                        ban_ticks_left > 0 ? ban_signature : std::string()));
+                    if (ban_ticks_left > 0 && --ban_ticks_left == 0) {
+                        ban_signature.clear();
+                    }
                 } else {
                     std::cout << "[MinecraftSession] cérebro ocupado (chat em andamento); "
                                  "pulando ação deste tick." << std::endl;
@@ -391,8 +545,20 @@ void MinecraftSession::handle_chat_events(const std::vector<nlohmann::json>& eve
             // the full committee instead — and gives Alyssa actual grounding
             // that this is an in-game message from a named player, rather
             // than an isolated one-liner.
+            // Explicitly NOT grounded in whether the action succeeded: this
+            // reply comes from the chat persona (think_with_fusion_ttsless),
+            // which has no visibility into gameplayModel's actual execution —
+            // the directive below only takes effect over the NEXT few ticks.
+            // Without this caveat, she confidently claims things she hasn't
+            // done yet ("Feito! Mesa no chão!" while still gathering wood
+            // ticks later) — observed live 2026-07-12, reads as her lying.
             std::string grounded_message = "[Minecraft] " + username +
-                " disse no chat do jogo, enquanto jogávamos juntos: \"" + message + "\"";
+                " disse no chat do jogo, enquanto jogávamos juntos: \"" + message + "\". "
+                "Isso é só um pedido que você está repassando pro seu 'corpo' no jogo "
+                "(gameplayModel) tentar nos próximos segundos — você NÃO sabe ainda se vai "
+                "dar certo. Responda reconhecendo o pedido (tipo 'beleza, vou tentar' ou "
+                "'deixa comigo'). NUNCA diga que já fez, já terminou ou já colocou algo — "
+                "você não tem como confirmar isso agora.";
 
             std::string reply;
             {
@@ -400,7 +566,24 @@ void MinecraftSession::handle_chat_events(const std::vector<nlohmann::json>& eve
                 reply = core.think_with_fusion_ttsless(grounded_message);
             }
             if (reply.size() > kMaxChatReplyLength) {
-                reply = reply.substr(0, kMaxChatReplyLength - 3) + "...";
+                reply.resize(kMaxChatReplyLength - 3);
+                // substr/resize cuts by byte count, not by character — Alyssa's
+                // replies often end in a multi-byte UTF-8 emoji, and slicing
+                // one in half left a dangling partial codepoint that made
+                // GameplayLog's json.dump() throw ("invalid UTF-8 byte") live
+                // on 2026-07-12, silently dropping that reply to the player.
+                // Trim back any orphaned trailing bytes: continuation bytes
+                // (10xxxxxx) first, then a lead byte (11xxxxxx) left with none
+                // of its continuations.
+                auto is_continuation = [](unsigned char c) { return (c & 0xC0) == 0x80; };
+                auto is_lead = [](unsigned char c) { return (c & 0xC0) == 0xC0; };
+                while (!reply.empty() && is_continuation(static_cast<unsigned char>(reply.back()))) {
+                    reply.pop_back();
+                }
+                if (!reply.empty() && is_lead(static_cast<unsigned char>(reply.back()))) {
+                    reply.pop_back();
+                }
+                reply += "...";
             }
             GameplayLog::instance().log("chat_reply", {{"from", username}, {"message", message}, {"reply", reply}});
             bridge.send_action("falar", {reply});

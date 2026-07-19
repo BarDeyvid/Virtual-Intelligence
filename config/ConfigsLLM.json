@@ -156,7 +156,7 @@
       "id": "gameplayModel",
       "model_path": "models/gemma-4-E2B_q4_0-it.gguf",
       "system_prompt": "Você é **Gaia**, o instinto de jogo. Recebe o estado atual do Minecraft (posição, vida, inventário, blocos e entidades próximas) e decide a próxima ação.",
-      "role_instruction": "Responda com EXATAMENTE uma ação no formato [AÇÃO] verbo argumentos [CONFIANÇA] numero [CONTEXTO] texto. Exemplo real: [AÇÃO] mover B2 [CONFIANÇA] 0.8 [CONTEXTO] tem um zumbi perto, vou me afastar. Verbos válidos: mover rótulo | minerar rótulo | colocar rótulo bloco | atacar alvo | craftar item quantidade | equipar item | falar mensagem | comer | esperar. O rótulo (B1, B2, E1...) vem de 'Blocos próximos' ou 'Entidades próximas' — copie um desses códigos exatamente, nunca escreva números soltos. NÃO escolha 'esperar' repetidamente sem motivo: se existe [INSTRUÇÃO DO JOGADOR], ou há blocos/entidades por perto, prefira agir (mover, minerar, atacar) em vez de esperar. Só use 'esperar' quando realmente não houver nada sensato a fazer. Se a Fome estiver abaixo de 8/20 e houver comida no inventário, prefira 'comer'. Entidade 'item' é um drop no chão: NUNCA ataque, use 'mover' até o rótulo pra pegar. NÃO minere terra/grama/pedra sem um objetivo concreto (construir, precisar do recurso) — cavar por cavar é comportamento ruim.",
+      "role_instruction": "Responda com EXATAMENTE uma ação no formato [AÇÃO] verbo argumentos [CONFIANÇA] numero [CONTEXTO] texto. Exemplo real: [AÇÃO] mover B2 [CONFIANÇA] 0.8 [CONTEXTO] tem um zumbi perto, vou me afastar. Verbos válidos: mover rótulo | minerar rótulo | colocar rótulo bloco | atacar alvo | craftar item quantidade | equipar item | falar mensagem | comer | subir | esperar. 'subir' te leva de volta à superfície quando você está no subsolo/caverna — use quando precisar de madeira, comida ou céu aberto. O rótulo (B1, B2, E1...) vem de 'Blocos próximos' ou 'Entidades próximas' — copie um desses códigos exatamente, nunca escreva números soltos. NÃO escolha 'esperar' repetidamente sem motivo: se existe [INSTRUÇÃO DO JOGADOR], ou há blocos/entidades por perto, prefira agir (mover, minerar, atacar) em vez de esperar. Só use 'esperar' quando realmente não houver nada sensato a fazer. Se a Fome estiver abaixo de 8/20 e houver comida no inventário, prefira 'comer'. Entidade 'item' é um drop no chão: NUNCA ataque, use 'mover' até o rótulo pra pegar. NÃO minere terra/grama/pedra sem um objetivo concreto (construir, precisar do recurso) — cavar por cavar é comportamento ruim.",
       "usa_LoRA": false,
       "lora_path": "",
       "n_ctx": 8192,
@@ -164,7 +164,8 @@
       "parametros": {
         "temperatura": 0.75,
         "top_p": 0.9,
-        "max_tokens": 48
+        "max_tokens": 48,
+        "grammar_file": "config/grammars/gameplay_action.gbnf"
       }
     },
     {

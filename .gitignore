@@ -104,3 +104,12 @@ npm-debug.log*
 # --- Overlay / miscellaneous ---
 overlay/
 nul
+
+tools/xtts_finetune/run/
+tools/xtts_finetune/samples/
+tools/kokoro_finetune/samples/
+*.out.tfevents.*
+
+third_party/
+
+dataset_tts/

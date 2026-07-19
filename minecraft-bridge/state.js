@@ -10,6 +10,30 @@ const MAX_PER_NAME = 3;  // dedupe: at most N entries of the same block type
 // directly decides what the model gets to choose from.
 const INTERESTING = /_ore$|_log$|^crafting_table$|^furnace$|^chest$|^bed$|_sapling$|^wheat$|^carrots$|^potatoes$|^pumpkin$|^melon$|^bamboo$|^sugar_cane$/;
 
+// "Interessante" depende do inventário, não só do bloco: minério sem
+// picareta não dropa NADA (a run noturna de 2026-07-16 gastou 2283 ticks
+// tentando deepslate_iron_ore de mão vazia porque _ore dominava os rótulos
+// B1-B5), e mais madeira com o estoque cheio é acumulação sem propósito
+// (observado: ela seguia derrubando árvores com troncos de sobra). O bloco
+// continua listável — só perde a PRIORIDADE de rótulo.
+const LOG_STOCK_ENOUGH = 12;
+function isInteresting(name, inv) {
+  if (!INTERESTING.test(name)) return false;
+  if (/_ore$/.test(name) && !inv.hasPickaxe) return false;
+  if (/_log$/.test(name) && inv.logCount >= LOG_STOCK_ENOUGH) return false;
+  return true;
+}
+
+function inventorySummary(bot) {
+  let hasPickaxe = false;
+  let logCount = 0;
+  for (const item of bot.inventory.items()) {
+    if (item.name.endsWith('_pickaxe')) hasPickaxe = true;
+    if (item.name.endsWith('_log')) logCount += item.count;
+  }
+  return { hasPickaxe, logCount };
+}
+
 const AIR_LIKE = new Set(['air', 'cave_air', 'void_air', 'water']);
 
 // A block the bot can't act on (buried in solid rock with no exposed face)
@@ -25,6 +49,7 @@ function isExposed(bot, pos) {
 
 function nearbyBlocks(bot) {
   const origin = bot.entity.position.floored();
+  const inv = inventorySummary(bot);
   const candidates = [];
   for (let dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
     for (let dy = -SCAN_RADIUS; dy <= SCAN_RADIUS; dy++) {
@@ -37,7 +62,7 @@ function nearbyBlocks(bot) {
           name: block.name,
           x: pos.x, y: pos.y, z: pos.z,
           dist: Math.abs(dx) + Math.abs(dy) + Math.abs(dz),
-          interesting: INTERESTING.test(block.name),
+          interesting: isInteresting(block.name, inv),
         });
       }
     }

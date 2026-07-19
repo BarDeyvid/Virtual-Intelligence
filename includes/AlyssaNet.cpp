@@ -1252,58 +1252,6 @@ bool CoreIntegration::are_signals_compatible(const std::string& signal1, const s
 };
 
 /**
- * @brief Calculate string similarity using Jaccard index.
- * @param str1 First string.
- * @param str2 Second string.
- * @return Similarity score between 0.0 (no similarity) and 1.0 (identical).
- */
-float CoreIntegration::calculate_string_similarity(const std::string& str1, const std::string& str2) {
-    // Similaridade de Jaccard simplificada
-    if (str1.empty() && str2.empty()) return 1.0f;
-    if (str1.empty() || str2.empty()) return 0.0f;
-    
-    std::string lower1 = str1;
-    std::string lower2 = str2;
-    std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
-    std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
-    
-    // Contar palavras comuns
-    std::set<std::string> words1, words2;
-    
-    auto tokenize = [](const std::string& text) -> std::set<std::string> {
-        std::set<std::string> tokens;
-        std::string token;
-        for (char c : text) {
-            if (std::isalnum(c) || c == '\'') {
-                token += c;
-            } else if (!token.empty()) {
-                tokens.insert(token);
-                token.clear();
-            }
-        }
-        if (!token.empty()) tokens.insert(token);
-        return tokens;
-    };
-    
-    words1 = tokenize(lower1);
-    words2 = tokenize(lower2);
-    
-    if (words1.empty() && words2.empty()) return 1.0f;
-    if (words1.empty() || words2.empty()) return 0.0f;
-    
-    int intersection = 0;
-    for (const auto& word : words1) {
-        if (words2.find(word) != words2.end()) {
-            intersection++;
-        }
-    }
-    
-    int union_size = words1.size() + words2.size() - intersection;
-    
-    return union_size > 0 ? (float)intersection / union_size : 0.0f;
-};
-
-/**
  * @brief Determine if input is small talk/social pleasantry.
  * @param input Text to analyze.
  * @return true if input is small talk, false if substantive content.
@@ -2170,43 +2118,22 @@ float CoreIntegration::calculate_committee_coherence(
 
 /**
  * @brief Determine if interaction should be stored in long-term memory.
- * @param input User's input text.
- * @param response System's response text.
- * @return true if worth storing in memory, false for small talk/noise.
+ * @return Always true — see comment below for why the filter was disabled.
  */
-bool CoreIntegration::should_store_in_memory(const std::string& input, const std::string& response) {
-    // Critério 1: Não armazenar small talk
-    if (CoreIntegration::is_small_talk(input)) return false;
-    
-    // Critério 2: Mínimo de novidade semântica
-    if (input.length() < 20 && response.length() < 30) return false;
-    
-    // Critério 3: Verificar repetição (similaridade com últimas N interações)
-    static std::vector<std::string> recent_interactions;
-    static const int MAX_RECENT = 10;
-    
-    if (recent_interactions.size() >= MAX_RECENT) {
-        recent_interactions.erase(recent_interactions.begin());
-    }
-    
-    // Calcular similaridade com interações recentes
-    for (const auto& recent : recent_interactions) {
-        float similarity = calculate_string_similarity(input, recent);
-        if (similarity > 0.8) {
-            return false; // Muito similar a algo recente
-        }
-    }
-    
-    recent_interactions.push_back(input);
-    
-    // Critério 4: Presença de elementos memoráveis
-    bool has_memorable_elements = 
-        input.find("?") != std::string::npos || // Pergunta
-        response.find("!") != std::string::npos || // Ênfase
-        input.length() > 100 || // Conteúdo substancial
-        response.length() > 150;
-    
-    return has_memorable_elements;
+bool CoreIntegration::should_store_in_memory(const std::string&, const std::string&) {
+    // Disabled per user request 2026-07-12. Root cause of "important stuff
+    // getting filtered out": criterion 3 below (Jaccard word-overlap
+    // similarity against the last 10 interactions) was meant to catch
+    // literal repeats, but MinecraftSession::handle_chat_events wraps every
+    // relayed player message in the same ~300-char grounding boilerplate
+    // ("Isso é só um pedido que você está repassando pro seu 'corpo'...").
+    // Since that shared boilerplate dominates the word set, distinct player
+    // instructions (including an actual crafting-recipe hint) scored >0.8
+    // similarity against each other and got silently dropped as noise —
+    // observed live losing real content, not small talk. Rather than
+    // special-case the Minecraft path, storing everything is simpler and
+    // was the explicit call made here.
+    return true;
 };
 
 /**

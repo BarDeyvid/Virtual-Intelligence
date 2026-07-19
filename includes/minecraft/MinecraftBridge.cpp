@@ -154,6 +154,12 @@ bool MinecraftBridge::read_line(std::string& out_line) {
         char buf[4096];
         int n = recv(static_cast<socket_t>(sock), buf, sizeof(buf), 0);
         if (n <= 0) {
+            // n==0: peer closed cleanly. n<0: either a real socket error or
+            // just the SO_RCVTIMEO timeout expiring (an action that's still
+            // running past timeout_ms) — recv() can't tell those apart, so
+            // this is logged as a disconnect either way.
+            std::cerr << "[MinecraftBridge] Sem resposta do sidecar (timeout ou conexão perdida); "
+                         "marcando desconectado." << std::endl;
             connected = false;
             return false;
         }

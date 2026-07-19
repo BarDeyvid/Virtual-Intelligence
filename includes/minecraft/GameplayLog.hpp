@@ -28,11 +28,41 @@ public:
     /// fields is merged into {"ts": ..., "event": event, ...fields}.
     void log(const std::string& event, const nlohmann::json& fields = nlohmann::json::object());
 
+    /// Stamps every subsequent entry with {"tick": tick_id} so all the lines
+    /// of one gameplay tick (tick_start, world_state, prompt, signal,
+    /// action_*) are correlatable by the analysis tooling
+    /// (tools/analyze_gameplay.js) without guessing by timestamp proximity.
+    /// MinecraftSession::tick_loop calls this once per tick.
+    void set_tick(long long tick_id);
+
+    ~GameplayLog();
+
 private:
     GameplayLog();
 
     std::mutex mtx;
     std::ofstream file;
+
+    // Collapses runs of consecutive entries that are identical apart from
+    // ts (e.g. a stuck bridge writing an empty world_state every 3s, or the
+    // "moving toward (x,y,z)" spam while she oscillates between two nearly
+    // identical labels) into one trailing {"repeated": N} marker instead of
+    // one full line per occurrence — same idea as syslog's "last message
+    // repeated N times", just applied per-event here.
+    std::string last_event;
+    nlohmann::json last_fields;
+    std::string last_written_ts;
+    long long repeat_count = 0;
+    bool has_last = false;
+
+    // Stamped alongside ts (i.e. NOT part of the dedup comparison — a run of
+    // identical idle ticks still collapses even though each has its own id).
+    long long current_tick = -1;
+    long long last_written_tick = -1;
+
+    /// Caller must hold mtx. Writes the pending "repeated N times" marker
+    /// for the last entry, if any repeats accumulated, then resets it.
+    void flush_repeat_marker_locked();
 };
 
 } // namespace alyssa_minecraft

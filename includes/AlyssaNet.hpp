@@ -507,15 +507,7 @@ private:
      * @return true if signals are compatible, false if contradictory.
      */
     bool are_signals_compatible(const std::string& signal1, const std::string& signal2);
-    
-    /**
-     * @brief Calculate string similarity using Jaccard index.
-     * @param str1 First string.
-     * @param str2 Second string.
-     * @return Similarity score between 0.0 (no similarity) and 1.0 (identical).
-     */
-    float calculate_string_similarity(const std::string& str1, const std::string& str2);
-    
+
     /**
      * @brief Determine if input is small talk/social pleasantry.
      * @param input Text to analyze.

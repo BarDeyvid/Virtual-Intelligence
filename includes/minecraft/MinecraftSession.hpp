@@ -89,6 +89,25 @@ private:
     std::atomic<bool> running{false};
     std::thread worker;
 
+    // Remembered from start() so tick_loop can reconnect after the bridge
+    // marks itself disconnected (dead sidecar OR just a slow action that
+    // outran MinecraftBridge's read timeout — see read_line's doc comment).
+    // Without this, a single hiccup went unrecovered for the rest of the
+    // session: every following tick silently got an empty world state
+    // forever, with nothing ever calling connect() again.
+    std::string bridge_host_;
+    int bridge_port_ = 8765;
+
+    // Monotonic tick id, stamped into every GameplayLog entry of the tick
+    // (GameplayLog::set_tick) so tools/analyze_gameplay.js can correlate
+    // prompt/signal/result lines without timestamp guessing.
+    long long tick_counter = 0;
+
+    // Console-spam gate: print the "sidecar desconectado, reconectando"
+    // message only on the connected->disconnected transition, not on every
+    // 3s retry of a long outage.
+    bool reconnect_notified = false;
+
     // Alyssa (chat) and gameplayModel (the autonomous actor) otherwise share
     // no state — a chat request like "go for a walk" would only ever reach
     // the chat brain, which has no idea it's embodied in Minecraft at all.
@@ -125,6 +144,11 @@ private:
     /// Carrega config/gameplay_goals.json (ausente/enabled:false = sem goals).
     void load_goals();
 
+    /// Lê de ConfigsLLM.json os hiperparâmetros do gameplayModel (temperatura,
+    /// top_p, grammar on/off...) pro registro session_start — é o que permite
+    /// comparar runs A/B por configuração no tools/analyze_gameplay.js.
+    static nlohmann::json read_gameplay_config_snapshot();
+
     /// Conta itens do inventário que casam com o objetivo (exact/suffix).
     static int count_in_inventory(const nlohmann::json& world_state, const GameplayGoal& g);
 
@@ -140,6 +164,37 @@ private:
     // more reliable forcing function. Reset to 0 whenever any other verb
     // is chosen.
     int consecutive_esperar_count = 0;
+
+    // "Obsessive spirit" watcher (per user request 2026-07-12): generalizes
+    // the esperar-escalation idea above to ANY action — if the exact same
+    // verb+target fails for the exact same reason across consecutive
+    // attempts, nudge her to stop blindly retrying instead of waiting for a
+    // human to notice the log and point it out (which is how every "colocar
+    // against an occupied spot" / "craftar wrong wood species" loop got
+    // caught so far). Reset on success or as soon as she tries something
+    // different. Only the worker thread touches this.
+    std::string last_failure_signature;
+    std::string last_failure_reason;
+    int consecutive_failure_count = 0;
+
+    // Feedback direto: o resultado da última ação entra no prompt de TODO
+    // tick ("[ÚLTIMA AÇÃO] minerar ... → FALHOU: ..."). Sem isso o modelo
+    // decide completamente às cegas — na run noturna de 2026-07-16 ele
+    // repetiu a mesma mineração impossível 2283 vezes sem nunca "saber" que
+    // tinha falhado (o [AVISO] só aparecia depois de 2+ repetições, e sem o
+    // porquê da falha).
+    std::string last_action_note;
+
+    // Ban determinístico (escalação além do [AVISO]): 3 falhas idênticas
+    // seguidas => a assinatura exata fica proibida por N ticks (o
+    // ActionExecutor recusa sem chamar o sidecar). Prompt sozinho provou
+    // não bastar pro 1B sair do loop (391 loops na run noturna).
+    std::string ban_signature;
+    int ban_ticks_left = 0;
+
+    /// Feeds one action_executor.execute() result into the repeat-failure
+    /// tracker above.
+    void note_action_outcome(const nlohmann::json& result);
 };
 
 } // namespace alyssa_minecraft

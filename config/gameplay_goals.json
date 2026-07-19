@@ -11,14 +11,14 @@
     },
     {
       "id": "tabuas",
-      "objetivo": "Crafte 16 tábuas de madeira (craftar oak_planks 4, ou o tipo da madeira que você tem).",
+      "objetivo": "Você JÁ TEM troncos suficientes. NÃO minere mais nada. Execute AGORA a ação: craftar oak_planks 4 (o sistema adapta ao tipo de madeira que você tem). Repita até ter 16 tábuas.",
       "done_item": "_planks",
       "done_count": 16,
       "match": "suffix"
     },
     {
       "id": "mesa",
-      "objetivo": "Crafte uma mesa de trabalho (craftar crafting_table 1).",
+      "objetivo": "Crafte uma mesa de trabalho (craftar crafting_table 1). Só precisa de 4 tábuas de madeira, NADA de pedra ou ferro.",
       "done_item": "crafting_table",
       "done_count": 1,
       "match": "exact"
@@ -46,7 +46,7 @@
     },
     {
       "id": "ferramentas_pedra",
-      "objetivo": "Crafte uma picareta de pedra (craftar stone_pickaxe 1) e uma espada de pedra (craftar stone_sword 1).",
+      "objetivo": "Crafte uma picareta de pedra (craftar stone_pickaxe 1) e uma espada de pedra (craftar stone_sword 1). PRECISA estar a até 4 blocos de uma crafting_table: se não tiver uma visível nos rótulos, coloque a sua (colocar rótulo crafting_table) ou use 'subir' e volte pra onde deixou a mesa.",
       "done_item": "stone_sword",
       "done_count": 1,
       "match": "exact"

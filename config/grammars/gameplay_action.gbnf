@@ -16,7 +16,7 @@
 
 root       ::= "[AÇÃO] " action " [CONFIANÇA] " confidence " [CONTEXTO] " context "\n"
 
-action     ::= "mover " label | "minerar " label | "colocar " label " " word | "atacar " word | "craftar " word " " integer | "falar " sentence | "comer" | "esperar"
+action     ::= "mover " label | "minerar " label | "colocar " label " " word | "atacar " word | "craftar " word " " integer | "equipar " word | "falar " sentence | "comer" | "subir" | "esperar"
 
 # Bounded lengths throughout: the grammar can only constrain shape, not
 # semantic sanity (a small quantized model still picks bad values inside a

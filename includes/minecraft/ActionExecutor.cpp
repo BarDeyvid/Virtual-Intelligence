@@ -2,6 +2,8 @@
 #include "minecraft/ActionExecutor.hpp"
 #include "minecraft/GameplayLog.hpp"
 
+#include <algorithm>
+#include <chrono>
 #include <regex>
 #include <sstream>
 #include <iostream>
@@ -68,7 +70,8 @@ ActionExecutor::ActionExecutor(MinecraftBridge& bridge_ref, alyssa_endocrine::En
     : bridge(bridge_ref), endocrine(endocrine_ref) {}
 
 json ActionExecutor::execute(const std::string& gameplay_signal_raw, const LabelMap& labels,
-                              const EntityLabelMap& entity_names) {
+                              const EntityLabelMap& entity_names,
+                              const std::string& banned_signature) {
     static const std::regex pattern(
         R"(\[AÇÃO\]\s*(\w+)\s*(.*?)\s*\[CONFIANÇA\]\s*(\d+\.?\d*)\s*\[CONTEXTO\]\s*(.+))");
 
@@ -89,24 +92,44 @@ json ActionExecutor::execute(const std::string& gameplay_signal_raw, const Label
     const std::string confidence = matches[3];
     const std::string context = matches[4];
 
-    // mover/minerar/colocar carry a label (B1, E2...) in args[0] instead of
-    // raw coordinates — resolve it to real integer coordinates here, before
+    // mover/minerar/colocar carry a label (B1, E2...) instead of raw
+    // coordinates — resolve it to real integer coordinates here, before
     // anything reaches the sidecar (which still only understands numbers).
     for (const auto& labeled : kLabeledVerbs) {
         if (verb != labeled.verb) continue;
         if (args.empty()) break;
 
-        auto it = labels.find(args[0]);
-        if (it == labels.end()) {
-            std::cerr << "[ActionExecutor] Label desconhecido '" << sanitize_for_display(args[0])
+        // gameplayModel currently runs with no grammar constraining its
+        // output (removed for latency — see docs/proximos-passos.md), so it
+        // routinely tacks the block/entity name on alongside the label
+        // ("minerar spruce_log B2" instead of "minerar B2") — assuming the
+        // label is always args[0] failed ~25% of mining attempts live on
+        // 2026-07-12. Scan every arg for the one that's actually a known
+        // label instead.
+        auto label_it = std::find_if(args.begin(), args.end(),
+            [&labels](const std::string& a) { return labels.count(a) > 0; });
+        if (label_it == args.end()) {
+            std::ostringstream joined;
+            for (size_t i = 0; i < args.size(); ++i) {
+                if (i) joined << ' ';
+                joined << args[i];
+            }
+            std::cerr << "[ActionExecutor] Nenhum rótulo conhecido em '" << sanitize_for_display(joined.str())
                       << "' para ação '" << verb << "', ignorando." << std::endl;
-            GameplayLog::instance().log("unknown_label", {{"verb", verb}, {"label", args[0]}});
-            return json{{"ok", false}, {"message", "unknown label: " + args[0]}};
+            GameplayLog::instance().log("unknown_label", {{"verb", verb}, {"args", args}});
+            return json{{"ok", false}, {"message", "no known label in args: " + joined.str()},
+                        {"verb", verb}, {"args", args}};
         }
 
-        std::vector<std::string> resolved = to_string_vec(it->second);
-        for (size_t i = 1; i <= labeled.trailing_args && i < args.size(); ++i) {
-            resolved.push_back(args[i]);
+        std::vector<std::string> resolved = to_string_vec(labels.at(*label_it));
+        // Any other (non-label) args are trailing values (colocar's block
+        // name) — keep them in order, capped at how many this verb expects.
+        size_t trailing_added = 0;
+        for (auto trailing_it = args.begin();
+             trailing_it != args.end() && trailing_added < labeled.trailing_args; ++trailing_it) {
+            if (trailing_it == label_it) continue;
+            resolved.push_back(*trailing_it);
+            ++trailing_added;
         }
         args = std::move(resolved);
         break;
@@ -125,8 +148,31 @@ json ActionExecutor::execute(const std::string& gameplay_signal_raw, const Label
     GameplayLog::instance().log("action_parsed",
         {{"verb", verb}, {"args", args}, {"confidence", confidence}, {"context", context}});
 
+    // Ação proibida (falhou 3+ vezes idênticas seguidas)? Recusa determinística
+    // sem tocar o sidecar — ver o doc do parâmetro no header.
+    if (!banned_signature.empty()) {
+        std::string sig = verb;
+        for (const auto& a : args) sig += " " + a;
+        if (sig == banned_signature) {
+            json refusal = {{"ok", false}, {"banned", true}, {"verb", verb}, {"args", args},
+                            {"message", "PROIBIDO: essa exata acao ja falhou varias vezes seguidas - "
+                                        "escolha OUTRO alvo ou OUTRO verbo"}};
+            GameplayLog::instance().log("action_banned", refusal);
+            return refusal;
+        }
+    }
+
+    const auto exec_start = std::chrono::steady_clock::now();
     json result = bridge.send_action(verb, args);
+    const auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - exec_start).count();
     const bool ok = result.value("ok", false);
+    // Echoed back so the caller (MinecraftSession) can tell "the same action
+    // against the same target" apart from just "another failure", without
+    // re-parsing the raw signal itself.
+    result["verb"] = verb;
+    result["args"] = args;
+    result["execution_time_ms"] = exec_ms;
     GameplayLog::instance().log("action_result", result);
 
     // Small, per-action endocrine nudge — not meant to dominate the profile,

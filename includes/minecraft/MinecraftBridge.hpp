@@ -33,7 +33,11 @@ public:
 
     /// Connects to the sidecar. host/port refer to the LOCAL bridge socket
     /// (minecraft-bridge's BRIDGE_PORT), not the Minecraft server itself.
-    bool connect(const std::string& host = "127.0.0.1", int port = 8765, int timeout_ms = 5000);
+    /// timeout_ms also bounds how long send_action() will wait for a reply:
+    /// it must be longer than the slowest legitimate action (bare-handed
+    /// mining, the 6s attack-approach in actions.js) or a merely-slow action
+    /// gets misread as a dead connection (see read_line's doc comment).
+    bool connect(const std::string& host = "127.0.0.1", int port = 8765, int timeout_ms = 20000);
     void disconnect();
     bool is_connected() const { return connected; }
 
@@ -61,6 +65,11 @@ private:
     /// Reads lines until a non-"event" message arrives (queuing events as they pass).
     /// Returns an empty object if the connection drops or times out.
     json read_reply();
+    /// Returns false both when the peer actually closed the socket AND when
+    /// recv() merely times out (SO_RCVTIMEO) — either way marks `connected`
+    /// false. A slow-but-alive action (dig/attack taking longer than
+    /// timeout_ms) is therefore indistinguishable from a dead sidecar; the
+    /// caller (MinecraftSession::tick_loop) is responsible for reconnecting.
     bool read_line(std::string& out_line);
 };
 

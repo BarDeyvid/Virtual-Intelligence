@@ -10,12 +10,21 @@ const { executeAction } = require('./actions');
 const MC_HOST = process.env.MC_HOST || 'localhost';
 const MC_PORT = Number(process.env.MC_PORT || 25565);
 const MC_USERNAME = process.env.MC_USERNAME || 'Alyssa';
+// Unset -> mineflayer pings the server first to auto-detect the version
+// (minecraft-protocol's autoVersion). That ping is a separate status-query
+// handshake, not the real login, and a paused singleplayer world (e.g. the
+// game window alt-tabbed/menu open, which freezes its network processing)
+// answers it slower or not at all — every createBot() call, including every
+// automatic reconnect, redoes this ping and can hang/ETIMEDOUT on it even
+// though the actual server is fine. Setting MC_VERSION skips it entirely.
+const MC_VERSION = process.env.MC_VERSION || false;
 const BRIDGE_PORT = Number(process.env.BRIDGE_PORT || 8765);
 const RECONNECT_DELAY_MS = 10000;
 
 let bot = null;
 let spawned = false;
 let lastHealth = null;
+let actionInFlight = null; // verbo da ação física em execução (serialização)
 const sockets = new Set();
 
 function broadcastEvent(event, data) {
@@ -33,6 +42,7 @@ function createBot() {
     host: MC_HOST,
     port: MC_PORT,
     username: MC_USERNAME,
+    version: MC_VERSION,
   });
 
   bot.loadPlugin(pathfinder);
@@ -124,6 +134,17 @@ function fleeFrom(entity) {
   bot.pathfinder.setGoal(new goals.GoalXZ(target.x, target.z));
 }
 
+// Reflexo assumiu o corpo: aborta o dig em andamento (senão o mineflayer
+// segue um dig fantasma — resolve num timer client-side e marca o bloco
+// como quebrado localmente MESMO com o servidor rejeitando porque o bot
+// saiu andando/olhando pro mob; run inteira de "mined ok" sem quebrar nada
+// observada ao vivo 2026-07-16) e sinaliza pro actions.js não INICIAR ação
+// física nova enquanto o corpo está em modo sobrevivência.
+function reflexTakeover() {
+  bot.stopDigging();
+  bot.alyssaReflexBusyUntil = Date.now() + 1500;
+}
+
 async function reflexTick() {
   if (!spawned || !bot || !bot.entity || reflexBusy) return;
 
@@ -132,6 +153,7 @@ async function reflexTick() {
   // 1. Vida baixa + ameaça por perto: fugir SEMPRE (sem heroísmo).
   if (bot.health < LOW_HEALTH && threat && threat.dist < HOSTILE_RANGE * 3) {
     reflexBusy = true;
+    reflexTakeover();
     fleeFrom(threat.entity);
     broadcastEvent('reflex', {
       action: 'fugir', reason: `vida ${bot.health}/20 e ${threat.entity.name} a ${threat.dist.toFixed(1)} blocos`,
@@ -147,6 +169,7 @@ async function reflexTick() {
       const now = Date.now();
       if (now - lastAttackAt > 600) {
         lastAttackAt = now;
+        reflexTakeover();
         bot.pathfinder.setGoal(null); // reflexo tem prioridade sobre o plano do LLM
         try {
           await bot.lookAt(threat.entity.position.offset(0, 1, 0));
@@ -161,6 +184,7 @@ async function reflexTick() {
         } catch (_) { /* mob sumiu no meio do gesto — reflexo aborta em paz */ }
       }
     } else {
+      reflexTakeover();
       fleeFrom(threat.entity);
       broadcastEvent('reflex', {
         action: 'fugir', reason: `${threat.entity.name} colado e vida ${bot.health}/20`,
@@ -174,6 +198,7 @@ async function reflexTick() {
   if (bot.food < LOW_FOOD && !threat) {
     reflexBusy = true;
     try {
+      reflexTakeover(); // comer troca o item da mão — corrompe dig em andamento igual
       const result = await executeAction(bot, 'comer', []);
       if (result.ok) broadcastEvent('reflex', { action: 'comer', reason: `fome ${bot.food}/20` });
     } finally {
@@ -206,8 +231,24 @@ function handleMessage(socket, msg) {
     return;
   }
   if (msg.type === 'action') {
+    // Um corpo, uma ação física por vez. Sem isso, quando uma ação estoura o
+    // timeout do socket C++ (20s) a resposta se perde e o tick seguinte manda
+    // OUTRA ação com a primeira ainda rodando — cada bot.dig() novo cancela o
+    // anterior (digging.js: stopDigging no início do dig), então os digs se
+    // cancelam em cadeia e o servidor nunca acumula progresso de quebra
+    // (observado ao vivo 2026-07-16: swing eterno, zero rachadura).
+    if (actionInFlight) {
+      socket.write(JSON.stringify({
+        type: 'action_result', ok: false,
+        message: `still executing previous action (${actionInFlight}) - wait for it`,
+      }) + '\n');
+      return;
+    }
+    actionInFlight = msg.verb;
     executeAction(bot, msg.verb, msg.args || []).then((result) => {
       socket.write(JSON.stringify({ type: 'action_result', ...result }) + '\n');
+    }).finally(() => {
+      actionInFlight = null;
     });
     return;
   }
