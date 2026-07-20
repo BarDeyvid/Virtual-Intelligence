@@ -1251,9 +1251,22 @@ nlohmann::json CoreIntegration::run_consolidation() {
     std::string facts_raw = consolidation_llm(
         "Da conversa abaixo, liste até 5 FATOS duráveis sobre o Deyvid "
         "(gostos, projetos, rotina, pessoas, planos). Um por linha, começando "
-        "com '- '. Ignore small talk e opiniões da Alyssa. Se não houver nada "
-        "durável, responda apenas 'nenhum'.\n\n" + corpus, 140);
+        "com '- '. Ignore small talk, opiniões da Alyssa e métricas de "
+        "hardware (CPU, RAM, uso de recursos, temperatura). Se não houver "
+        "nada durável, responda apenas 'nenhum'.\n\n" + corpus, 140);
     auto facts = parse_dash_lines(facts_raw, 5);
+    // Cinto além do prompt: métrica de máquina não é fato sobre uma pessoa
+    // ("uso médio dos recursos do PC foi 21.85%" entrou no primeiro aceite).
+    facts.erase(std::remove_if(facts.begin(), facts.end(),
+        [](const std::string& f) {
+            std::string low = f;
+            std::transform(low.begin(), low.end(), low.begin(), ::tolower);
+            for (const char* kw : {"cpu", "ram", "recurso", "hardware",
+                                   "temperatura", "métrica", "metrica", "%"}) {
+                if (low.find(kw) != std::string::npos) return true;
+            }
+            return false;
+        }), facts.end());
     for (const auto& f : facts) memory_manager->saveFact(f);
 
     // 4. Agenda de amanhã (o caminho ROBUSTO — o tool add_to_agenda é a via

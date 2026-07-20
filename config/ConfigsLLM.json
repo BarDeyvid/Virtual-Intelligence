@@ -3,7 +3,7 @@
   "models": [
     {
       "id": "utility",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+      "model_path": "models/gemma-3-1b-it-Q4_K_M.gguf",
       "system_prompt": "Você é um módulo utilitário interno da Alyssa: roteia, resume e serve de fallback. Responda sempre de forma curta e objetiva.",
       "usa_LoRA": false,
       "lora_path": "",

@@ -391,6 +391,13 @@ namespace alyssa_core {
             }
 
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_min_p(0.05f, 1));
+            // top_p FINALMENTE na chain (era calculado na linha acima e nunca
+            // usado — o top_p 0.9 da persona foi ignorado a v1 inteira).
+            // Inserido aqui pra manter a ordem antiga intacta: com top_p=1.0
+            // o comportamento é byte-idêntico ao anterior.
+            if (top_p < 1.0f) {
+                llama_sampler_chain_add(smpl.get(), llama_sampler_init_top_p(top_p, 1));
+            }
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_temp(temp));
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_penalties(
                 params.penalty_last_n, static_cast<float>(params.repeat_penalty), 0.0f, 0.0f));

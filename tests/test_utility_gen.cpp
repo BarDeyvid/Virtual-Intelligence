@@ -56,8 +56,11 @@ static std::string greedy_generate(alyssa_core::AlyssaCore& core, const std::str
     return out;
 }
 
-int main() {
-    alyssa_core::AlyssaCore core("models/gemma-3-1b-it-q4_0.gguf", 4096);
+int main(int argc, char** argv) {
+    // argv[1] = gguf alternativo (ex.: validar um quant novo do utility)
+    const char* model_path = argc > 1 ? argv[1] : "models/gemma-3-1b-it-q4_0.gguf";
+    printf("modelo: %s\n", model_path);
+    alyssa_core::AlyssaCore core(model_path, 4096);
 
     SimpleModelParameters p;
     p.temperature = 0.3;
