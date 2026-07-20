@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { render, Box, Text, useInput, useApp, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
-import { AlyssadClient, HormoneProfile, DaemonStatus } from './alyssad';
+import { AlyssadClient, HormoneProfile, DaemonStatus, SelfState } from './alyssad';
 
 const client = new AlyssadClient();
 
@@ -12,6 +12,8 @@ interface Message {
     latencyMs?: number;
     /** true quando a resposta saiu falada pelo TTS */
     spoken?: boolean;
+    /** origem quando não foi esta TUI: 'voz', 'celular', ... */
+    via?: string;
 }
 
 type TtsMode = 'auto' | 'on' | 'off';
@@ -20,10 +22,12 @@ const HELP_TEXT = [
     '/help — esta lista',
     '/clear — limpa o histórico da tela',
     '/tts auto|on|off — voz por mensagem (auto = decisão do daemon)',
+    '/voice — liga/desliga o OUVIDO dela (mic → Whisper; atalho Ctrl+V)',
+    '/consolidate — ela dorme e digere o dia agora',
     '/status — snapshot do daemon',
     '/quit — fecha a TUI (daemon continua)',
     '/shutdown — encerra o daemon e a TUI',
-    'Tab alterna abas · PgUp/PgDn rola o histórico · ↑/↓ repete mensagens',
+    'Tab alterna abas (Chat · Endocrine · Self) · PgUp/PgDn rola · ↑/↓ repete',
 ].join('\n');
 
 const ProgressBar = ({ label, value, color }: { label: string, value: number, color: string }) => {
@@ -44,7 +48,7 @@ const App = () => {
     const { exit } = useApp();
     const { stdout } = useStdout();
     const [connected, setConnected] = useState(false);
-    const [activeTab, setActiveTab] = useState<'chat' | 'endocrine'>('chat');
+    const [activeTab, setActiveTab] = useState<'chat' | 'endocrine' | 'self'>('chat');
     const [input, setInput] = useState('');
     const [history, setHistory] = useState<Message[]>([]);
     const [isThinking, setIsThinking] = useState(false);
@@ -56,6 +60,9 @@ const App = () => {
     const [scrollOffset, setScrollOffset] = useState(0); // 0 = colado no fim
     const [thinkingSince, setThinkingSince] = useState<number | null>(null);
     const [thinkingElapsed, setThinkingElapsed] = useState(0);
+    const [listening, setListening] = useState(false);          // ouvido dela (mic)
+    const [consolidating, setConsolidating] = useState(false);  // 💤 digerindo o dia
+    const [selfState, setSelfState] = useState<SelfState | null>(null);
 
     // Recall de mensagens enviadas (↑/↓ estilo shell)
     const sentHistory = useRef<string[]>([]);
@@ -88,6 +95,30 @@ const App = () => {
             setIsThinking(thinking);
             setThinkingSince(thinking ? Date.now() : null);
             if (thinking) setStreamText('');
+            setConsolidating(data.phase === 'consolidating');
+        });
+
+        // v0.2: turnos de OUTROS clientes (voz, celular, bench) aparecem aqui.
+        // A própria TUI se identifica como 'tui' e ignora o eco.
+        client.on('user_text', (data) => {
+            if (data.client === 'tui') return;
+            setScrollOffset(0);
+            setHistory(prev => [...prev, { sender: 'Deyvid', text: data.text, via: data.client }]);
+        });
+
+        client.on('listening', (data) => {
+            setListening(data.enabled === true);
+            pushSystem(data.enabled ? '🎤 ouvido LIGADO — pode falar com ela'
+                                    : '🎤 ouvido desligado');
+        });
+
+        client.on('consolidation', (data) => {
+            pushSystem(data.ok
+                ? `💤 dia digerido em ${((data.ms ?? 0) / 1000).toFixed(1)}s: ` +
+                  `${data.facts ?? 0} fato(s), ${data.agenda_added ?? 0} item(ns) de agenda` +
+                  `${data.reflection ? ', 1 reflexão' : ''}` +
+                  `${(data.pruned ?? 0) > 0 ? `, ${data.pruned} memória(s) podada(s)` : ''}`
+                : `consolidação falhou: ${data.error ?? '?'}`);
         });
 
         // Pedaços crus conforme ela gera; o 'response' final substitui tudo
@@ -105,7 +136,11 @@ const App = () => {
 
         client.on('hormones', (data) => setHormones(data));
         client.on('ambient', (line) => setAmbient(line));
-        client.on('status', (data) => setStatus(data));
+        client.on('status', (data) => {
+            setStatus(data);
+            if (data.self) setSelfState(data.self);
+            if (typeof data.voice_in === 'boolean') setListening(data.voice_in);
+        });
 
         client.on('daemon-error', (msg) => {
             pushSystem(`[Erro] ${msg}`);
@@ -139,10 +174,15 @@ const App = () => {
     const maxScroll = Math.max(0, history.length - visibleCount);
 
     // Tab alterna abas. (Setas ← → ficam livres pro cursor do TextInput.)
-    // PgUp/PgDn rolam o histórico; ↑/↓ repetem mensagens já enviadas.
-    useInput((_char, key) => {
+    // PgUp/PgDn rolam o histórico; ↑/↓ repetem mensagens; Ctrl+V = ouvido.
+    useInput((char, key) => {
         if (key.tab) {
-            setActiveTab(prev => prev === 'chat' ? 'endocrine' : 'chat');
+            setActiveTab(prev =>
+                prev === 'chat' ? 'endocrine' : prev === 'endocrine' ? 'self' : 'chat');
+            return;
+        }
+        if (key.ctrl && char === 'v') {
+            client.listen(!listening);
             return;
         }
         if (activeTab !== 'chat') return;
@@ -202,6 +242,17 @@ const App = () => {
                 }
                 return true;
             }
+            case '/voice': {
+                const arg = (rest[0] || '').toLowerCase();
+                const target = arg === 'on' ? true : arg === 'off' ? false : !listening;
+                client.listen(target);
+                return true;
+            }
+            case '/consolidate': {
+                client.consolidate();
+                pushSystem('💤 pedindo pra ela digerir o dia...');
+                return true;
+            }
             default:
                 if (cmd.startsWith('/')) {
                     pushSystem(`comando desconhecido: ${cmd} (/help lista os comandos)`);
@@ -251,6 +302,8 @@ const App = () => {
                 <Text color={activeTab === 'chat' ? 'cyan' : 'gray'} bold={activeTab === 'chat'}> 💬 Chat </Text>
                 <Text dimColor> | </Text>
                 <Text color={activeTab === 'endocrine' ? 'cyan' : 'gray'} bold={activeTab === 'endocrine'}> 🧠 Endocrine </Text>
+                <Text dimColor> | </Text>
+                <Text color={activeTab === 'self' ? 'cyan' : 'gray'} bold={activeTab === 'self'}> 🪞 Self </Text>
                 <Text dimColor>  (Tab alterna · /help)</Text>
             </Box>
 
@@ -275,6 +328,7 @@ const App = () => {
                                     <Text bold color={msg.sender === 'Alyssa' ? 'cyan' : msg.sender === 'System' ? 'yellow' : 'blue'}>
                                         {msg.sender}
                                     </Text>
+                                    {msg.via && <Text dimColor> · via {msg.via === 'voz' ? '🎤 voz' : msg.via}</Text>}
                                     {msg.latencyMs !== undefined && (
                                         <Text dimColor> · {(msg.latencyMs / 1000).toFixed(1)}s</Text>
                                     )}
@@ -287,6 +341,9 @@ const App = () => {
                         ))}
                         {scrollOffset > 0 && (
                             <Text dimColor italic>↓ {scrollOffset} mensagens abaixo</Text>
+                        )}
+                        {consolidating && (
+                            <Text dimColor italic>💤 Alyssa tá digerindo o dia (consolidação)...</Text>
                         )}
                         {isThinking && streamText === '' && (
                             <Text dimColor italic>⏳ Alyssa tá pensando... {thinkingElapsed.toFixed(1)}s</Text>
@@ -314,6 +371,41 @@ const App = () => {
                         <ProgressBar label="Adrenaline" value={hormones?.adrenaline || 0} color="redBright" />
                     </Box>
                 )}
+
+                {activeTab === 'self' && (
+                    <Box flexDirection="column" borderStyle="single" borderColor="gray" padding={1}>
+                        {!selfState && <Text dimColor italic>sem dados do self ainda (daemon em echo? /status)</Text>}
+                        {selfState && (
+                            <>
+                                {selfState.yesterday_summary !== '' && (
+                                    <Box flexDirection="column" marginBottom={1}>
+                                        <Text color="magenta" bold>💭 Ontem, segundo ela</Text>
+                                        <Text wrap="wrap">{selfState.yesterday_summary}</Text>
+                                    </Box>
+                                )}
+                                <Text color="cyan" bold>🗣 Opiniões ({selfState.opinions.length})</Text>
+                                {selfState.opinions.slice(0, 5).map((o, i) => (
+                                    <Text key={i} wrap="truncate-end">  • {o.topic}: {o.stance} <Text dimColor>({(o.confidence * 100).toFixed(0)}%)</Text></Text>
+                                ))}
+                                {selfState.opinions.length === 0 && <Text dimColor>  (nenhuma ainda)</Text>}
+                                <Box marginTop={1} flexDirection="column">
+                                    <Text color="green" bold>🎯 Metas ({selfState.goals.length})</Text>
+                                    {selfState.goals.slice(0, 4).map((g, i) => (
+                                        <Text key={i} wrap="truncate-end">  • {g.desc}{g.progress ? ` — ${g.progress}` : ''}</Text>
+                                    ))}
+                                    {selfState.goals.length === 0 && <Text dimColor>  (nenhuma ainda)</Text>}
+                                </Box>
+                                <Box marginTop={1} flexDirection="column">
+                                    <Text color="yellow" bold>📌 Agenda dela ({selfState.agenda.length})</Text>
+                                    {selfState.agenda.slice(0, 4).map((a, i) => (
+                                        <Text key={i} wrap="truncate-end">  • {a.bring_up}{a.reason ? <Text dimColor> ({a.reason})</Text> : null}</Text>
+                                    ))}
+                                    {selfState.agenda.length === 0 && <Text dimColor>  (vazia)</Text>}
+                                </Box>
+                            </>
+                        )}
+                    </Box>
+                )}
             </Box>
 
             {/* Input Footer — o TextInput fica montado mesmo enquanto ela pensa
@@ -334,6 +426,11 @@ const App = () => {
                     <Box>
                         <Text dimColor>
                             TTS: {ttsMode}{status ? (status.voice_available ? ' · voz ok' : ' · daemon sem voz') : ''}
+                        </Text>
+                        <Text color={listening ? 'greenBright' : 'gray'}>
+                            {'  🎤 ' + (listening ? 'OUVINDO (Ctrl+V desliga)' : 'mudo (Ctrl+V liga)')}
+                        </Text>
+                        <Text dimColor>
                             {!connected ? ' · aguardando daemon na porta ' + (process.env.ALYSSAD_PORT || 8377) : ''}
                         </Text>
                     </Box>

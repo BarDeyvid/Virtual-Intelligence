@@ -33,7 +33,10 @@ typedef int socket_t;
 
 #include "AlyssaNet.hpp"
 #include "voice/KokoroTTS.hpp"
+#include "voice/VoicePipeline.hpp"
 #include "json.hpp"
+
+#include <filesystem>
 
 #include <algorithm>
 #include <atomic>
@@ -143,6 +146,13 @@ struct DaemonState {
     std::string auth_token;             // env ALYSSAD_TOKEN; vazio = sem auth (loopback)
     socket_t listener = INVALID_SOCKET; // shutdown fecha pra destravar o accept
 
+    // Voice-in (`listen`, v0.2): mic → VAD → Whisper → turno normal.
+    // O modelo carrega LAZY no primeiro listen on e SAI da VRAM no off.
+    std::unique_ptr<VoicePipeline> stt;
+    std::atomic<bool> listening{false};
+    std::thread listen_poll;            // thread única de polling dos transcripts
+    std::mutex stt_mtx;                 // serializa liga/desliga
+
     void start_worker(std::function<void()> fn) {
         std::lock_guard<std::mutex> lk(worker_mtx);
         if (worker.joinable()) worker.join();
@@ -174,6 +184,8 @@ void local_clock(int& hour, int& yyyymmdd) {
     hour = tm_buf.tm_hour;
     yyyymmdd = (tm_buf.tm_year + 1900) * 10000 + (tm_buf.tm_mon + 1) * 100 + tm_buf.tm_mday;
 }
+
+void start_say_turn(DaemonState& st, const std::string& text, bool want_tts);
 
 void handle_say(DaemonState& st, socket_t sock, const json& id, const json& params) {
     std::string text = params.value("text", "");
@@ -213,6 +225,18 @@ void handle_say(DaemonState& st, socket_t sock, const json& id, const json& para
     bool want_tts = params.value("tts", st.tts != nullptr);
     send_ok(sock, id, {{"accepted", true}});
 
+    // user_text: os OUTROS clientes veem o que este cliente falou (a TUI
+    // mostra a conversa do celular e vice-versa). O originador se identifica
+    // em params.client e ignora o próprio eco.
+    broadcast_event(st, "user_text",
+                    {{"text", text}, {"client", params.value("client", "cliente")}});
+
+    start_say_turn(st, text, want_tts);
+}
+
+/// Corpo do turno (compartilhado entre `say` e o voice-in do `listen`).
+/// Pré-condição: st.busy já está true (guard do chamador).
+void start_say_turn(DaemonState& st, const std::string& text, bool want_tts) {
     st.start_worker([&st, text, want_tts]() {
         broadcast_event(st, "state", {{"phase", "thinking"}});
 
@@ -265,17 +289,108 @@ void handle_status(DaemonState& st, socket_t sock, const json& id) {
         // Fonte de CPU tem estado (delta entre chamadas) e não é thread-safe
         // contra a inferência — só amostra com o cérebro ocioso.
         if (!st.busy.load()) data["ambient"] = ambient_line(*st.brain);
-        // Self persistente (F2/F3): visão rápida pro frontend
+        // Self persistente (F2/F3): visão rápida pro frontend, com os itens
+        // em si (a aba Self da TUI mostra opiniões/metas/agenda de verdade).
         const auto& self = st.brain->get_self_state();
+        json opinions = json::array();
+        for (const auto& o : self.opinions) {
+            opinions.push_back({{"topic", o.topic}, {"stance", o.stance},
+                                {"confidence", o.confidence}});
+        }
+        json goals = json::array();
+        for (const auto& g : self.goals) {
+            goals.push_back({{"desc", g.desc}, {"progress", g.progress},
+                             {"priority", g.priority}});
+        }
+        json agenda = json::array();
+        for (const auto& a : self.agenda) {
+            agenda.push_back({{"bring_up", a.bring_up}, {"reason", a.reason}});
+        }
         data["self"] = {
-            {"opinions", self.opinions.size()},
-            {"goals", self.goals.size()},
-            {"agenda", self.agenda.size()},
+            {"opinions", opinions},
+            {"goals", goals},
+            {"agenda", agenda},
+            {"yesterday_summary", self.yesterday_summary},
             {"last_consolidation_date", self.last_consolidation_date},
-            {"has_yesterday_summary", !self.yesterday_summary.empty()},
         };
+        data["voice_in"] = st.listening.load();
     }
     send_ok(sock, id, data);
+}
+
+/// Voice-in (`listen`, v0.2): liga/desliga mic → VAD (Silero) → Whisper.
+/// Transcript vira turno normal via start_say_turn; o modelo Whisper só
+/// ocupa VRAM enquanto ligado (unload no off — mesmo espírito do gameplay).
+void handle_listen(DaemonState& st, socket_t sock, const json& id, const json& params) {
+    if (st.echo_mode || !st.brain) {
+        send_err(sock, id, "sem cérebro (modo echo)");
+        return;
+    }
+    const bool enable = params.value("enabled", true);
+    std::lock_guard<std::mutex> lk(st.stt_mtx);
+
+    if (enable == st.listening.load()) {
+        send_ok(sock, id, {{"listening", st.listening.load()}});
+        return;
+    }
+
+    if (enable) {
+        const char* WHISPER_PATH = "models/ggml-large-v3-turbo-q8_0.bin";
+        if (!std::filesystem::exists(WHISPER_PATH)) {
+            send_err(sock, id, std::string("modelo de voz ausente: ") + WHISPER_PATH);
+            return;
+        }
+        if (!st.stt) {
+            VoicePipeline::Options opts; // defaults já são pt-BR + Silero + initial_prompt
+            st.stt = std::make_unique<VoicePipeline>(WHISPER_PATH, opts, /*defer=*/true);
+        }
+        if (!st.stt->model_loaded() && !st.stt->load_model()) {
+            send_err(sock, id, "falha ao carregar o Whisper");
+            return;
+        }
+        if (!st.stt->start()) {
+            st.stt->unload_model();
+            send_err(sock, id, "falha ao abrir o microfone");
+            return;
+        }
+        st.listening = true;
+        std::cout << "[alyssad] voice-in LIGADO (mic → Whisper)\n";
+        broadcast_event(st, "listening", {{"enabled", true}});
+        send_ok(sock, id, {{"listening", true}});
+    } else {
+        st.listening = false;
+        if (st.stt) {
+            st.stt->stop();
+            st.stt->unload_model(); // devolve a VRAM do Whisper
+        }
+        std::cout << "[alyssad] voice-in desligado\n";
+        broadcast_event(st, "listening", {{"enabled", false}});
+        send_ok(sock, id, {{"listening", false}});
+    }
+}
+
+/// Thread única de polling do voice-in: transcript pronto → evento `heard`
+/// + turno normal (mesmo guard busy; ocupada = descarta com aviso).
+void listen_poll_loop(DaemonState& st) {
+    while (st.running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        if (!st.listening.load() || !st.stt) continue;
+
+        std::string text;
+        if (!st.stt->get_last_result(text)) continue;
+        if (text.empty()) continue;
+
+        broadcast_event(st, "heard", {{"text", text}});
+
+        if (st.busy.exchange(true)) {
+            broadcast_event(st, "error",
+                            {{"message", "ouvi \"" + text + "\" mas estava no meio de um turno — repete?"}});
+            continue;
+        }
+        st.last_activity = static_cast<long long>(std::time(nullptr));
+        broadcast_event(st, "user_text", {{"text", text}, {"client", "voz"}});
+        start_say_turn(st, text, /*want_tts=*/st.tts != nullptr);
+    }
 }
 
 /// Consolidação manual (`consolidate`): mesmo guard `busy` dos turnos.
@@ -343,6 +458,8 @@ void dispatch(DaemonState& st, socket_t sock, const std::string& raw, bool& auth
         handle_status(st, sock, id);
     } else if (method == "say") {
         handle_say(st, sock, id, params);
+    } else if (method == "listen") {
+        handle_listen(st, sock, id, params);
     } else if (method == "consolidate") {
         handle_consolidate(st, sock, id);
     } else if (method == "shutdown") {
@@ -484,6 +601,11 @@ int main(int argc, char** argv) {
         std::cout << "[alyssad] auth por token LIGADA (ALYSSAD_TOKEN)\n";
     }
 
+    // Thread de polling do voice-in (dorme enquanto listening=false)
+    if (!echo_mode) {
+        st.listen_poll = std::thread([&st]() { listen_poll_loop(st); });
+    }
+
     // Scheduler da consolidação noturna (v2/F3): checa a cada minuto se
     // (a) hoje ainda não consolidou, (b) já passou das 04:00 e (c) tem 30min
     // de silêncio — aí "dorme e digere o dia" com o mesmo guard dos turnos.
@@ -538,6 +660,9 @@ int main(int argc, char** argv) {
         if (t.joinable()) t.join();
     }
     st.join_worker(); // turno em andamento termina antes de derrubar tudo
+    st.listening = false;
+    if (st.stt) st.stt->stop();
+    if (st.listen_poll.joinable()) st.listen_poll.join();
     if (consolidation_scheduler.joinable()) consolidation_scheduler.join();
 #ifdef _WIN32
     WSACleanup();

@@ -12,11 +12,26 @@ export interface HormoneProfile {
     emotional_state: string;
 }
 
+export interface SelfOpinion { topic: string; stance: string; confidence: number; }
+export interface SelfGoal { desc: string; progress: string; priority: number; }
+export interface SelfAgendaItem { bring_up: string; reason: string; }
+
+/** O self persistente dela (state/self.json), via `status` (v0.2/F3). */
+export interface SelfState {
+    opinions: SelfOpinion[];
+    goals: SelfGoal[];
+    agenda: SelfAgendaItem[];
+    yesterday_summary: string;
+    last_consolidation_date: number;
+}
+
 /** Shape da resposta do método `status` (docs/alyssad-protocol.md). */
 export interface DaemonStatus {
     echo: boolean;
     busy: boolean;
     voice_available: boolean;
+    voice_in?: boolean;
+    self?: SelfState;
     hormones?: HormoneProfile;
     emotional_state?: string;
     ambient?: string;
@@ -41,6 +56,10 @@ export class AlyssadClient extends EventEmitter {
         this.socket = socket;
 
         socket.connect(this.port, '127.0.0.1', () => {
+            // v0.2: auth por token quando o daemon exigir (ALYSSAD_TOKEN dos
+            // dois lados). Sem token no daemon o auth é no-op de sucesso.
+            const token = process.env.ALYSSAD_TOKEN;
+            if (token) this.send('auth', { token });
             this.emit('connected');
             this.requestStatus(); // Get initial hormones + ambient
         });
@@ -101,9 +120,21 @@ export class AlyssadClient extends EventEmitter {
     /**
      * tts omitido = decisão fica com o daemon (fala quando subiu com --voice).
      * Mandar `false` fixo aqui silenciava a voz mesmo com o daemon em --voice.
+     * client:'tui' identifica a origem — o broadcast `user_text` volta pra
+     * todos e a TUI ignora o próprio eco.
      */
     public say(text: string, tts?: boolean) {
-        this.send('say', tts === undefined ? { text } : { text, tts });
+        this.send('say', tts === undefined ? { text, client: 'tui' } : { text, tts, client: 'tui' });
+    }
+
+    /** Voice-in do daemon (mic → Whisper). v0.2, método `listen`. */
+    public listen(enabled: boolean) {
+        this.send('listen', { enabled });
+    }
+
+    /** Consolidação manual (ela "dorme e digere o dia" agora). */
+    public consolidate() {
+        this.send('consolidate');
     }
 
     public requestStatus() {

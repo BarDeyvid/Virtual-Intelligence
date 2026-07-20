@@ -113,6 +113,15 @@ de silêncio e no máximo uma vez por dia (gate em
 resumo do self: `{"self":{opinions,goals,agenda,last_consolidation_date,
 has_yesterday_summary}}`.
 
+### `listen` (v0.2 — voice-in)
+`params`: `{"enabled": true|false}`. Liga/desliga o OUVIDO dela: mic → VAD
+(Silero) → Whisper turbo → o transcript vira um turno normal. O modelo
+Whisper carrega lazy no primeiro on e SAI da VRAM no off. Broadcast
+`event listening {enabled}` a cada mudança; `status` expõe `voice_in`.
+Cada enunciado emite `event heard {text}` e, se o cérebro estiver livre, um
+turno com `event user_text {text, client:"voz"}` + o streaming normal.
+Ocupada = descarta com `event error` ("ouvi mas estava ocupada").
+
 ### `shutdown`
 → `{"ok":true}`. Espera o turno em andamento terminar e encerra o processo.
 
@@ -125,7 +134,14 @@ has_yesterday_summary}}`.
 | `response` | `{"text","latency_ms","tts"}`          | resposta pronta (substitui os tokens) |
 | `hormones` | `{cortisol,...,"emotional_state"}`     | após cada turno                |
 | `consolidation` | stats do ciclo                    | consolidação terminou          |
+| `user_text` | `{"text","client"}`                   | say aceito (dedup: ignore o próprio `client`) |
+| `heard`    | `{"text"}`                             | voice-in transcreveu um enunciado |
+| `listening`| `{"enabled"}`                          | voice-in ligado/desligado      |
 | `error`    | `{"message"}`                          | turno falhou / request inválida|
+
+O `status.self` (F2/F3) traz os ITENS: `opinions[{topic,stance,confidence}]`,
+`goals[{desc,progress,priority}]`, `agenda[{bring_up,reason}]`,
+`yesterday_summary`, `last_consolidation_date` — a aba 🪞 Self da TUI.
 
 ## Reservado (v0.2+, nomes já fixados pra não quebrar cliente)
 
