@@ -147,9 +147,10 @@ set(COMMON_SOURCES
     includes/EmotionLexiconLoader.cpp 
     includes/AlyssaMemoryHandler.cpp 
     includes/Embedding/Embedder.cpp 
-    includes/EndocrineSystem.cpp 
-    includes/WeightedFusion/WeightedFusion.cpp 
-    includes/voice/ElevenLabsTTS.cpp 
+    includes/EndocrineSystem.cpp
+    # v2/F1: WeightedFusion.cpp aposentado (o .hpp fica — ExpertContribution
+    # é o tipo da interface IExpert). Ver docs/plano-alyssa-v2.md.
+    includes/voice/ElevenLabsTTS.cpp
     includes/voice/KokoroTTS.cpp 
     includes/voice/VoicePipeline.cpp 
     includes/log.cpp 

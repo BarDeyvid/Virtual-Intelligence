@@ -233,31 +233,23 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             }
         }
 
-        // 2. Buscar configurações dos modelos
+        // 2. Buscar configurações dos modelos (v2: "utility" é o 1B interno —
+        // router/resumo/fallback; nunca deixar o E2B do gameplay virar base)
         const SimpleModelConfig* base_1b_config = nullptr;
         const SimpleModelConfig* alyssa_4b_config = nullptr;
         const SimpleModelConfig* gameplay_config = nullptr;
 
         for (const auto& cfg : configs) {
-            if (cfg.id == "gameplayModel") {
-                gameplay_config = &cfg;
-            }
-            if (cfg.id == "alyssa") {
-                alyssa_4b_config = &cfg;
-            } else if (cfg.model_path.find("1b") != std::string::npos ||
-                      cfg.model_path.find("1B") != std::string::npos ||
-                      cfg.id != "alyssa") {
-                // Usar o primeiro modelo 1b que não seja alyssa como base
-                if (!base_1b_config) {
-                    base_1b_config = &cfg;
-                }
-            }
+            if (cfg.id == "gameplayModel")   gameplay_config  = &cfg;
+            else if (cfg.id == "alyssa")     alyssa_4b_config = &cfg;
+            else if (cfg.id == "utility")    base_1b_config   = &cfg;
         }
-        
-        // Fallback: se não encontrar um modelo 1b, usar qualquer modelo que não seja alyssa
+
+        // Fallback (config antiga sem "utility"): primeiro modelo que não é
+        // persona nem gameplay
         if (!base_1b_config) {
             for (const auto& cfg : configs) {
-                if (cfg.id != "alyssa") {
+                if (cfg.id != "alyssa" && cfg.id != "gameplayModel") {
                     base_1b_config = &cfg;
                     break;
                 }
@@ -285,27 +277,6 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         std::cout << "[INFO] Criando AlyssaCore BASE com modelo: " << base_1b_config->model_path
                   << " (n_ctx = " << context_size << ")" << std::endl;
         core_instance = std::make_unique<alyssa_core::AlyssaCore>(base_1b_config->model_path, context_size);
-
-        // 4.1. Pool de contextos para execução paralela dos experts (Fase 3.2).
-        // Os contextos compartilham os pesos do modelo 1B (sem duplicar RAM/VRAM);
-        // cada um roda em sua própria thread. Tamanho = TOP_K do gating.
-        // Falha na criação (ex.: sem memória) não é fatal: cai no modo sequencial.
-        constexpr int EXPERT_POOL_SIZE = 3;
-        try {
-            for (int i = 0; i < EXPERT_POOL_SIZE; ++i) {
-                expert_context_pool.push_back(std::make_unique<alyssa_core::AlyssaCore>(
-                    core_instance->get_model(), context_size, base_1b_config->n_batch));
-            }
-            std::cout << "[Parallel] Pool de " << expert_context_pool.size()
-                      << " contextos criado para experts em paralelo" << std::endl;
-        } catch (const std::exception& e) {
-            expert_context_pool.clear();
-            std::cerr << "[Parallel] Falha ao criar pool de contextos (" << e.what()
-                      << "). Mantendo execução sequencial." << std::endl;
-        }
-
-        // 5. Inicializar fusion engine
-        fusion_engine = std::make_unique<alyssa_fusion::WeightedFusion>(*embedder);
 
         // 5.1. Inicializar sistema de tools (registry-driven, Fase 1)
         tool_executor = std::make_unique<alyssa_tools::ToolExecutor>();
@@ -356,38 +327,9 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             "../alyssa_advanced_memory.db", embedder);
         std::cout << "Sistema de Memória de Longo Prazo (LTM) inicializado." << std::endl;
         
-        // 7. Criar e registrar especialistas usando o modelo base (1b)
-        llama_model* shared_model = core_instance->get_model();
-        
-        for (const auto& cfg : configs) {
-            // Pular o modelo Alyssa (4b) - ele será tratado separadamente
-            if (cfg.id == "alyssa") {
-                std::cout << "[INFO] Especialista '" << cfg.id << "' (4b) será registrado separadamente" << std::endl;
-                continue;
-            }
-            // Pular gameplayModel (E2B) - também tem core próprio, registrado
-            // separadamente depois da Alyssa (ver passo 9 abaixo).
-            if (cfg.id == "gameplayModel") {
-                std::cout << "[INFO] Especialista '" << cfg.id << "' (E2B) será registrado separadamente" << std::endl;
-                continue;
-            }
-
-            std::cout << "Configurando especialista: " << cfg.id 
-                      << " (usando modelo base 1b, max_tokens=" << cfg.params.max_tokens << ")" << std::endl;
-            
-            // Verificar se o especialista precisa de ajuste de max_tokens
-            if (cfg.params.max_tokens < 64) {
-                std::cout << "[AVISO] Especialista '" << cfg.id 
-                          << "' tem max_tokens muito baixo: " << cfg.params.max_tokens << std::endl;
-            }
-            
-            auto expert = std::make_unique<alyssa_experts::ExpertBase>(cfg);
-            if (expert->initialize(shared_model)) {
-                register_expert(std::move(expert));
-            } else {
-                std::cerr << "Falha ao inicializar especialista: " << cfg.id << std::endl;
-            }
-        }
+        // 7. v2/F1: sem comitê — os únicos experts registrados são a persona
+        // ("alyssa", passo 8) e o gameplayModel (lazy, passo 9). O modelo
+        // utility (core_instance) trabalha via generate_raw, sem registro.
 
         // 8. Criar e registrar especialista Alyssa com modelo 4b separado
         std::cout << "[INFO] Inicializando modelo separado para Alyssa (4b): " 
@@ -435,9 +377,9 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
         }
 
         initialized = true;
-        std::cout << "CoreIntegration (MoE + Weighted Fusion) inicializado com sucesso!" << std::endl;
+        std::cout << "CoreIntegration (v2 — caminho único) inicializado com sucesso!" << std::endl;
         std::cout << "Contexto base configurado: n_ctx = " << context_size << std::endl;
-        std::cout << "Modelo base (para especialistas): " << base_1b_config->model_path << std::endl;
+        std::cout << "Modelo utility (router/resumo/fallback): " << base_1b_config->model_path << std::endl;
         std::cout << "Modelo Alyssa: " << alyssa_4b_config->model_path << std::endl;
         std::cout << "Total de especialistas registrados: " << experts.size() << std::endl;
         return true;
@@ -589,22 +531,34 @@ std::string CoreIntegration::run_router_prepass(const std::string& input) {
 
 std::string CoreIntegration::generate_direct_response(const std::string& respond_to,
                                                       const std::string& raw_input,
-                                                      bool use_tts, ITTS* tts) {
-    // Modo direto também precisa de personalidade e ferramentas — perguntas
-    // curtas ("lista os arquivos?") caem muito neste caminho.
+                                                      bool use_tts, ITTS* tts,
+                                                      const char* style_hint,
+                                                      const char* dataset_mode) {
+    // O caminho de resposta da v2: personalidade + tools + ambiente + input,
+    // com histórico via run_expert (só o que o usuário disse entra no
+    // histórico — ver history_user_text).
     std::string direct_personality = alyssa_personality::generate_personality_context(
         personality,
         endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
     std::string direct_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
 
     std::string direct_prompt = direct_personality + direct_tools + build_ambient_context() +
-                                "[MODO DIRETO] Responda ao usuário: " + respond_to;
+                                style_hint + respond_to;
     std::string direct_resp = run_expert("alyssa", direct_prompt, use_tts, tts, &raw_input);
+
+    // Fase 4.3: resposta vazia/erro da persona → última cartada com o 1B.
+    // Na v1 só o caminho do comitê tinha essa rede; agora é de todos.
+    std::string trimmed = direct_resp;
+    trimmed.erase(0, trimmed.find_first_not_of(" \n\r\t"));
+    if (trimmed.empty() || trimmed.rfind("Erro:", 0) == 0) {
+        direct_resp = generate_fallback_response(direct_prompt);
+    }
+
     direct_resp = resolve_tool_calls(direct_resp, use_tts, tts);
     printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", direct_resp.c_str());
     if (memory_manager && should_store_in_memory(raw_input, direct_resp))
         memory_manager->processInteraction(raw_input, direct_resp);
-    log_interaction_for_dataset(raw_input, direct_resp, "direct");
+    log_interaction_for_dataset(raw_input, direct_resp, dataset_mode);
     clear_kv_cache();
     return direct_resp;
 }
@@ -963,9 +917,7 @@ void CoreIntegration::maybe_reload_personality() {
 }
 
 std::string CoreIntegration::summarize_history_chunk(const std::string& text) {
-    alyssa_core::AlyssaCore* summarizer = !expert_context_pool.empty()
-        ? expert_context_pool[0].get()
-        : core_instance.get();
+    alyssa_core::AlyssaCore* summarizer = core_instance.get();
     if (!summarizer || text.empty()) return "";
 
     SimpleModelParameters params;
@@ -978,12 +930,9 @@ std::string CoreIntegration::summarize_history_chunk(const std::string& text) {
         "Resuma a conversa abaixo em no máximo 3 frases, preservando fatos, nomes, "
         "preferências e decisões importantes. Responda APENAS com o resumo, sem introdução.\n\n" + text;
 
-    // Pool: clear_kv direto. core_instance: clear_kv_cache() do orquestrador,
-    // que também zera o tracking active_expert_in_cache.
-    auto clean = [this, summarizer]() {
-        if (!expert_context_pool.empty()) summarizer->clear_kv();
-        else clear_kv_cache();
-    };
+    // clear_kv_cache() do orquestrador: limpa o KV do utility E zera o
+    // tracking active_expert_in_cache (o prompt do resumo não pode vazar).
+    auto clean = [this]() { clear_kv_cache(); };
 
     try {
         clean();
@@ -1002,9 +951,7 @@ std::string CoreIntegration::summarize_history_chunk(const std::string& text) {
 std::string CoreIntegration::generate_fallback_response(const std::string& prompt) {
     std::cout << "[Fallback] Resposta da Alyssa vazia/falhou. Tentando modelo base 1B..." << std::endl;
 
-    alyssa_core::AlyssaCore* fallback_core = !expert_context_pool.empty()
-        ? expert_context_pool[0].get()
-        : core_instance.get();
+    alyssa_core::AlyssaCore* fallback_core = core_instance.get();
     if (!fallback_core) {
         return "Desculpa, deu ruim aqui no meu processamento. Tenta de novo?";
     }
@@ -1015,10 +962,7 @@ std::string CoreIntegration::generate_fallback_response(const std::string& promp
     params.max_tokens = 160;
     params.timeout_ms = 15000;
 
-    auto clean = [this, fallback_core]() {
-        if (!expert_context_pool.empty()) fallback_core->clear_kv();
-        else clear_kv_cache();
-    };
+    auto clean = [this]() { clear_kv_cache(); };
 
     try {
         clean();
@@ -1209,47 +1153,6 @@ std::string CoreIntegration::resolve_tool_calls(std::string response, bool use_t
 // =========================================================================
 // Utility Functions
 // =========================================================================
-
-/**
- * @brief Check if two expert signals are compatible.
- * @param signal1 First expert signal.
- * @param signal2 Second expert signal.
- * @return true if signals are compatible, false if contradictory.
- */
-bool CoreIntegration::are_signals_compatible(const std::string& signal1, const std::string& signal2) {
-    // Lógica simples de compatibilidade
-    // Se ambos os sinais contêm "ERRO", são incompatíveis
-    if (signal1.find("[ERRO]") != std::string::npos && 
-        signal2.find("[ERRO]") != std::string::npos) {
-        return false;
-    }
-    
-    // Sinais com alta confiança (>0.7) são considerados compatíveis se não forem opostos
-    // Extrair confiança dos sinais
-    auto extract_confidence = [](const std::string& signal) -> float {
-        std::regex conf_pattern(R"(\[CONFIANÇA\]\s*(\d+\.?\d*))");
-        std::smatch matches;
-        if (std::regex_search(signal, matches, conf_pattern) && matches.size() >= 2) {
-            try {
-                return std::stof(matches[1]);
-            } catch (...) {
-                return 0.0f;
-            }
-        }
-        return 0.0f;
-    };
-    
-    float conf1 = extract_confidence(signal1);
-    float conf2 = extract_confidence(signal2);
-    
-    // Se ambos têm confiança alta (>0.7), considerar compatíveis
-    if (conf1 > 0.7f && conf2 > 0.7f) {
-        return true;
-    }
-    
-    // Por padrão, considerar compatíveis
-    return true;
-};
 
 /**
  * @brief Determine if input is small talk/social pleasantry.
@@ -1553,257 +1456,46 @@ std::string CoreIntegration::run_expert(
     return response;
 }
 
-/**
- * @brief Detect emotional content in input using heuristics.
- * @param input Text to analyze for emotional content.
- * @return Detected emotion as string (e.g., "neutralidade", "curiosidade").
- */
-std::string CoreIntegration::detect_emotion_with_heuristics(const std::string& input) {
-    // 1. Verificar small talk
-    if (CoreIntegration::is_small_talk(input)) {
-        return "neutralidade";
-    }
-    
-    // 2. Usar o detector do fusion_engine com fallback
-    std::string detected = fusion_engine->detect_emotion_from_input(input);
-    
-    // 3. Heurística: se confiança baixa (< 0.3) ou emoção "surpresa" em input curto
-    if (detected == "surpresa" && input.length() < 50) {
-        // Verificar se há realmente algo surpreendente
-        std::vector<std::string> surprise_indicators = {
-            "incrível", "incrivel", "uau", "nossa", "caramba",
-            "surpresa", "inesperado", "não acredito", "sério"
-        };
-        
-        std::string lower_input = input;
-        std::transform(lower_input.begin(), lower_input.end(), lower_input.begin(), ::tolower);
-        
-        bool has_surprise_word = false;
-        for (const auto& word : surprise_indicators) {
-            if (lower_input.find(word) != std::string::npos) {
-                has_surprise_word = true;
-                break;
-            }
-        }
-        
-        if (!has_surprise_word) {
-            return "curiosidade"; // Fallback mais provável para perguntas
-        }
-    }
-    
-    return detected;
-}
-
 // =========================================================================
-// Weighted Fusion
+// Core v2 — caminho único (docs/plano-alyssa-v2.md, F1)
 // =========================================================================
 
 /**
- * @brief Generate fused input for Alyssa model from expert contributions.
- * @param original_input Original user input.
- * @param contributions Vector of expert contributions.
- * @param emotion Detected emotion for context.
- * @return Formatted prompt with expert thoughts and memory context.
- */
-std::string CoreIntegration::generate_fused_input(
-    const std::string& original_input,
-    const std::vector<alyssa_fusion::ExpertContribution>& contributions,
-    const std::string& emotion
-) {
-    // Construir blocos de pensamento em português
-    std::string thoughts = "[PENSAMENTOS]\n";
-    
-    // Adicionar emoção detectada
-    if (!emotion.empty()) {
-        thoughts += "[Emoção]: " + emotion + "\n";
-    }
-    
-    // Organizar pensamentos por especialista
-    std::map<std::string, std::vector<std::string>> thoughts_by_type;
-    
-    // Build thought type mapping from ConfigsLLM.json
-    static std::map<std::string, std::string> thought_type_mapping;
-    
-    if (thought_type_mapping.empty()) {
-        // Load and cache mapping from configs
-        AllModelConfigs configs = load_config();
-        for (const auto& cfg : configs) {
-            std::string thought_label = cfg.id;
-            
-            // Convert ID to Portuguese thought type label
-            if (cfg.id.find("emotional") != std::string::npos) {
-                thought_label = "Emocional";
-            } else if (cfg.id.find("introspect") != std::string::npos) {
-                thought_label = "Introspectivo";
-            } else if (cfg.id.find("social") != std::string::npos) {
-                thought_label = "Social";
-            } else if (cfg.id.find("analyt") != std::string::npos) {
-                thought_label = "Analítico";
-            } else if (cfg.id.find("creat") != std::string::npos) {
-                thought_label = "Criativo";
-            } else if (cfg.id.find("memory") != std::string::npos) {
-                thought_label = "Memória";
-            } else {
-                // Capitalize first letter for unknown types
-                if (!thought_label.empty()) {
-                    thought_label[0] = std::toupper(thought_label[0]);
-                }
-            }
-            
-            thought_type_mapping[cfg.id] = thought_label;
-        }
-    }
-    
-    // Sort by weight descending so the most relevant thought lands first in the prompt
-    std::vector<alyssa_fusion::ExpertContribution> sorted_contributions = contributions;
-    std::sort(sorted_contributions.begin(), sorted_contributions.end(),
-              [](const auto& a, const auto& b) { return a.weight > b.weight; });
-
-    for (const auto& contrib : sorted_contributions) {
-        // Skip alyssa from contributions (should not be here)
-        if (contrib.expert_id == "alyssa") continue;
-        
-        // Get thought type from loaded config mapping
-        std::string thought_type = contrib.expert_id;
-        auto it = thought_type_mapping.find(contrib.expert_id);
-        if (it != thought_type_mapping.end()) {
-            thought_type = it->second;
-        }
-        
-        thoughts_by_type[thought_type].push_back(contrib.response);
-    }
-    
-    // Adicionar pensamentos ao bloco
-    for (const auto& [type, responses] : thoughts_by_type) {
-        thoughts += "[" + type + "]: ";
-        for (size_t i = 0; i < responses.size(); ++i) {
-            thoughts += responses[i];
-            if (i < responses.size() - 1) thoughts += " ";
-        }
-        thoughts += "\n";
-    }
-    
-    // Adicionar contexto de memória
-    if (memory_manager) {
-        auto memories = memory_manager->getHybridMemories(original_input);
-        if (!memories.empty()) {
-            thoughts += "[Memória de Longo Prazo]:\n";
-            for (const auto& mem : memories) {
-                thoughts += "- " + mem.content + " (Emoção: " + mem.emotion + ")\n";
-            }
-        }
-    }
-    
-    thoughts += "[/PENSAMENTOS]\n\n";
-    
-    // =====================================================================
-    // 🧬 INJECT HORMONAL STATE INTO SYSTEM CONTEXT
-    // =====================================================================
-    
-    std::string hormonal_context = "";
-    if (endocrine_system) {
-        hormonal_context = endocrine_system->generate_hormonal_system_context();
-        hormonal_context += "\n";
-        
-        std::cout << "\n[Hormonal Injection] " << hormonal_context << std::endl;
-    }
-    
-    // Bloco compacto de ferramentas disponíveis (Fase 1: descrições curtas,
-    // não o registro inteiro, para não explodir o contexto)
-    std::string tools_context = "";
-    if (tool_executor) {
-        tools_context = tool_executor->get_tools_prompt();
-        if (!tools_context.empty()) tools_context += "\n";
-    }
-
-    // Bloco de personalidade com estado atual modulado pelos hormônios (Fase 2.1)
-    std::string personality_context = alyssa_personality::generate_personality_context(
-        personality,
-        endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
-    if (!personality_context.empty()) personality_context += "\n";
-
-    // Construir prompt final para a Alyssa. Tools ficam por último antes da
-    // entrada: modelos pequenos dão mais atenção ao fim do prompt.
-    std::string fused_prompt = personality_context +
-                               hormonal_context +
-                               build_ambient_context() +
-                               thoughts +
-                               tools_context +
-                               "ENTRADA DO USUÁRIO: \"" + original_input + "\"\n\n" +
-                               "Baseado nos pensamentos acima e seu estado hormonal atual, forneça sua resposta como Alyssa:";
-
-    return fused_prompt;
-}
-
-// =========================================================================
-// Core Fusion Engine (shared by both TTS and TTS-less paths)
-// =========================================================================
-
-/**
- * @brief Shared implementation for all think_with_fusion variants.
+ * @brief Shared implementation for all think_with_fusion variants (v2/F1).
  *
- * Runs rule-based Top-K gating, executes only the selected expert subset,
- * builds the fused prompt, calls Alyssa for the final answer, and handles
- * endocrine updates and memory storage.  TTS streaming is enabled when
- * use_tts=true and tts != nullptr.
+ * Caminho único: tick endócrino → memória (pulada em small talk) →
+ * generate_direct_response (histórico + tools + fallback 1B) → update
+ * hormonal com a troca real. O comitê/fusão da v1 foi aposentado; o nome
+ * "fusion" ficou pela API pública estável dos frontends.
  */
 std::string CoreIntegration::think_with_fusion_core(
     const std::string& input,
     bool use_tts,
     ITTS* tts
 ) {
-    if (!initialized || !core_instance || !fusion_engine) {
+    if (!initialized || !core_instance) {
         return "Erro: Sistema não inicializado corretamente.";
     }
 
     // Hot-reload de personalidade: tuning sem reiniciar
     maybe_reload_personality();
 
-    // =========================================================================
     // 1. ENDOCRINE: metabolism tick
-    // =========================================================================
     if (endocrine_system) {
         endocrine_system->apply_metabolism(0.05);
         std::cout << endocrine_system->get_hormone_profile().to_string() << std::endl;
     }
 
-    std::cout << "\n[Weighted Fusion] Processando input: " << input << std::endl;
+    std::cout << "\n[v2] Processando input: " << input << std::endl;
+    auto turn_start = std::chrono::steady_clock::now();
 
-    // =========================================================================
-    // 1.5. FAST PATH: small talk pula o comitê inteiro (latência ~1 chamada 4B)
-    // =========================================================================
-    if (is_small_talk(input)) {
-        std::cout << "[Fast Path] Small talk detectado — comitê pulado.\n";
-        auto fast_start = std::chrono::steady_clock::now();
-
-        std::string fast_personality = alyssa_personality::generate_personality_context(
-            personality,
-            endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
-        std::string fast_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
-
-        std::string fast_prompt = fast_personality + fast_tools + build_ambient_context() +
-            "[CONVERSA CASUAL] Responda curto e natural, como Alyssa: " + input;
-
-        std::string fast_resp = run_expert("alyssa", fast_prompt, use_tts, tts, &input);
-        fast_resp = resolve_tool_calls(fast_resp, use_tts, tts);
-
-        auto fast_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - fast_start).count();
-        std::cout << "[Fast Path] Resposta em " << fast_ms << "ms\n";
-        printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", fast_resp.c_str());
-
-        log_interaction_for_dataset(input, fast_resp, "small_talk");
-        clear_kv_cache();
-        return fast_resp;
-    }
-
-    // =========================================================================
-    // 2. MEMORY CONTEXT AUGMENTATION (isolated, max 3 memories)
-    // =========================================================================
+    // 2. MEMÓRIA: augmentation isolada (máx 3 memórias). Small talk pula a
+    // busca (embedder + SQLite) — mas NUNCA o histórico: o "fast path sem
+    // contexto" da v1 morreu junto com o comitê.
+    const bool small = is_small_talk(input);
     std::string augmented_input = input;
-    AllModelConfigs configs = load_config();
 
-    if (memory_manager) {
+    if (!small && memory_manager) {
         auto memories = memory_manager->getHybridMemories(input);
         std::vector<typename decltype(memories)::value_type> filtered;
         for (size_t i = 0; i < memories.size() && filtered.size() < 3; ++i) {
@@ -1824,261 +1516,31 @@ std::string CoreIntegration::think_with_fusion_core(
         }
     }
 
-    // =========================================================================
-    // 2.5 ROUTER ADAPTATIVO (docs/plano-router-e-voz-gameplay.md, seção A):
-    // um pre-pass de ~100ms no 1B decide se o turno paga o comitê (~1s+).
-    // "direto"/"memoria" respondem já; rota de expert único pula o gating.
-    // =========================================================================
-    std::string forced_expert;
-    if (router_adaptive) {
-        const std::string route = run_router_prepass(input);
-        if (route == "direto") {
-            return generate_direct_response(input, input, use_tts, tts);
-        } else if (route == "memoria") {
-            // As memórias relevantes já foram injetadas na seção 2.
-            return generate_direct_response(augmented_input, input, use_tts, tts);
-        } else if (route == "emocional") {
-            forced_expert = "emotionalModel";
-        } else if (route == "analitico") {
-            forced_expert = "analyticalModel";
-        } else if (route == "criativo") {
-            forced_expert = "creativeModel";
-        }
-        // "comite" (ou rota desconhecida): fluxo completo abaixo.
-    }
+    // 3. RESPOSTA: caminho único com histórico (LTM, dataset e KV clear
+    // acontecem dentro de generate_direct_response)
+    const char* style = small
+        ? "[CONVERSA CASUAL] Responda curto e natural, como Alyssa: "
+        : "[MODO DIRETO] Responda ao usuário: ";
+    std::string response = generate_direct_response(
+        augmented_input, input, use_tts, tts, style, small ? "small_talk" : "direct");
 
-    // =========================================================================
-    // 3. RULE-BASED GATING + Top-K selection (k=3, threshold=0.15)
-    // =========================================================================
-    std::vector<std::string> available_experts;
-    for (const auto& cfg : configs) {
-        if (cfg.id != "alyssa") available_experts.push_back(cfg.id);
-    }
-
-    constexpr int    TOP_K     = 3;
-    constexpr double THRESHOLD = 0.15;
-
-    std::map<std::string, double> gating_weights;
-    std::set<std::string> active_experts;
-
-    if (!forced_expert.empty() && has_expert(forced_expert)) {
-        // Router escolheu o especialista: comitê de UM, peso cheio.
-        active_experts.insert(forced_expert);
-        gating_weights[forced_expert] = 1.0;
-        std::cout << "[Router] Expert único pelo router: " << forced_expert << "\n";
-    } else {
-        gating_weights =
-            fusion_engine->calculate_rule_based_weights(augmented_input, available_experts);
-
-        std::vector<std::pair<std::string, double>> sorted_w(gating_weights.begin(), gating_weights.end());
-        std::sort(sorted_w.begin(), sorted_w.end(),
-                  [](const auto& a, const auto& b) { return a.second > b.second; });
-
-        for (int i = 0; i < static_cast<int>(sorted_w.size()); ++i) {
-            if (i < TOP_K && sorted_w[i].second >= THRESHOLD) {
-                active_experts.insert(sorted_w[i].first);
-                std::cout << "[MoE Gating] Expert ATIVADO: " << sorted_w[i].first
-                          << " (Peso: " << sorted_w[i].second << ")\n";
-            } else {
-                gating_weights[sorted_w[i].first] = 0.0;
-            }
-        }
-    }
-
-    // =========================================================================
-    // 4. CONDITIONAL EXPERT EXECUTION (only the selected subset)
-    //    Fase 3.2: paralelo via pool de contextos; sequencial como fallback.
-    // =========================================================================
-    std::vector<alyssa_fusion::ExpertContribution> contributions;
-
-    // Lista de selecionados na ordem das configs (determinística)
-    std::vector<const SimpleModelConfig*> selected;
-    for (const auto& cfg : configs) {
-        if (cfg.id == "alyssa") continue;
-        if (active_experts.find(cfg.id) != active_experts.end()) selected.push_back(&cfg);
-    }
-
-    auto committee_start = std::chrono::steady_clock::now();
-    const bool run_parallel = expert_context_pool.size() >= 2 && selected.size() >= 2;
-
-    if (run_parallel) {
-        // Processa em lotes do tamanho do pool: cada task usa um contexto
-        // exclusivo do lote, então não há dois decodes no mesmo contexto.
-        const size_t pool_size = expert_context_pool.size();
-
-        for (size_t base = 0; base < selected.size(); base += pool_size) {
-            size_t batch_n = std::min(pool_size, selected.size() - base);
-            std::vector<std::future<alyssa_fusion::ExpertContribution>> futures;
-
-            for (size_t i = 0; i < batch_n; ++i) {
-                const SimpleModelConfig* cfg = selected[base + i];
-                alyssa_core::AlyssaCore* slot_core = expert_context_pool[i].get();
-                alyssa_experts::IExpert* expert_ptr = experts[cfg->id].get();
-                double weight = gating_weights[cfg->id];
-
-                // Cópia isolada do histórico feita na thread principal (o mapa
-                // expert_histories não é tocado pelas workers)
-                std::vector<llama_chat_message> isolated_history = expert_histories[cfg->id];
-                if (isolated_history.size() > 4) {
-                    isolated_history.erase(isolated_history.begin(),
-                                           isolated_history.begin() + (isolated_history.size() - 4));
-                }
-
-                std::cout << "[MoE Execution] Rodando " << cfg->id << " (paralelo, slot "
-                          << i << ")...\n";
-
-                futures.push_back(std::async(std::launch::async,
-                    [this, expert_ptr, slot_core, weight,
-                     isolated_history, augmented_input]() mutable {
-                        slot_core->clear_kv(); // contexto reutilizado entre turnos
-
-                        size_t base_size = isolated_history.size();
-                        llama_adapter_lora* active_lora = nullptr;
-                        auto contrib = expert_ptr->get_contribution(
-                            augmented_input, slot_core, embedder, nullptr,
-                            isolated_history, &active_lora
-                        );
-                        contrib.weight = weight;
-
-                        // Libera as mensagens strdup'adas que o run() anexou à cópia
-                        for (size_t k = base_size; k < isolated_history.size(); ++k) {
-                            free(const_cast<char*>(isolated_history[k].content));
-                        }
-                        return contrib;
-                    }));
-            }
-
-            for (auto& f : futures) {
-                auto contrib = f.get();
-                std::cout << "[Comitê] " << contrib.expert_id << " respondeu: "
-                          << (contrib.response.length() > 50
-                              ? contrib.response.substr(0, 50) + "..."
-                              : contrib.response) << std::endl;
-                contributions.push_back(std::move(contrib));
-            }
-        }
-    } else {
-        // Caminho sequencial original (pool indisponível ou 1 expert só)
-        for (const SimpleModelConfig* cfg_ptr : selected) {
-            const auto& cfg = *cfg_ptr;
-            std::cout << "[MoE Execution] Rodando " << cfg.id << "...\n";
-            switch_expert_context(cfg.id);
-
-            auto& expert  = experts[cfg.id];
-            auto& history = expert_histories[cfg.id];
-
-            std::vector<llama_chat_message> isolated_history = history;
-            if (isolated_history.size() > 4) {
-                isolated_history.erase(isolated_history.begin(),
-                                       isolated_history.begin() + (isolated_history.size() - 4));
-            }
-
-            llama_adapter_lora* active_lora = nullptr;
-            auto contrib = expert->get_contribution(
-                augmented_input, core_instance.get(), embedder, nullptr,
-                isolated_history, &active_lora
-            );
-            contrib.weight = gating_weights[cfg.id];
-            contributions.push_back(contrib);
-
-            std::cout << "[Comitê] " << cfg.id << " respondeu: "
-                      << (contrib.response.length() > 50
-                          ? contrib.response.substr(0, 50) + "..."
-                          : contrib.response) << std::endl;
-        }
-    }
-
-    auto committee_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - committee_start).count();
-    std::cout << "[MoE Execution] Comitê de " << selected.size() << " expert(s) concluído em "
-              << committee_ms << "ms (" << (run_parallel ? "paralelo" : "sequencial")
-              << ")" << std::endl;
-
-    // Fallback: no expert cleared the gate
-    if (contributions.empty()) {
-        std::cout << "[MoE Gating] Nenhum expert atingiu o threshold. Fallback: socialModel\n";
-        if (has_expert("socialModel")) {
-            switch_expert_context("socialModel");
-            auto& expert  = experts["socialModel"];
-            auto& history = expert_histories["socialModel"];
-            llama_adapter_lora* al = nullptr;
-            auto contrib = expert->get_contribution(
-                augmented_input, core_instance.get(), embedder, nullptr, history, &al);
-            contrib.weight = 1.0;
-            contributions.push_back(contrib);
-        }
-    }
-
-    // =========================================================================
-    // 5. ENDOCRINE: update from expert signals
-    // =========================================================================
-    if (endocrine_system && !contributions.empty()) {
-        std::vector<std::string> signals;
-        for (const auto& c : contributions) signals.push_back(c.response);
-        endocrine_system->update_hormone_levels(signals);
-        std::cout << "\n[Endocrine Update] Hormônios atualizados após comitê:\n"
-                  << endocrine_system->get_hormone_profile().to_string() << std::endl;
-    }
-
-    // =========================================================================
-    // 6. COHERENCE CHECK
-    // =========================================================================
-    float coherence = calculate_committee_coherence(contributions);
-    if (coherence < 0.3f) {
-        std::cout << "[AVISO] Coerência do comitê baixa (" << coherence
-                  << "). Gerando resposta direta." << std::endl;
-        return generate_direct_response(input, input, use_tts, tts);
-    }
-
-    // =========================================================================
-    // 7. GENERATE FUSED PROMPT & CALL ALYSSA
-    // =========================================================================
-    std::string emotion     = detect_emotion_with_heuristics(input);
-    std::string fused_input = generate_fused_input(input, contributions, emotion);
-    std::string final_response = run_expert("alyssa", fused_input, use_tts, tts, &input);
-
-    // Fase 4.3: resposta vazia/erro do 4B → última cartada com o modelo base 1B
-    std::string trimmed = final_response;
-    trimmed.erase(0, trimmed.find_first_not_of(" \n\r\t"));
-    if (trimmed.empty() || trimmed.rfind("Erro:", 0) == 0) {
-        final_response = generate_fallback_response(fused_input);
-    }
-
-    // Resolver [TOOL_CALL] antes de qualquer pós-processamento (Fase 1.2)
-    final_response = resolve_tool_calls(final_response, use_tts, tts);
-
-    printf("\033[36m[RESPOSTA FINAL]: \033[0m%s\n", final_response.c_str());
-
-    // Strip optional [RESPOSTA] tags
-    size_t s = final_response.find("[RESPOSTA]");
-    size_t e = final_response.find("[/RESPOSTA]");
-    if (s != std::string::npos && e != std::string::npos) {
-        final_response = final_response.substr(s + 10, e - s - 10);
-        final_response.erase(0, final_response.find_first_not_of(" \n\r\t"));
-        final_response.erase(final_response.find_last_not_of(" \n\r\t") + 1);
-    }
-
-    // =========================================================================
-    // 8. MEMORY & CLEANUP
-    // =========================================================================
-    if (memory_manager) {
-        if (should_store_in_memory(input, final_response)) {
-            memory_manager->processInteraction(input, final_response);
-            std::cout << "\n Interação salva na LTM." << std::endl;
-        } else {
-            std::cout << "\n Small talk/ruído não salvo na LTM." << std::endl;
-        }
-    }
-
+    // 4. ENDOCRINE: hormônios reagem à troca real. (Na v1 reagiam aos sinais
+    // do comitê — texto PT-BR contra keywords EN, ou seja, quase nunca.
+    // Léxico PT de verdade é trabalho da F2.)
     if (endocrine_system) {
-        std::cout << "\n[Turn End] Limpando caches para próximo turno.\n"
-                  << "  Estado final: "
+        endocrine_system->update_hormone_levels({input, response});
+        std::cout << "[Turn End] Estado: "
                   << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
     }
-    log_interaction_for_dataset(input, final_response, "fusion");
-    clear_kv_cache();
-    return final_response;
+
+    auto turn_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - turn_start).count();
+    std::cout << "[v2] Turno completo em " << turn_ms << "ms" << std::endl;
+
+    return response;
 }
+
+
 
 /**
  * @brief TTS-enabled wrapper over think_with_fusion_core.
@@ -2088,33 +1550,6 @@ std::string CoreIntegration::think_with_fusion(const std::string& input, ITTS& t
     return think_with_fusion_core(input, true, &tts);
 }
 
-
-/**
- * @brief Calculate coherence metric for expert committee responses.
- * @param contributions Vector of contributions from different experts.
- * @return Coherence score between 0.0 (incoherent) and 1.0 (fully coherent).
- */
-float CoreIntegration::calculate_committee_coherence(
-    const std::vector<alyssa_fusion::ExpertContribution>& contributions
-) {
-    if (contributions.size() <= 1) return 1.0f;
-    
-    // Simples métrica de similaridade textual
-    int agreeing_signals = 0;
-    int total_pairs = 0;
-    
-    for (size_t i = 0; i < contributions.size(); ++i) {
-        for (size_t j = i + 1; j < contributions.size(); ++j) {
-            // Verificar se os sinais são compatíveis
-            if (are_signals_compatible(contributions[i].response, contributions[j].response)) {
-                agreeing_signals++;
-            }
-            total_pairs++;
-        }
-    }
-    
-    return total_pairs > 0 ? (float)agreeing_signals / total_pairs : 0.0f;
-};
 
 /**
  * @brief Determine if interaction should be stored in long-term memory.

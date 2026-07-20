@@ -2,154 +2,17 @@
   "router_mode": "adaptive",
   "models": [
     {
-      "id": "socialModel",
+      "id": "utility",
       "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Aly**, o radar social. Analisa rapidamente intenções e dinâmicas.",
+      "system_prompt": "Você é um módulo utilitário interno da Alyssa: roteia, resume e serve de fallback. Responda sempre de forma curta e objetiva.",
       "usa_LoRA": false,
       "lora_path": "",
       "n_ctx": 4096,
       "n_batch": 8192,
       "parametros": {
-        "temperatura": 0.7,
-        "top_p": 0.85,
-        "max_tokens": 48
-      }
-    },
-    {
-      "id": "introspectiveModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Intro**, a voz da autoanálise. Percebe motivações e contradições internas.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.5,
+        "temperatura": 0.3,
         "top_p": 0.8,
-        "max_tokens": 64
-      }
-    },
-    {
-      "id": "emotionalModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Emi**, o centro emocional. Sente o clima e o subtexto afetivo da conversa.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.7,
-        "top_p": 0.85,
-        "max_tokens": 64
-      }
-    },
-    {
-      "id": "creativeModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Crea**, a centelha criativa. Dá ideias originais e conexões inesperadas.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.85,
-        "top_p": 0.9,
-        "max_tokens": 80
-      }
-    },
-    {
-      "id": "analyticalModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Logos**, o pensador lógico. Busca padrões, inconsistências e estrutura racional.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.2,
-        "top_p": 0.7,
-        "max_tokens": 64
-      }
-    },
-    {
-      "id": "memoryModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Mem**, a memória contextual. Lembra de históricos e padrões relevantes.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.25,
-        "top_p": 0.75,
-        "max_tokens": 48
-      }
-    },
-    {
-      "id": "strategicModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Strat**, a mente estratégica. Pensa em objetivos, caminhos e resultados práticos.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.6,
-        "top_p": 0.8,
-        "max_tokens": 64
-      }
-    },
-    {
-      "id": "cynicalModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Cyn**, o realista. Enxerga segundas intenções e verdades inconvenientes.",
-      "usa_LoRA": false,
-      "lora_path": "",
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.7,
-        "top_p": 0.85,
-        "max_tokens": 48
-      }
-    },
-    {
-      "id": "peacekeeperModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Pax**, a diplomata. Busca harmonia e produtividade no diálogo.",
-      "usa_LoRA": false,
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.4,
-        "top_p": 0.8,
-        "max_tokens": 48
-      }
-    },
-    {
-      "id": "zenModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Zen**, a estabilidade. Mantém equilíbrio emocional independente do contexto.",
-      "usa_LoRA": false,
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.2,
-        "top_p": 0.75,
-        "max_tokens": 32
-      }
-    },
-    {
-      "id": "museModel",
-      "model_path": "models/gemma-3-1b-it-q4_0.gguf",
-      "system_prompt": "Você é **Muse**, a otimista. Vê possibilidades, potencial e oportunidades.",
-      "usa_LoRA": false,
-      "n_ctx": 4096,
-      "n_batch": 8192,
-      "parametros": {
-        "temperatura": 0.8,
-        "top_p": 0.9,
-        "max_tokens": 56
+        "max_tokens": 96
       }
     },
     {

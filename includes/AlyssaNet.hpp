@@ -1,5 +1,4 @@
 #include "AlyssaCore.hpp"
-#include "WeightedFusion/WeightedFusion.hpp"
 #include "voice/TTSBase.hpp"
 #include "AlyssaMemoryHandler.hpp"
 #include "IExpert.hpp"
@@ -18,29 +17,23 @@
 
 /**
  * @class CoreIntegration
- * @brief Main orchestration class for the Alyssa AI system using Mixture of Experts (MoE) architecture.
- * 
- * This class integrates multiple specialized AI models (experts) with weighted fusion capabilities,
- * memory management, and text-to-speech functionality. It serves as the central controller for
- * processing user inputs through different expert models and generating coherent responses.
- * 
+ * @brief Main orchestration class for the Alyssa AI system (v2 — docs/plano-alyssa-v2.md).
+ *
+ * v2/F1: o comitê MoE foi aposentado. Todo turno segue UM caminho:
+ * memória → resposta direta com histórico (generate_direct_response).
+ * O modelo "utility" (1B) serve de router (F4), sumarizador e fallback;
+ * a persona roda no expert "alyssa"; o gameplay no "gameplayModel" (lazy).
+ *
  * Key features:
- * - Mixture of Experts (MoE) architecture with specialized models
- * - Weighted fusion of expert contributions
+ * - Single-path response generation with conversation history
  * - Long-term memory integration
- * - Context switching between experts
+ * - Endocrine/personality state injection
  * - TTS (Text-to-Speech) integration
  * - Dynamic history management
  */
 class CoreIntegration {
 private:
-    std::unique_ptr<alyssa_core::AlyssaCore> core_instance;           ///< Base model instance (1B)
-
-    /// @brief Pool of extra contexts on the shared 1B model for parallel expert
-    ///        execution (Phase 3.2). Declared AFTER core_instance on purpose:
-    ///        members are destroyed in reverse order, so the pool contexts are
-    ///        freed before the model they borrow from.
-    std::vector<std::unique_ptr<alyssa_core::AlyssaCore>> expert_context_pool;
+    std::unique_ptr<alyssa_core::AlyssaCore> core_instance;           ///< Utility model instance (1B)
 
     /// Config do gameplayModel guardada no boot; o load real (E2B, ~3GB de
     /// VRAM) só acontece em ensure_gameplay_expert() no primeiro /mc start.
@@ -53,25 +46,28 @@ private:
 
     /**
      * @brief Pre-pass de roteamento: classifica o input numa rota de processamento.
-     * @details Roda no 1B compartilhado (core_instance) com grammar — ~100ms,
-     *          sem tocar no core/histórico da Alyssa. v1 deliberadamente no
-     *          1B: se logs/router_decisions.jsonl mostrar roteamento ruim,
-     *          upgrade pro E2B é trocar o core da chamada.
+     * @details Roda no 1B compartilhado (core_instance) com grammar — ~100ms.
+     *          F1 da v2: FORA do caminho quente (todas as rotas colapsaram em
+     *          "direto"). Mantido compilando porque na F4 vira o seletor
+     *          reflexo (E2B) vs córtex (12B) — ver docs/plano-alyssa-v2.md.
      * @return "direto" | "emocional" | "analitico" | "criativo" | "memoria"
      *         | "comite" (fallback seguro em qualquer erro).
      */
     std::string run_router_prepass(const std::string& input);
 
     /**
-     * @brief Resposta em MODO DIRETO: personalidade+tools+input, sem comitê.
-     * @details Compartilhado entre o router (rota direto/memoria) e o
-     *          fallback de coerência baixa do comitê (que já existia).
+     * @brief O caminho de resposta da v2: personalidade+tools+ambiente+input,
+     *        com histórico, tool calls resolvidos, fallback 1B se o modelo da
+     *        persona falhar, memória LTM e dataset log.
+     * @param style_hint   Prefixo de estilo do turno (direto vs casual).
+     * @param dataset_mode Rótulo gravado em training_data.jsonl (curadoria LoRA).
      */
     std::string generate_direct_response(const std::string& respond_to,
                                          const std::string& raw_input,
-                                         bool use_tts, ITTS* tts);
+                                         bool use_tts, ITTS* tts,
+                                         const char* style_hint = "[MODO DIRETO] Responda ao usuário: ",
+                                         const char* dataset_mode = "direct");
 
-    std::unique_ptr<alyssa_fusion::WeightedFusion> fusion_engine;    ///< Weighted fusion engine
     std::shared_ptr<Embedder> embedder;                             ///< Embedding generator for semantic analysis
     std::unique_ptr<alyssa_memory::AlyssaMemoryManager> memory_manager; ///< Long-term memory manager
     std::unique_ptr<alyssa_endocrine::EndocrineSystem> endocrine_system; ///< Hormonal system for behavioral modulation
@@ -205,20 +201,6 @@ public:
     bool validate_context_size(const std::string& prompt, const std::string& expert_id);
     
     /**
-     * @brief Detect emotional content in input using heuristics.
-     * @param input Text to analyze for emotional content.
-     * @return Detected emotion as string (e.g., "neutralidade", "curiosidade").
-     */
-    std::string detect_emotion_with_heuristics(const std::string& input);
-
-    /**
-     * @brief Calculate coherence metric for expert committee responses.
-     * @param contributions Vector of contributions from different experts.
-     * @return Coherence score between 0.0 (incoherent) and 1.0 (fully coherent).
-     */
-    float calculate_committee_coherence(const std::vector<alyssa_fusion::ExpertContribution>& contributions);
-    
-    /**
      * @brief Determine if interaction should be stored in long-term memory.
      * @param input User's input text.
      * @param response System's response text.
@@ -229,20 +211,7 @@ public:
     // =========================================================================
     // Utility Methods
     // =========================================================================
-    
-    /**
-     * @brief Generate fused input for Alyssa model from expert contributions.
-     * @param original_input Original user input.
-     * @param contributions Vector of expert contributions.
-     * @param emotion Detected emotion for context.
-     * @return Formatted prompt with expert thoughts and memory context.
-     */
-    std::string generate_fused_input(
-        const std::string& original_input,
-        const std::vector<alyssa_fusion::ExpertContribution>& contributions,
-        const std::string& emotion
-    );
-    
+
     /**
      * @brief Log source awareness information.
      * @param source Source identifier (expert ID).
@@ -399,11 +368,12 @@ private:
     // =========================================================================
 
     /**
-     * @brief Shared processing core for all think_with_fusion variants.
+     * @brief Shared processing core for all think_with_fusion variants (v2/F1).
      *
-     * Handles: endocrine tick, memory augmentation, rule-based Top-K gating,
-     * conditional expert execution, coherence check, fused prompt generation,
-     * Alyssa inference, memory storage, and KV cache cleanup.
+     * Handles: endocrine tick, memory augmentation (skipped for small talk),
+     * direct response with history via generate_direct_response, and endocrine
+     * update from the actual exchange. O nome "fusion" ficou pela API pública
+     * estável dos frontends; a fusão em si foi aposentada na F1.
      *
      * @param input   Raw user input.
      * @param use_tts Whether to stream tokens to TTS.
@@ -499,14 +469,6 @@ private:
         ITTS* tts = nullptr,
         const std::string* history_user_text = nullptr
     );
-
-    /**
-     * @brief Check if two expert signals are compatible.
-     * @param signal1 First expert signal.
-     * @param signal2 Second expert signal.
-     * @return true if signals are compatible, false if contradictory.
-     */
-    bool are_signals_compatible(const std::string& signal1, const std::string& signal2);
 
     /**
      * @brief Determine if input is small talk/social pleasantry.
