@@ -713,6 +713,20 @@ void AdvancedMemorySystem::initializeDatabase() {
             FOREIGN KEY(memory_id) REFERENCES memories(id)
         );
         )",
+
+        // Tabela de fatos destilados (v2/F3): o que a consolidação noturna
+        // aprendeu de durável sobre o Deyvid. Dedup por texto exato; fatos
+        // repetidos são REFORÇADOS (reinforced_count), não duplicados.
+        R"(
+        CREATE TABLE IF NOT EXISTS facts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fato TEXT NOT NULL UNIQUE,
+            fonte TEXT DEFAULT 'consolidation',
+            created_at INTEGER,
+            reinforced_count INTEGER DEFAULT 1,
+            last_reinforced INTEGER
+        );
+        )",
         
         // Tabela de vínculos entre memórias
         R"(
@@ -1636,9 +1650,10 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
     static int interaction_count = 0;
     if (++interaction_count % 10 == 0) {
         memory_system->applyMemoryDecay();
-        memory_system->generateReflections();
+        // v2/F3: generateReflections (template) saiu do caminho por-turno —
+        // reflexão de verdade é trabalho da consolidação noturna.
     }
-    
+
     if (interaction_count % 5 == 0) {
         memory_system->printSystemStatus();
     }
@@ -1710,7 +1725,7 @@ void AlyssaMemoryManager::processInteraction(const std::string& user_input,
     static int interaction_count = 0;
     if (++interaction_count % 10 == 0) {
         memory_system->applyMemoryDecay();
-        memory_system->generateReflections();
+        // v2/F3: reflexão-template aposentada (ver consolidação noturna).
     }
 }
 
@@ -1730,6 +1745,126 @@ std::vector<AdvancedMemorySystem::ContextualMemory> AlyssaMemoryManager::getRele
  */
 std::vector<AdvancedMemorySystem::SemanticMemory> AlyssaMemoryManager::getSemanticMemories(const std::string& context) {
     return memory_system->semanticSearch(context, 3);
+}
+
+// ============================================================================
+// v2/F3 — fatos destilados + matéria-prima e faxina da consolidação
+// ============================================================================
+
+void AdvancedMemorySystem::saveFact(const std::string& fact, const std::string& source) {
+    if (fact.empty()) return;
+    const char* sql = R"(
+        INSERT INTO facts (fato, fonte, created_at, reinforced_count, last_reinforced)
+        VALUES (?, ?, ?, 1, ?)
+        ON CONFLICT(fato) DO UPDATE SET
+            reinforced_count = reinforced_count + 1,
+            last_reinforced  = excluded.last_reinforced;
+    )";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        long long now = static_cast<long long>(std::time(nullptr));
+        sqlite3_bind_text(stmt, 1, fact.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, source.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(stmt, 3, now);
+        sqlite3_bind_int64(stmt, 4, now);
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            std::cerr << "[Facts] Falha ao salvar fato: " << sqlite3_errmsg(db) << "\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+}
+
+std::vector<std::string> AdvancedMemorySystem::getCoreFacts(int top_n) {
+    std::vector<std::string> facts;
+    const char* sql = R"(
+        SELECT fato FROM facts
+        ORDER BY reinforced_count DESC, last_reinforced DESC
+        LIMIT ?;
+    )";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, top_n);
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            facts.emplace_back(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        }
+        sqlite3_finalize(stmt);
+    }
+    return facts;
+}
+
+std::string AdvancedMemorySystem::getMemoriesTextSince(long long since_epoch, size_t max_chars) {
+    std::string text;
+    // day_summary fica FORA do corpus: além de contar o dia duas vezes, um
+    // resumo ruim de ontem se auto-perpetua (a sopa de token do aceite da F3
+    // entrou no corpus seguinte e o 1B só continuou o padrão dela).
+    const char* sql = R"(
+        SELECT emocao, conteudo FROM memories
+        WHERE timestamp >= ?
+          AND (contexto IS NULL OR contexto NOT LIKE 'day_summary%')
+        ORDER BY timestamp ASC;
+    )";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, since_epoch);
+        while (sqlite3_step(stmt) == SQLITE_ROW && text.size() < max_chars) {
+            const char* emo = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            const char* con = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            text += "[" + std::string(emo ? emo : "neutral") + "] "
+                  + std::string(con ? con : "") + "\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+    if (text.size() > max_chars) text.resize(max_chars);
+    return text;
+}
+
+int AdvancedMemorySystem::pruneMemoriesBefore(long long before_epoch, double importance_below) {
+    // Preserva resumos e arquivos de histórico: só episódios crus de baixa
+    // importância morrem — e só DEPOIS que o resumo do dia deles existe.
+    const char* sql = R"(
+        DELETE FROM memories
+        WHERE timestamp < ? AND importancia < ?
+          AND (contexto IS NULL OR (contexto NOT LIKE '%summary%'
+                                    AND contexto NOT LIKE '%archived_history%'));
+    )";
+    sqlite3_stmt* stmt;
+    int deleted = 0;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, before_epoch);
+        sqlite3_bind_double(stmt, 2, importance_below);
+        if (sqlite3_step(stmt) == SQLITE_DONE) deleted = sqlite3_changes(db);
+        sqlite3_finalize(stmt);
+    }
+    // Faxina de órfãos (FKs não são enforced): embeddings e decay de
+    // memórias que acabaram de morrer.
+    char* err = nullptr;
+    sqlite3_exec(db, "DELETE FROM memory_embeddings WHERE memory_id NOT IN (SELECT id FROM memories);", nullptr, nullptr, &err);
+    if (err) sqlite3_free(err);
+    sqlite3_exec(db, "DELETE FROM memory_decay WHERE memory_id NOT IN (SELECT id FROM memories);", nullptr, nullptr, &err);
+    if (err) sqlite3_free(err);
+    return deleted;
+}
+
+// ---- Passthroughs do facade (AlyssaMemoryManager) ----
+
+void AlyssaMemoryManager::saveFact(const std::string& fact, const std::string& source) {
+    if (memory_system) memory_system->saveFact(fact, source);
+}
+
+std::vector<std::string> AlyssaMemoryManager::getCoreFacts(int top_n) {
+    return memory_system ? memory_system->getCoreFacts(top_n) : std::vector<std::string>{};
+}
+
+std::string AlyssaMemoryManager::getMemoriesTextSince(long long since_epoch, size_t max_chars) {
+    return memory_system ? memory_system->getMemoriesTextSince(since_epoch, max_chars) : "";
+}
+
+int AlyssaMemoryManager::pruneMemoriesBefore(long long before_epoch, double importance_below) {
+    return memory_system ? memory_system->pruneMemoriesBefore(before_epoch, importance_below) : 0;
+}
+
+void AlyssaMemoryManager::saveReflection(int memory_id, const std::string& type, const std::string& content) {
+    if (memory_system) memory_system->saveReflection(memory_id, type, content);
 }
 
 /**

@@ -46,6 +46,14 @@ struct SimpleModelParameters {
     int timeout_ms = 0;         /**< Generation time budget in ms; 0 = unlimited (Phase 4.3). */
     std::string grammar;         /**< Optional GBNF grammar source; empty = unconstrained sampling. */
     std::string grammar_root = "root"; /**< Start rule name within `grammar`. */
+
+    /// Penalidade de repetição (v2/F3): 1.3/64 era HARDCODED no generate_raw.
+    /// 1.3 é agressivo — o 1B (logits achatados) vira sopa de token em prosa
+    /// PT-BR longa, porque a janela penaliza até as palavras comuns do FIM DO
+    /// PROMPT antes do primeiro token gerado. Defaults preservam o
+    /// comportamento da persona; sumarização/consolidação passam 1.05.
+    double repeat_penalty = 1.3; /**< 1.0 = desligado. */
+    int penalty_last_n = 64;     /**< Janela de tokens considerada. */
 };
 
 /**
@@ -236,6 +244,12 @@ namespace alyssa_core {
             llama_context_params ctx_params = llama_context_default_params();
             ctx_params.n_ctx = n_ctx;
             ctx_params.n_batch = n_batch;
+            // v2/F3: cache SWA COMPLETO. Com o cache otimizado (default), o
+            // gemma3 1B (n_swa=1024) vira sopa de token em prompts maiores
+            // que a janela — reproduzido em tests/test_utility_gen.cpp (D).
+            // Custo de VRAM irrisório nos nossos modelos; protege também
+            // históricos longos da persona.
+            ctx_params.swa_full = true;
 
             ctx = llama_init_from_model(model, ctx_params);
             if (!ctx) {
@@ -266,6 +280,7 @@ namespace alyssa_core {
             llama_context_params ctx_params = llama_context_default_params();
             ctx_params.n_ctx = n_ctx;
             ctx_params.n_batch = n_batch;
+            ctx_params.swa_full = true; // mesmo fix anti-sopa do construtor principal
 
             ctx = llama_init_from_model(model, ctx_params);
             if (!ctx) {
@@ -377,7 +392,8 @@ namespace alyssa_core {
 
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_min_p(0.05f, 1));
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_temp(temp));
-            llama_sampler_chain_add(smpl.get(), llama_sampler_init_penalties(64, 1.3f, 0.0f, 0.0f));
+            llama_sampler_chain_add(smpl.get(), llama_sampler_init_penalties(
+                params.penalty_last_n, static_cast<float>(params.repeat_penalty), 0.0f, 0.0f));
             llama_sampler_chain_add(smpl.get(), llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
             // 2. Tokenize the NEW prompt part

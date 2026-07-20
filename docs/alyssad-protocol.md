@@ -86,6 +86,22 @@ desenvolver a UI de token sem carregar modelo.
 Falha no turno emite `event error` (`{"message":"..."}`) antes do
 `state idle`.
 
+### `consolidate` (v0.2 — F3)
+Dispara a consolidação noturna manualmente (mesmo guard `busy` dos turnos).
+Sem `params`. Resposta imediata `{"accepted":true}` (ou `busy` / erro no modo
+echo); ao terminar emite:
+
+1. `event state` — `{"phase":"consolidating"}`
+2. `event consolidation` — stats: `{"ok",summary_chars,facts,agenda_added,
+   reflection,opinions_dropped,pruned,ms}` (ou `{"ok":false,"error":...}`)
+3. `event state` — `{"phase":"idle"}`
+
+O disparo AUTOMÁTICO acontece no daemon: a partir das 04:00 locais, com 30min
+de silêncio e no máximo uma vez por dia (gate em
+`self.last_consolidation_date` do state/self.json). O `status` expõe um
+resumo do self: `{"self":{opinions,goals,agenda,last_consolidation_date,
+has_yesterday_summary}}`.
+
 ### `shutdown`
 → `{"ok":true}`. Espera o turno em andamento terminar e encerra o processo.
 
@@ -93,10 +109,11 @@ Falha no turno emite `event error` (`{"message":"..."}`) antes do
 
 | event      | data                                   | quando                         |
 |------------|----------------------------------------|--------------------------------|
-| `state`    | `{"phase":"idle"\|"thinking"}`         | em volta de cada turno         |
+| `state`    | `{"phase":"idle"\|"thinking"\|"consolidating"}` | em volta de cada turno/ciclo |
 | `token`    | `{"text"}`                             | cada pedaço gerado da resposta |
 | `response` | `{"text","latency_ms","tts"}`          | resposta pronta (substitui os tokens) |
 | `hormones` | `{cortisol,...,"emotional_state"}`     | após cada turno                |
+| `consolidation` | stats do ciclo                    | consolidação terminou          |
 | `error`    | `{"message"}`                          | turno falhou / request inválida|
 
 ## Reservado (v0.2+, nomes já fixados pra não quebrar cliente)

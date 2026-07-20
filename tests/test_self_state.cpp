@@ -91,6 +91,21 @@ static void test_agenda_prune() {
           s.agenda.size() == 1 && s.agenda[0].bring_up == "sem validade");
 }
 
+static void test_agenda_dedup() {
+    alyssa_self::SelfState s;
+    alyssa_self::add_agenda(s, "perguntar da entrevista", "nervoso", 3);
+    alyssa_self::add_agenda(s, "perguntar da entrevista", "", 5);
+    CHECK("agenda: add repetido só renova", s.agenda.size() == 1);
+
+    // Self-healing: duplicata pré-existente (self.json antigo) morre no prune
+    alyssa_self::AgendaItem dup;
+    dup.bring_up = "perguntar da entrevista";
+    dup.expires_at = alyssa_self::now_epoch() + 86400;
+    s.agenda.push_back(dup);
+    alyssa_self::prune_agenda(s);
+    CHECK("agenda: prune remove duplicata", s.agenda.size() == 1);
+}
+
 static void test_render_caps() {
     alyssa_self::SelfState s;
     for (int i = 0; i < 8; ++i) {
@@ -105,13 +120,52 @@ static void test_render_caps() {
     CHECK("render: cap de 5 opiniões", count == 5);
 }
 
+static void test_yesterday_roundtrip() {
+    alyssa_self::SelfState s;
+    s.yesterday_summary = "Ontem falamos de açaí e da entrevista.";
+    s.yesterday_date = 20260719;
+    s.last_consolidation_date = 20260720;
+    alyssa_self::save_self(s, TEST_FILE);
+
+    auto r = alyssa_self::load_self(TEST_FILE);
+    CHECK("ontem: resumo persiste", r.yesterday_summary == s.yesterday_summary);
+    CHECK("ontem: datas persistem",
+          r.yesterday_date == 20260719 && r.last_consolidation_date == 20260720);
+    CHECK("ontem: bloco renderiza",
+          alyssa_self::render_yesterday_block(r).find("açaí") != std::string::npos);
+
+    alyssa_self::SelfState vazio;
+    CHECK("ontem: sem resumo → sem bloco",
+          alyssa_self::render_yesterday_block(vazio).empty());
+}
+
+static void test_opinion_drift() {
+    alyssa_self::SelfState s;
+    long long now = alyssa_self::now_epoch();
+
+    alyssa_self::upsert_opinion(s, "fresca", "reforçada hoje", 0.5);
+    alyssa_self::upsert_opinion(s, "velha", "sem reforço", 0.5);
+    s.opinions[1].last_reinforced = now - 20LL * 86400;  // 20 dias parada
+    alyssa_self::upsert_opinion(s, "moribunda", "quase morta", 0.205);
+    s.opinions[2].last_reinforced = now - 20LL * 86400;
+
+    int dropped = alyssa_self::drift_opinions(s, now);
+    CHECK("drift: fresca intacta", s.opinions[0].confidence > 0.499);
+    CHECK("drift: velha decai 5%", std::abs(s.opinions[1].confidence - 0.475) < 1e-6);
+    // 0.205 * 0.95 = 0.19475 < 0.2 → desapega
+    CHECK("drift: moribunda morre", dropped == 1 && s.opinions.size() == 2);
+}
+
 int main() {
     test_first_life();
     test_roundtrip();
     test_upsert_dedup();
     test_offline_decay();
     test_agenda_prune();
+    test_agenda_dedup();
     test_render_caps();
+    test_yesterday_roundtrip();
+    test_opinion_drift();
 
     std::filesystem::remove_all("test_self_state_tmp");
 

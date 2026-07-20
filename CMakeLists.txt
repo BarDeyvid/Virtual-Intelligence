@@ -193,6 +193,7 @@ set(TEST_FRAME_CACHE tests/test_frame_cache.cpp includes/VisionEnhancer.cpp)
 set(TEST_COMPANION tests/test_companion.cpp includes/InputController.cpp)
 set(TEST_VRAM_MANAGER tests/test_vram_manager.cpp includes/vram/VRAMResourceManager.cpp includes/vram/GpuMemoryProbe.cpp)
 set(VRAM_BASELINE tests/vram_baseline.cpp)
+set(TEST_UTILITY_GEN tests/test_utility_gen.cpp)
 set(TEST_KOKORO tests/test_kokoro.cpp includes/voice/KokoroTTS.cpp)
 set(TEST_ASR_AB tests/test_asr_ab.cpp includes/voice/VoicePipeline.cpp)
 set(TEST_GAMEPLAY_AUDIO tests/test_gameplay_audio.cpp includes/AlyssaCoreAudio.cpp)
@@ -219,6 +220,9 @@ target_link_libraries(test_vram_manager PRIVATE Threads::Threads)
 # Roda de dentro de build/Release (precisa de models/ e das DLLs já copiadas).
 add_executable(vram_baseline ${VRAM_BASELINE} includes/AlyssaCoreAudio.cpp)
 target_link_libraries(vram_baseline PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${MTMD_LIBRARY_FILE} ${WHISPER_LIBRARY_FILE} Threads::Threads)
+# Bisecção do caminho de geração do utility 1B (v2/F3, sopa de token)
+add_executable(test_utility_gen ${TEST_UTILITY_GEN} includes/AlyssaCoreAudio.cpp)
+target_link_libraries(test_utility_gen PRIVATE ${LLAMA_LIBRARY_FILE} ${GGML_LIBRARY_FILE} ${MTMD_LIBRARY_FILE} Threads::Threads)
 # Fase 3 do plano_scheduler: mede load/RAM/RTF/latência do Kokoro TTS local.
 # Roda de dentro de build/Release (precisa de models/kokoro e libespeak-ng.dll).
 add_executable(test_kokoro ${TEST_KOKORO})

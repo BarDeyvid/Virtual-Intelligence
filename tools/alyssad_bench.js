@@ -24,6 +24,13 @@ function send(obj) { t0 = Date.now(); ttft = null; sock.write(JSON.stringify(obj
 function nextTurn() {
   idx++;
   if (idx >= turns.length) return finish();
+  // Turno especial "@consolidate": dispara o ciclo de consolidação (F3)
+  // em vez de um say — termina no evento `consolidation`.
+  if (turns[idx] === "@consolidate") {
+    console.log(`\n→ [${idx + 1}/${turns.length}] @consolidate`);
+    send({ type: "req", id: 100 + idx, method: "consolidate", params: {} });
+    return;
+  }
   console.log(`\n→ [${idx + 1}/${turns.length}] "${turns[idx]}"`);
   send({ type: "req", id: 100 + idx, method: "say", params: { text: turns[idx] } });
 }
@@ -59,6 +66,12 @@ sock.on("data", (chunk) => {
       const ms = Date.now() - t0;
       console.log(`← (${ms}ms, ttft ${ttft ?? "—"}ms) ${String(msg.data.text).slice(0, 120)}`);
       results.push({ turn: turns[idx], ms, ttft, text: String(msg.data.text) });
+      nextTurn();
+    } else if (msg.type === "event" && msg.event === "consolidation") {
+      const ms = Date.now() - t0;
+      const stats = JSON.stringify(msg.data);
+      console.log(`← consolidação (${ms}ms): ${stats}`);
+      results.push({ turn: "@consolidate", ms, ttft: null, text: stats });
       nextTurn();
     }
   }

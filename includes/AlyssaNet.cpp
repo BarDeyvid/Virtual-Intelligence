@@ -582,6 +582,20 @@ std::string CoreIntegration::generate_direct_response(const std::string& respond
         personality,
         endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
     std::string self_block = alyssa_self::render_self_block(self_state);
+
+    // Camada sempre-presente da retrieval (F3): resumo de ontem + fatos core.
+    // Barata (uma consulta pequena no SQLite) e é o que faz "lembrar" parecer
+    // natural — a busca híbrida profunda continua sob demanda na seção 2.
+    std::string always_on = alyssa_self::render_yesterday_block(self_state);
+    if (memory_manager) {
+        auto core_facts = memory_manager->getCoreFacts(6);
+        if (!core_facts.empty()) {
+            always_on += "[FATOS SOBRE O DEYVID]\n";
+            for (const auto& f : core_facts) always_on += "- " + f + "\n";
+            always_on += "[/FATOS]\n";
+        }
+    }
+
     std::string direct_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
 
     // Gate hormonal (F2): energia/humor baixos encurtam a resposta DE
@@ -601,8 +615,9 @@ std::string CoreIntegration::generate_direct_response(const std::string& respond
         }
     }
 
-    std::string direct_prompt = direct_personality + self_block + direct_tools +
-                                build_ambient_context() + style_hint + respond_to;
+    std::string direct_prompt = direct_personality + self_block + always_on +
+                                direct_tools + build_ambient_context() +
+                                style_hint + respond_to;
     std::string direct_resp = run_expert("alyssa", direct_prompt, use_tts, tts, &raw_input);
 
     // Fase 4.3: resposta vazia/erro da persona → última cartada com o 1B.
@@ -1038,10 +1053,16 @@ std::string CoreIntegration::summarize_history_chunk(const std::string& text) {
     params.top_p = 0.8;
     params.max_tokens = 96;
     params.timeout_ms = 15000; // resumo não pode travar o turno
+    params.repeat_penalty = 1.05; // 1.3 default vira sopa de token no 1B (ver AlyssaCore.hpp)
 
+    // Turn format do gemma3 na mão (mesmo fix da consolidation_llm): sem
+    // template, o 1B instruction-tuned devolve sopa de token — bug latente
+    // da v1 que a F3 expôs.
     std::string prompt =
+        "<start_of_turn>user\n"
         "Resuma a conversa abaixo em no máximo 3 frases, preservando fatos, nomes, "
-        "preferências e decisões importantes. Responda APENAS com o resumo, sem introdução.\n\n" + text;
+        "preferências e decisões importantes. Responda APENAS com o resumo, sem introdução.\n\n"
+        + text + "<end_of_turn>\n<start_of_turn>model\n";
 
     // clear_kv_cache() do orquestrador: limpa o KV do utility E zera o
     // tracking active_expert_in_cache (o prompt do resumo não pode vazar).
@@ -1094,6 +1115,225 @@ std::string CoreIntegration::generate_fallback_response(const std::string& promp
         std::cerr << "[Fallback] Modelo base também falhou: " << e.what() << std::endl;
         return "Desculpa, deu ruim aqui no meu processamento. Tenta de novo?";
     }
+}
+
+// =========================================================================
+// Consolidação noturna (v2/F3) — docs/plano-alyssa-v2.md
+// =========================================================================
+
+namespace {
+
+/// AAAAMMDD local (mesma conta do humor-do-dia).
+int local_yyyymmdd() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm_buf{};
+#ifdef _WIN32
+    localtime_s(&tm_buf, &t);
+#else
+    localtime_r(&t, &tm_buf);
+#endif
+    return (tm_buf.tm_year + 1900) * 10000 + (tm_buf.tm_mon + 1) * 100 + tm_buf.tm_mday;
+}
+
+/// Detector de saída degenerada do 1B ("[a[a[a...", linhas de colchete).
+/// Um resumo podre NUNCA pode ser gravado: ele entra no prompt de todo turno
+/// e no corpus da próxima consolidação — lixo que se auto-perpetua.
+bool looks_degenerate(const std::string& text) {
+    if (text.size() < 40) return true;
+    size_t brackets = 0;
+    for (char c : text) {
+        if (c == '[' || c == ']' || c == '|') ++brackets;
+    }
+    return brackets * 100 / text.size() > 10; // >10% de colchetes/pipes = sopa
+}
+
+/// Extrai linhas "- item" da saída do 1B (ignora "nenhum", trunca, limita).
+std::vector<std::string> parse_dash_lines(const std::string& raw, size_t max_items,
+                                          size_t max_len = 200) {
+    std::vector<std::string> items;
+    std::istringstream ss(raw);
+    std::string line;
+    while (std::getline(ss, line) && items.size() < max_items) {
+        line.erase(0, line.find_first_not_of(" \t\r"));
+        if (line.rfind("- ", 0) != 0) continue;
+        line.erase(0, 2);
+        line.erase(line.find_last_not_of(" \t\r") + 1);
+        std::string lower = line;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        if (line.empty() || lower.find("nenhum") != std::string::npos) continue;
+        if (line.size() > max_len) line = line.substr(0, max_len);
+        items.push_back(line);
+    }
+    return items;
+}
+
+} // namespace
+
+std::string CoreIntegration::consolidation_llm(const std::string& prompt, int max_tokens) {
+    // Preferir o CÓRTEX (E2B da persona): já está na VRAM, ocioso às 4h, e
+    // aguenta contexto longo. O gguf do utility 1B COLAPSA em prompts de
+    // ~1k+ tokens (quant ruim — "Q4_0" a 7.98 BPW; reproduzido em
+    // tests/test_utility_gen.cpp e no llama-cli puro, CPU e GPU). O 1B fica
+    // como fallback e segue firme no router (prompt curto + grammar).
+    alyssa_core::AlyssaCore* core = nullptr;
+    bool gemma4 = false;
+    if (auto it = experts.find("alyssa"); it != experts.end()) {
+        core = it->second->dedicated_core();
+        // Boot degradado (E2B falhou → persona no 1B) marca gemma4 errado
+        // aqui; aceitável — a persona inteira já está degradada nesse caso.
+        gemma4 = (core != nullptr);
+    }
+    if (!core) core = core_instance.get();
+    if (!core) return "";
+
+    SimpleModelParameters params;
+    params.temperature = 0.3;
+    params.top_p = 0.8;
+    params.max_tokens = max_tokens;
+    params.timeout_ms = 30000; // um passo travado não pode travar o ciclo
+    params.repeat_penalty = 1.05; // 1.3 default é agressivo demais pra sumarização
+
+    // Template correto por família (instrução crua sem template = sopa):
+    // gemma4 usa <|turn> (ExpertBase::format_gemma4_prompt), gemma3 usa
+    // <start_of_turn> (igual ao router).
+    std::string templated = gemma4
+        ? "<|turn>user\n" + prompt + "<turn|>\n<|turn>model\n"
+        : "<start_of_turn>user\n" + prompt + "<end_of_turn>\n<start_of_turn>model\n";
+
+    try {
+        core->clear_kv(); // não herdar KV do turno anterior da persona
+        std::string out = core->generate_raw(templated, params, nullptr, nullptr);
+        core->clear_kv(); // nem deixar o corpus no cache pro próximo turno
+        out.erase(0, out.find_first_not_of(" \n\r\t"));
+        out.erase(out.find_last_not_of(" \n\r\t") + 1);
+        return out;
+    } catch (const std::exception& e) {
+        std::cerr << "[Consolidação] Passo LLM falhou: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+nlohmann::json CoreIntegration::run_consolidation() {
+    nlohmann::json stats = {{"ok", false}};
+    if (!initialized || !core_instance || !memory_manager) {
+        stats["error"] = "sistema não inicializado";
+        return stats;
+    }
+
+    const int today = local_yyyymmdd();
+    auto t0 = std::chrono::steady_clock::now();
+    std::cout << "\n[Consolidação] Iniciando ciclo (dia " << today << ")..." << std::endl;
+
+    // 1. Matéria-prima: últimas 24h de memórias
+    long long since = alyssa_self::now_epoch() - 86400;
+    std::string corpus = memory_manager->getMemoriesTextSince(since, 8000);
+    if (corpus.empty()) {
+        std::cout << "[Consolidação] Sem memórias no período — dia marcado, nada a digerir." << std::endl;
+        self_state.last_consolidation_date = today;
+        persist_self();
+        stats["ok"] = true;
+        stats["skipped"] = "sem memórias nas últimas 24h";
+        return stats;
+    }
+
+    // 2. Resumo do dia (primeira pessoa: é a memória DELA do dia)
+    std::string summary = consolidation_llm(
+        "Você é a Alyssa. Resuma o seu dia com o Deyvid abaixo em 3 a 5 frases, "
+        "em primeira pessoa, preservando fatos, nomes e decisões importantes. "
+        "Responda APENAS com o resumo.\n\n" + corpus, 160);
+    if (!summary.empty() && looks_degenerate(summary)) {
+        std::cerr << "[Consolidação] Resumo degenerado DESCARTADO ("
+                  << summary.size() << " chars). Mantendo o anterior." << std::endl;
+        summary.clear();
+    }
+
+    // 3. Fatos duráveis sobre o Deyvid → tabela facts
+    std::string facts_raw = consolidation_llm(
+        "Da conversa abaixo, liste até 5 FATOS duráveis sobre o Deyvid "
+        "(gostos, projetos, rotina, pessoas, planos). Um por linha, começando "
+        "com '- '. Ignore small talk e opiniões da Alyssa. Se não houver nada "
+        "durável, responda apenas 'nenhum'.\n\n" + corpus, 140);
+    auto facts = parse_dash_lines(facts_raw, 5);
+    for (const auto& f : facts) memory_manager->saveFact(f);
+
+    // 4. Agenda de amanhã (o caminho ROBUSTO — o tool add_to_agenda é a via
+    // expressa; isto aqui garante que "te lembro amanhã" vira lembrança real)
+    constexpr size_t AGENDA_CAP = 6;
+    std::string agenda_raw = consolidation_llm(
+        "Da conversa abaixo, o que a Alyssa deveria puxar de assunto com o "
+        "Deyvid amanhã? Liste no máximo 2 itens, um por linha começando com "
+        "'- ' (ex: '- perguntar como foi a entrevista das 14h'). Se nada "
+        "merecer follow-up, responda apenas 'nenhum'.\n\n" + corpus, 100);
+    auto agenda_items = parse_dash_lines(agenda_raw, 2);
+    int agenda_added = 0;
+    for (const auto& item : agenda_items) {
+        if (self_state.agenda.size() >= AGENDA_CAP) break;
+        alyssa_self::add_agenda(self_state, item, "consolidação de " + std::to_string(today), 2);
+        ++agenda_added;
+    }
+
+    // 5. UMA reflexão pessoal de verdade → tabela reflections (o template
+    // "Notei que me senti muito X" da v1 morre aqui)
+    std::string reflection = consolidation_llm(
+        "Você é a Alyssa. Escreva UMA reflexão pessoal curta (1 a 2 frases) "
+        "sobre o seu dia abaixo — algo que você aprendeu, sentiu ou quer fazer "
+        "diferente. Responda APENAS com a reflexão.\n\n" + corpus, 80);
+
+    // 6. Drift de opiniões (código puro): sem reforço há 14+ dias → -5% de
+    // convicção por dia; < 0.2 ela desapega
+    int dropped = alyssa_self::drift_opinions(self_state);
+
+    // 7. Persistência: resumo vira memória taggeada + entra no self
+    int summary_mem_id = -1;
+    if (!summary.empty()) {
+        summary_mem_id = memory_manager->storeMemoryWithEmotionalAnalysis(
+            summary, "day_summary | " + std::to_string(today));
+        self_state.yesterday_summary = summary;
+        self_state.yesterday_date = today;
+    }
+    if (!reflection.empty() && !looks_degenerate(reflection)) {
+        memory_manager->saveReflection(summary_mem_id > 0 ? summary_mem_id : 0,
+                                       "daily", reflection);
+    } else {
+        reflection.clear(); // degenerada não conta como reflexão nos stats
+    }
+    self_state.last_consolidation_date = today;
+
+    // 8. Poda: episódios crus com 7+ dias e importância < 0.4 (os resumos
+    // deles já existem; o cru vira ruído de retrieval)
+    int pruned = memory_manager->pruneMemoriesBefore(
+        alyssa_self::now_epoch() - 7LL * 86400, 0.4);
+
+    persist_self();
+    clear_kv_cache();
+
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+
+    stats["ok"] = true;
+    stats["summary_chars"]    = summary.size();
+    stats["facts"]            = static_cast<int>(facts.size());
+    stats["agenda_added"]     = agenda_added;
+    stats["reflection"]       = !reflection.empty();
+    stats["opinions_dropped"] = dropped;
+    stats["pruned"]           = pruned;
+    stats["ms"]               = ms;
+
+    // Auditoria (mesmo padrão do router na v1)
+    try {
+        std::filesystem::create_directories("logs");
+        std::ofstream log("logs/consolidation.jsonl", std::ios::app);
+        nlohmann::json line = stats;
+        line["ts"] = static_cast<long long>(std::time(nullptr));
+        line["day"] = today;
+        log << line.dump() << "\n";
+    } catch (const std::exception&) { /* best-effort */ }
+
+    std::cout << "[Consolidação] Ciclo completo em " << ms << "ms: "
+              << facts.size() << " fato(s), " << agenda_added << " agenda, "
+              << dropped << " opinião(ões) desapegada(s), " << pruned
+              << " memória(s) podada(s)." << std::endl;
+    return stats;
 }
 
 std::string CoreIntegration::build_ambient_context() {
@@ -1173,6 +1413,18 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
     // principalmente a AGENDA ("puxar assunto X") entram no prompt proativo.
     std::string self_block = alyssa_self::render_self_block(self_state);
 
+    // F3: ontem + fatos core também — iniciativa com contexto do dia anterior
+    // ("vi que ontem você...") em vez de small talk genérico.
+    std::string always_on = alyssa_self::render_yesterday_block(self_state);
+    if (memory_manager) {
+        auto core_facts = memory_manager->getCoreFacts(6);
+        if (!core_facts.empty()) {
+            always_on += "[FATOS SOBRE O DEYVID]\n";
+            for (const auto& f : core_facts) always_on += "- " + f + "\n";
+            always_on += "[/FATOS]\n";
+        }
+    }
+
     std::string hormonal_context = "";
     if (endocrine_system) {
         hormonal_context = endocrine_system->generate_hormonal_system_context() + "\n";
@@ -1185,8 +1437,8 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
     std::string prefs_line = alyssa_prefs::render_preferences_line();
     if (!prefs_line.empty()) prefs_line = "[MEMÓRIA DE GOSTOS] " + prefs_line + "\n\n";
 
-    std::string prompt = personality_context + self_block + hormonal_context +
-        build_ambient_context() + tools_context + prefs_line +
+    std::string prompt = personality_context + self_block + always_on +
+        hormonal_context + build_ambient_context() + tools_context + prefs_line +
         "[INICIATIVA PRÓPRIA] " + reason + "\n\n"
         "Escreva UMA mensagem curta e espontânea, como quem manda mensagem no chat "
         "sem ter sido chamada. Não cumprimente como se fosse a primeira conversa do dia "

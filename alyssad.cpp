@@ -39,6 +39,7 @@ typedef int socket_t;
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -128,12 +129,26 @@ struct DaemonState {
     ITTS* tts = nullptr;                // nullptr sem --voice
     std::atomic<bool> busy{false};
     std::atomic<bool> running{true};
+    std::atomic<long long> last_activity{0};  // epoch do último say (gate de idle da consolidação)
     std::thread worker;                 // no máximo um turno em andamento
 
     void join_worker() {
         if (worker.joinable()) worker.join();
     }
 };
+
+/// Hora local (0-23) e AAAAMMDD numa tacada (pro trigger da consolidação).
+void local_clock(int& hour, int& yyyymmdd) {
+    std::time_t t = std::time(nullptr);
+    std::tm tm_buf{};
+#ifdef _WIN32
+    localtime_s(&tm_buf, &t);
+#else
+    localtime_r(&t, &tm_buf);
+#endif
+    hour = tm_buf.tm_hour;
+    yyyymmdd = (tm_buf.tm_year + 1900) * 10000 + (tm_buf.tm_mon + 1) * 100 + tm_buf.tm_mday;
+}
 
 void handle_say(DaemonState& st, socket_t sock, const json& id, const json& params) {
     std::string text = params.value("text", "");
@@ -147,6 +162,7 @@ void handle_say(DaemonState& st, socket_t sock, const json& id, const json& para
         return;
     }
     st.join_worker(); // turno anterior já sinalizou !busy; só recolhe a thread
+    st.last_activity = static_cast<long long>(std::time(nullptr));
 
     if (st.echo_mode) {
         send_ok(sock, id, {{"accepted", true}});
@@ -225,8 +241,44 @@ void handle_status(DaemonState& st, socket_t sock, const json& id) {
         // Fonte de CPU tem estado (delta entre chamadas) e não é thread-safe
         // contra a inferência — só amostra com o cérebro ocioso.
         if (!st.busy.load()) data["ambient"] = ambient_line(*st.brain);
+        // Self persistente (F2/F3): visão rápida pro frontend
+        const auto& self = st.brain->get_self_state();
+        data["self"] = {
+            {"opinions", self.opinions.size()},
+            {"goals", self.goals.size()},
+            {"agenda", self.agenda.size()},
+            {"last_consolidation_date", self.last_consolidation_date},
+            {"has_yesterday_summary", !self.yesterday_summary.empty()},
+        };
     }
     send_ok(sock, id, data);
+}
+
+/// Consolidação manual (`consolidate`): mesmo guard `busy` dos turnos.
+/// O trigger automático (04:00+ com 30min de idle) vive na thread scheduler.
+void handle_consolidate(DaemonState& st, socket_t sock, const json& id) {
+    if (st.echo_mode || !st.brain) {
+        send_err(sock, id, "sem cérebro (modo echo)");
+        return;
+    }
+    if (st.busy.exchange(true)) {
+        send_err(sock, id, "busy");
+        return;
+    }
+    st.join_worker();
+    send_ok(sock, id, {{"accepted", true}});
+
+    st.worker = std::thread([&st, sock]() {
+        send_event(sock, "state", {{"phase", "consolidating"}});
+        try {
+            json stats = st.brain->run_consolidation();
+            send_event(sock, "consolidation", stats);
+        } catch (const std::exception& e) {
+            send_event(sock, "error", {{"message", e.what()}});
+        }
+        send_event(sock, "state", {{"phase", "idle"}});
+        st.busy = false;
+    });
 }
 
 void dispatch(DaemonState& st, socket_t sock, const std::string& raw) {
@@ -248,6 +300,8 @@ void dispatch(DaemonState& st, socket_t sock, const std::string& raw) {
         handle_status(st, sock, id);
     } else if (method == "say") {
         handle_say(st, sock, id, params);
+    } else if (method == "consolidate") {
+        handle_consolidate(st, sock, id);
     } else if (method == "shutdown") {
         send_ok(sock, id);
         st.running = false;
@@ -364,6 +418,41 @@ int main(int argc, char** argv) {
     st.echo_mode = echo_mode;
     st.brain = brain.get();
     st.tts = tts.get();
+    st.last_activity = static_cast<long long>(std::time(nullptr));
+
+    // Scheduler da consolidação noturna (v2/F3): checa a cada minuto se
+    // (a) hoje ainda não consolidou, (b) já passou das 04:00 e (c) tem 30min
+    // de silêncio — aí "dorme e digere o dia" com o mesmo guard dos turnos.
+    std::thread consolidation_scheduler;
+    if (!echo_mode) {
+        consolidation_scheduler = std::thread([&st]() {
+            while (st.running) {
+                for (int i = 0; i < 60 && st.running; ++i) {
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+                if (!st.running || !st.brain || st.busy.load()) continue;
+
+                int hour, today;
+                local_clock(hour, today);
+                if (hour < 4) continue; // madrugada cedo demais / dia anterior
+                if (st.brain->get_self_state().last_consolidation_date == today) continue;
+
+                long long idle_s =
+                    static_cast<long long>(std::time(nullptr)) - st.last_activity.load();
+                if (idle_s < 30 * 60) continue;
+
+                if (st.busy.exchange(true)) continue; // turno chegou no meio: tenta no próximo minuto
+                std::cout << "[alyssad] 04:00+ e " << idle_s / 60
+                          << "min de silêncio — consolidando o dia...\n";
+                try {
+                    st.brain->run_consolidation();
+                } catch (const std::exception& e) {
+                    std::cerr << "[alyssad] consolidação falhou: " << e.what() << "\n";
+                }
+                st.busy = false;
+            }
+        });
+    }
 
     while (st.running) {
         socket_t client = accept(listener, nullptr, nullptr);
@@ -378,6 +467,7 @@ int main(int argc, char** argv) {
     }
 
     ALYSSAD_CLOSESOCK(listener);
+    if (consolidation_scheduler.joinable()) consolidation_scheduler.join();
 #ifdef _WIN32
     WSACleanup();
 #endif

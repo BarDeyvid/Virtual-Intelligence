@@ -262,6 +262,24 @@ public:
     const alyssa_self::SelfState& get_self_state() const { return self_state; }
 
     /**
+     * @brief Consolidação noturna (v2/F3): ela "dorme e digere o dia".
+     *
+     * Com o utility 1B: resume as últimas 24h, destila fatos duráveis sobre o
+     * Deyvid (tabela facts), escreve UMA reflexão pessoal (tabela reflections,
+     * substituindo o template da v1), sugere agenda pra amanhã, aplica o
+     * drift de opiniões e poda episódios velhos de baixa importância.
+     *
+     * NÃO é thread-safe contra um turno: o chamador garante cérebro ocioso
+     * (alyssad usa o mesmo guard `busy` dos turnos). Idempotente por dia via
+     * self_state.last_consolidation_date.
+     *
+     * @return Stats JSON: {ok, summary_chars, facts, agenda, reflection,
+     *         opinions_dropped, pruned, ms} — vira a resposta do método
+     *         `consolidate` do protocolo.
+     */
+    nlohmann::json run_consolidation();
+
+    /**
      * @brief Tool executor getter (for UI inspection of the call log).
      * @return Pointer to ToolExecutor (nullptr if not initialized).
      */
@@ -445,6 +463,14 @@ private:
      * @return Response from the base model, or canned apology on total failure.
      */
     std::string generate_fallback_response(const std::string& prompt);
+
+    /**
+     * @brief Uma chamada do utility 1B pra consolidação (F3).
+     * @details Mesmo contrato do summarize_history_chunk (clear_kv antes e
+     *          depois, timeout, trim), com max_tokens parametrizado.
+     * @return Texto gerado, ou "" em falha (o passo é pulado, nunca fatal).
+     */
+    std::string consolidation_llm(const std::string& prompt, int max_tokens);
 
     /**
      * @brief Append one interaction to training_data.jsonl (LoRA groundwork).

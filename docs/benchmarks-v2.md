@@ -1,4 +1,44 @@
-# Benchmarks v2 — F1 (comitê aposentado) + F2 (self persistente)
+# Benchmarks v2 — F1 (comitê) + F2 (self) + F3 (consolidação)
+
+## F3 — aceite RODADO 2026-07-20 06:11 ✔
+
+`@consolidate` no E2B: **3.4s** → resumo do dia em 1ª pessoa (339 chars,
+fiel: açaí, entrevista 14h, boxe, projeto de sexta), **5 fatos** duráveis na
+tabela `facts`, **2 itens de agenda** (o "te lembro" que falhava como tool
+call na F2 agora é garantido pela consolidação), reflexão real na tabela
+`reflections` (o template "Notei que me senti..." morreu). Após kill+restart:
+*"Bom dia! Lembro sim. A gente tava falando sobre o ritual do café da manhã e
+eu decidi que açaí com morango é melhor, né?"* — direto do bloco [ONTEM].
+`test_self_state`: 31/31.
+
+### A saga do debug (1 noite, 4 bugs reais — ver tests/test_utility_gen.cpp)
+1. **Sem chat template**: summarize_history_chunk/consolidação mandavam
+   instrução CRUA pro 1B → sopa de token. Fix: turn format por família
+   (gemma3 `<start_of_turn>`, gemma4 `<|turn>`).
+2. **repeat_penalty 1.3/64 HARDCODED** no generate_raw (AlyssaCore.hpp).
+   Agora é parâmetro (default preserva a persona; sumarização usa 1.05).
+3. **Auto-envenenamento**: o resumo podre do dia 1 entrava no corpus do dia 2
+   e o modelo só continuava o padrão dele. Fix: day_summary fora do corpus +
+   guarda de degeneração (resumo/reflexão podre é DESCARTADO, nunca gravado).
+4. **O gguf do 1B é um quant quebrado**: "Q4_0" a 7.98 BPW que colapsa em
+   prompts ≥ ~1k tokens — reproduzido no llama-cli PURO, em CPU e GPU, com
+   corpus limpo; o 4B no mesmo harness resume perfeito. Por isso a
+   consolidação roda no **E2B da persona** (já na VRAM, ocioso às 4h) com o
+   1B só de fallback — que é o desenho do córtex da F4 chegando mais cedo.
+
+### Watch-list F3
+- **Trocar o gguf do 1B** por um quant são (Q4_K_M oficial) — ele segue no
+  router (prompt curto + grammar funciona) e como fallback, mas está doente.
+- **`top_p` NUNCA entrou na sampler chain** (generate_raw calcula e não usa —
+  variável morta desde sempre; o `top_p: 0.9` da persona é ignorado). Não
+  corrigi de madrugada: mudar sampling da persona pede A/B acordado.
+- Fato-ruído ("uso médio de recursos do PC 21.85%") entrou na tabela facts —
+  o ranking por reforço enterra, mas a consolidação pode filtrar métricas.
+- `swa_full=true` ligado nos contextos (custo irrisório; era suspeito durante
+  o debug, mantido como proteção pra históricos longos).
+
+---
+
 
 ## F2 — aceite RODADO 2026-07-19 21:34 ✔
 

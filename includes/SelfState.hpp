@@ -76,8 +76,14 @@ struct SelfState {
     std::vector<Opinion> opinions;
     std::vector<Goal> goals;
     std::vector<std::string> inside_jokes;
-    nlohmann::json people = nlohmann::json::object();  ///< formato livre até a F3
+    nlohmann::json people = nlohmann::json::object();  ///< formato livre (a consolidação preenche)
     std::vector<AgendaItem> agenda;
+
+    // ---- v2/F3: escrito pela consolidação noturna ----
+    std::string yesterday_summary;      ///< resumo LLM do último dia consolidado
+    int yesterday_date = 0;             ///< AAAAMMDD do dia resumido
+    int last_consolidation_date = 0;    ///< AAAAMMDD da última consolidação (gate do trigger)
+
     bool loaded = false;  ///< false = primeira vida (arquivo ausente/corrompido)
 };
 
@@ -148,6 +154,9 @@ inline SelfState load_self(const std::string& path = SELF_FILE) {
                 if (!item.bring_up.empty()) s.agenda.push_back(std::move(item));
             }
         }
+        s.yesterday_summary       = j.value("yesterday_summary", "");
+        s.yesterday_date          = j.value("yesterday_date", 0);
+        s.last_consolidation_date = j.value("last_consolidation_date", 0);
 
         s.loaded = true;
         std::cout << "[Self] Carregado: " << s.opinions.size() << " opinião(ões), "
@@ -194,6 +203,9 @@ inline bool save_self(SelfState& s, const std::string& path = SELF_FILE) {
             {"bring_up", a.bring_up}, {"reason", a.reason}, {"expires_at", a.expires_at},
         });
     }
+    j["yesterday_summary"]       = s.yesterday_summary;
+    j["yesterday_date"]          = s.yesterday_date;
+    j["last_consolidation_date"] = s.last_consolidation_date;
 
     try {
         std::filesystem::path p(path);
@@ -257,6 +269,15 @@ inline void update_goal(SelfState& s, const std::string& desc,
 
 inline void add_agenda(SelfState& s, const std::string& bring_up,
                        const std::string& reason = "", int expires_days = 3) {
+    // Dedup: mesmo assunto só renova a validade (ela repetia o item quando
+    // pedia duas vezes — visto ao vivo no aceite da F3).
+    for (auto& a : s.agenda) {
+        if (a.bring_up == bring_up) {
+            a.expires_at = expires_days > 0 ? now_epoch() + 86400LL * expires_days : 0;
+            if (!reason.empty()) a.reason = reason;
+            return;
+        }
+    }
     AgendaItem item;
     item.bring_up = bring_up;
     item.reason = reason;
@@ -264,7 +285,8 @@ inline void add_agenda(SelfState& s, const std::string& bring_up,
     s.agenda.push_back(std::move(item));
 }
 
-/// Remove itens de agenda vencidos. Chamar no boot e a cada save de turno.
+/// Remove itens de agenda vencidos e duplicatas (self-healing pra self.json
+/// escrito antes do dedup do add_agenda). Chamar no boot e a cada save.
 inline void prune_agenda(SelfState& s, long long now = 0) {
     if (now == 0) now = now_epoch();
     s.agenda.erase(
@@ -273,6 +295,15 @@ inline void prune_agenda(SelfState& s, long long now = 0) {
                            return a.expires_at != 0 && a.expires_at < now;
                        }),
         s.agenda.end());
+    std::vector<AgendaItem> unique;
+    for (auto& a : s.agenda) {
+        bool dup = false;
+        for (const auto& u : unique) {
+            if (u.bring_up == a.bring_up) { dup = true; break; }
+        }
+        if (!dup) unique.push_back(std::move(a));
+    }
+    s.agenda = std::move(unique);
 }
 
 // =========================================================================
@@ -365,6 +396,33 @@ inline std::string render_self_block(const SelfState& s) {
 
     block += "[/EU]\n";
     return block;
+}
+
+/**
+ * @brief Bloco [ONTEM] pro prompt (camada sempre-presente da retrieval F3).
+ */
+inline std::string render_yesterday_block(const SelfState& s) {
+    if (s.yesterday_summary.empty()) return "";
+    return "[ONTEM]\n" + s.yesterday_summary + "\n[/ONTEM]\n";
+}
+
+/**
+ * @brief Drift diário de opiniões (F3, código puro): opinião não reforçada
+ *        há 14+ dias perde 5% de convicção por consolidação; abaixo de 0.2
+ *        ela desapega (a opinião morre). Retorna quantas morreram.
+ */
+inline int drift_opinions(SelfState& s, long long now = 0) {
+    if (now == 0) now = now_epoch();
+    constexpr long long STALE_S = 14LL * 86400;
+    for (auto& o : s.opinions) {
+        if (now - o.last_reinforced > STALE_S) o.confidence *= 0.95;
+    }
+    auto before = s.opinions.size();
+    s.opinions.erase(
+        std::remove_if(s.opinions.begin(), s.opinions.end(),
+                       [](const Opinion& o) { return o.confidence < 0.2; }),
+        s.opinions.end());
+    return static_cast<int>(before - s.opinions.size());
 }
 
 }  // namespace alyssa_self

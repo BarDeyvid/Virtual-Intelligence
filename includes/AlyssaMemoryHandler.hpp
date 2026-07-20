@@ -716,14 +716,6 @@ namespace alyssa_memory {
         void checkEmotionalAutoActivation();
         
         /**
-         * @brief Save reflection to database
-         * @param memory_id Memory ID being reflected upon
-         * @param type Type of reflection
-         * @param content Reflection content
-         */
-        void saveReflection(int memory_id, const std::string& type, const std::string& content);
-        
-        /**
          * @brief Calculate intention boost for memory relevance
          * @param content Memory content
          * @return Boost score (0.0-0.5)
@@ -852,8 +844,51 @@ namespace alyssa_memory {
         
         /**
          * @brief Generate reflections based on recent memories
+         * @deprecated v2/F3: o template hardcoded saiu do caminho por-turno;
+         *             a consolidação noturna (CoreIntegration::run_consolidation)
+         *             escreve reflexões de verdade via saveReflection.
          */
         void generateReflections();
+
+        // =====================================================================
+        // v2/F3 — fatos destilados + matéria-prima e faxina da consolidação
+        // =====================================================================
+
+        /**
+         * @brief Save reflection to database.
+         * @details Público desde a F3: a consolidação noturna escreve a
+         *          reflexão diária daqui de fora (era private na v1, quando
+         *          só o generateReflections-template usava).
+         */
+        void saveReflection(int memory_id, const std::string& type, const std::string& content);
+
+        /**
+         * @brief Salva/reforça um fato durável sobre o usuário (tabela facts).
+         * @details Dedup por texto exato: fato repetido ganha +1 em
+         *          reinforced_count em vez de duplicar.
+         */
+        void saveFact(const std::string& fact, const std::string& source = "consolidation");
+
+        /**
+         * @brief Top-N fatos por reforço/recência — os "core facts" que entram
+         *        em todo prompt (camada barata da retrieval em duas camadas).
+         */
+        std::vector<std::string> getCoreFacts(int top_n = 8);
+
+        /**
+         * @brief Concatena memórias desde since_epoch como texto cru
+         *        (matéria-prima do resumo do dia). Linhas "[emocao] conteudo".
+         * @param max_chars Truncamento defensivo (o 1B resume em chunks).
+         */
+        std::string getMemoriesTextSince(long long since_epoch, size_t max_chars = 8000);
+
+        /**
+         * @brief Poda episódios antigos de baixa importância (PÓS-resumo:
+         *        chame só depois do resumo do dia existir). Resumos e
+         *        arquivos de histórico são preservados pelo filtro de contexto.
+         * @return Número de memórias apagadas.
+         */
+        int pruneMemoriesBefore(long long before_epoch, double importance_below = 0.4);
         
         /**
          * @brief Create link between memories
@@ -1080,6 +1115,13 @@ namespace alyssa_memory {
          * @param fact_type Fact type/category
          */
         void processIdentityFact(const std::string& fact_value, const std::string& fact_type);
+
+        // ---- v2/F3: passthroughs da consolidação (ver AdvancedMemorySystem) ----
+        void saveFact(const std::string& fact, const std::string& source = "consolidation");
+        std::vector<std::string> getCoreFacts(int top_n = 8);
+        std::string getMemoriesTextSince(long long since_epoch, size_t max_chars = 8000);
+        int pruneMemoriesBefore(long long before_epoch, double importance_below = 0.4);
+        void saveReflection(int memory_id, const std::string& type, const std::string& content);
     };
     
     // ============================================================================
