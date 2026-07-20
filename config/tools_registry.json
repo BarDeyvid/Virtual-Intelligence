@@ -120,6 +120,33 @@
       "params": [
         {"name": "key", "type": "string", "required": true}
       ]
+    },
+    {
+      "name": "save_opinion",
+      "description": "Salva ou atualiza uma opinião SUA (da Alyssa) no seu self permanente — use quando você formar ou mudar de opinião sobre algo",
+      "params": [
+        {"name": "topic", "type": "string", "required": true},
+        {"name": "stance", "type": "string", "required": true},
+        {"name": "confidence", "type": "string", "required": false, "default": "0.6"}
+      ]
+    },
+    {
+      "name": "update_goal",
+      "description": "Cria ou atualiza uma meta SUA (da Alyssa) no seu self permanente (ex: ficar boa de Minecraft)",
+      "params": [
+        {"name": "goal", "type": "string", "required": true},
+        {"name": "progress", "type": "string", "required": false},
+        {"name": "priority", "type": "string", "required": false}
+      ]
+    },
+    {
+      "name": "add_to_agenda",
+      "description": "Anota um assunto que VOCÊ quer puxar depois (ex: perguntar amanhã como foi a prova). Expira sozinho",
+      "params": [
+        {"name": "bring_up", "type": "string", "required": true},
+        {"name": "reason", "type": "string", "required": false},
+        {"name": "expires_days", "type": "int", "required": false, "default": "3"}
+      ]
     }
   ]
 }

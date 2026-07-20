@@ -18,6 +18,7 @@
 #include <cctype>
 #include <future>
 #include <chrono>
+#include <iomanip>
 #include <random>
 #include <ctime>
 #include "vision/VisionManager.hpp"
@@ -58,10 +59,26 @@ CoreIntegration::CoreIntegration()
  * @details Cleans up expert histories and logs destruction.
  */
 CoreIntegration::~CoreIntegration() {
+    if (initialized) {
+        persist_self(); // último snapshot: desligar não é esquecer (F2)
+    }
     for (auto& pair : expert_histories) {
         free_chat_history(pair.second);
     }
     printf("CoreIntegration destroyed");
+}
+
+void CoreIntegration::persist_self() {
+    if (endocrine_system) {
+        const auto& h = endocrine_system->get_hormone_profile();
+        self_state.hormones = {
+            {"cortisol", h.cortisol},   {"dopamine", h.dopamine},
+            {"oxytocin", h.oxytocin},   {"serotonin", h.serotonin},
+            {"adrenaline", h.adrenaline},
+        };
+    }
+    alyssa_self::prune_agenda(self_state);
+    alyssa_self::save_self(self_state);
 }
 
 // =========================================================================
@@ -299,9 +316,26 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
             presence_detector.reset(); // sem cascade, sem presença — sistema segue normal
         }
 
-        // 5.4. Humor do dia: offsets pequenos e determinísticos (hash da data)
-        // nos hormônios — a Alyssa "acorda" um pouco diferente a cada dia.
+        // 5.4. Self persistente (v2/F2): restaura hormônios do último save
+        // com decaimento offline, depois aplica o humor-do-dia — mas só UMA
+        // vez por dia (antes, cada restart no mesmo dia somava offsets de
+        // novo). Restart deixa de ser lobotomia.
+        self_state = alyssa_self::load_self();
+        alyssa_self::prune_agenda(self_state);
+
         if (endocrine_system) {
+            if (self_state.loaded && !self_state.hormones.empty() && self_state.saved_at > 0) {
+                double hours = (alyssa_self::now_epoch() - self_state.saved_at) / 3600.0;
+                alyssa_self::apply_offline_decay(
+                    self_state.hormones, hours,
+                    [this](const std::string& name, double level) {
+                        endocrine_system->set_hormone_level(name, level);
+                    });
+                std::cout << "[Self] Hormônios restaurados (decay offline de "
+                          << std::fixed << std::setprecision(1) << hours << "h):\n"
+                          << endocrine_system->get_hormone_profile().to_string() << std::endl;
+            }
+
             std::time_t t = std::time(nullptr);
             std::tm local_tm{};
 #ifdef _WIN32
@@ -309,18 +343,25 @@ bool CoreIntegration::initialize(const std::string& base_model_path) {
 #else
             localtime_r(&t, &local_tm);
 #endif
-            unsigned seed = static_cast<unsigned>(
-                (local_tm.tm_year + 1900) * 10000 + (local_tm.tm_mon + 1) * 100 + local_tm.tm_mday);
-            std::mt19937 rng(seed);
-            std::uniform_real_distribution<double> offset(-0.08, 0.08);
+            int today_seed =
+                (local_tm.tm_year + 1900) * 10000 + (local_tm.tm_mon + 1) * 100 + local_tm.tm_mday;
 
-            for (const char* hormone : {"cortisol", "dopamine", "oxytocin", "serotonin", "adrenaline"}) {
-                double level = endocrine_system->get_hormone_level(hormone) + offset(rng);
-                endocrine_system->set_hormone_level(hormone, std::clamp(level, 0.0, 1.0));
+            if (self_state.last_daily_seed != today_seed) {
+                std::mt19937 rng(static_cast<unsigned>(today_seed));
+                std::uniform_real_distribution<double> offset(-0.08, 0.08);
+
+                for (const char* hormone : {"cortisol", "dopamine", "oxytocin", "serotonin", "adrenaline"}) {
+                    double level = endocrine_system->get_hormone_level(hormone) + offset(rng);
+                    endocrine_system->set_hormone_level(hormone, std::clamp(level, 0.0, 1.0));
+                }
+                self_state.last_daily_seed = today_seed;
+                std::cout << "[Humor do Dia] Baseline hormonal do dia aplicado (seed " << today_seed << "):\n"
+                          << endocrine_system->get_hormone_profile().to_string() << std::endl;
+            } else {
+                std::cout << "[Humor do Dia] Já aplicado hoje — restart no mesmo dia mantém o humor." << std::endl;
             }
-            std::cout << "[Humor do Dia] Baseline hormonal do dia aplicado (seed " << seed << "):\n"
-                      << endocrine_system->get_hormone_profile().to_string() << std::endl;
         }
+        persist_self(); // grava last_daily_seed + hormônios do boot
 
         // 6. Inicializar memory manager
         memory_manager = std::make_unique<alyssa_memory::AlyssaMemoryManager>(
@@ -534,16 +575,34 @@ std::string CoreIntegration::generate_direct_response(const std::string& respond
                                                       bool use_tts, ITTS* tts,
                                                       const char* style_hint,
                                                       const char* dataset_mode) {
-    // O caminho de resposta da v2: personalidade + tools + ambiente + input,
-    // com histórico via run_expert (só o que o usuário disse entra no
+    // O caminho de resposta da v2: personalidade + self + tools + ambiente +
+    // input, com histórico via run_expert (só o que o usuário disse entra no
     // histórico — ver history_user_text).
     std::string direct_personality = alyssa_personality::generate_personality_context(
         personality,
         endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
+    std::string self_block = alyssa_self::render_self_block(self_state);
     std::string direct_tools = tool_executor ? tool_executor->get_tools_prompt() : "";
 
-    std::string direct_prompt = direct_personality + direct_tools + build_ambient_context() +
-                                style_hint + respond_to;
+    // Gate hormonal (F2): energia/humor baixos encurtam a resposta DE
+    // VERDADE (max_tokens), não só no tom. Fórmulas espelham
+    // PersonalityCore::derive_current_state — a mesma "energia baixa" que
+    // aparece no bloco [PERSONALIDADE] agora corta tokens de fato.
+    if (endocrine_system) {
+        const auto& h = endocrine_system->get_hormone_profile();
+        double energy = 0.5 * h.dopamine + 0.5 * h.adrenaline;
+        double mood   = h.serotonin - 0.5 * h.cortisol;
+        double scale  = 1.0;
+        if (energy < 0.25)     scale *= 0.6;
+        else if (energy < 0.4) scale *= 0.8;
+        if (mood < 0.15)       scale *= 0.8;
+        if (auto it = experts.find("alyssa"); it != experts.end()) {
+            it->second->set_max_tokens_scale(scale);
+        }
+    }
+
+    std::string direct_prompt = direct_personality + self_block + direct_tools +
+                                build_ambient_context() + style_hint + respond_to;
     std::string direct_resp = run_expert("alyssa", direct_prompt, use_tts, tts, &raw_input);
 
     // Fase 4.3: resposta vazia/erro da persona → última cartada com o 1B.
@@ -808,6 +867,60 @@ void CoreIntegration::register_builtin_tools() {
             return "Aberto no navegador: " + url;
         });
 
+    // --- Tools de self (v2/F2): a Alyssa edita o próprio state/self.json ---
+    // Formar opinião numa conversa passa a ter efeito PERMANENTE, pelo mesmo
+    // mecanismo de tool call que ela já usa pra tudo.
+    tool_executor->register_handler("save_opinion",
+        [this](const std::map<std::string, std::string>& args) -> std::string {
+            auto topic  = args.find("topic");
+            auto stance = args.find("stance");
+            if (topic == args.end() || topic->second.empty() ||
+                stance == args.end() || stance->second.empty()) {
+                return "ERRO: save_opinion precisa de topic e stance";
+            }
+            double confidence = 0.6;
+            if (auto c = args.find("confidence"); c != args.end()) {
+                try { confidence = std::stod(c->second); } catch (...) {}
+            }
+            alyssa_self::upsert_opinion(self_state, topic->second, stance->second, confidence);
+            persist_self();
+            return "Opinião salva no seu self: " + topic->second + " → " + stance->second;
+        });
+
+    tool_executor->register_handler("update_goal",
+        [this](const std::map<std::string, std::string>& args) -> std::string {
+            auto goal = args.find("goal");
+            if (goal == args.end() || goal->second.empty()) {
+                return "ERRO: update_goal precisa de goal";
+            }
+            std::string progress;
+            if (auto p = args.find("progress"); p != args.end()) progress = p->second;
+            double priority = -1.0;
+            if (auto pr = args.find("priority"); pr != args.end()) {
+                try { priority = std::stod(pr->second); } catch (...) {}
+            }
+            alyssa_self::update_goal(self_state, goal->second, progress, priority);
+            persist_self();
+            return "Meta atualizada no seu self: " + goal->second;
+        });
+
+    tool_executor->register_handler("add_to_agenda",
+        [this](const std::map<std::string, std::string>& args) -> std::string {
+            auto bring_up = args.find("bring_up");
+            if (bring_up == args.end() || bring_up->second.empty()) {
+                return "ERRO: add_to_agenda precisa de bring_up";
+            }
+            std::string reason;
+            if (auto r = args.find("reason"); r != args.end()) reason = r->second;
+            int days = 3;
+            if (auto d = args.find("expires_days"); d != args.end()) {
+                try { days = std::stoi(d->second); } catch (...) {}
+            }
+            alyssa_self::add_agenda(self_state, bring_up->second, reason, days);
+            persist_self();
+            return "Anotado na sua agenda: " + bring_up->second;
+        });
+
     // --- web_search: DuckDuckGo HTML + extração crua dos títulos/snippets ---
     tool_executor->register_handler("web_search",
         [](const std::map<std::string, std::string>& args) -> std::string {
@@ -1056,6 +1169,10 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
         personality,
         endocrine_system ? &endocrine_system->get_hormone_profile() : nullptr);
 
+    // Self (F2): a iniciativa dela nasce de quem ela é — opiniões, metas e
+    // principalmente a AGENDA ("puxar assunto X") entram no prompt proativo.
+    std::string self_block = alyssa_self::render_self_block(self_state);
+
     std::string hormonal_context = "";
     if (endocrine_system) {
         hormonal_context = endocrine_system->generate_hormonal_system_context() + "\n";
@@ -1068,8 +1185,8 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
     std::string prefs_line = alyssa_prefs::render_preferences_line();
     if (!prefs_line.empty()) prefs_line = "[MEMÓRIA DE GOSTOS] " + prefs_line + "\n\n";
 
-    std::string prompt = personality_context + hormonal_context + build_ambient_context() +
-        tools_context + prefs_line +
+    std::string prompt = personality_context + self_block + hormonal_context +
+        build_ambient_context() + tools_context + prefs_line +
         "[INICIATIVA PRÓPRIA] " + reason + "\n\n"
         "Escreva UMA mensagem curta e espontânea, como quem manda mensagem no chat "
         "sem ter sido chamada. Não cumprimente como se fosse a primeira conversa do dia "
@@ -1094,6 +1211,7 @@ std::string CoreIntegration::generate_proactive_message(const std::string& reaso
         response.erase(response.find_last_not_of(" \n\r\t") + 1);
     }
 
+    persist_self(); // metabolismo + possíveis tool calls de self acima
     clear_kv_cache();
     return response;
 }
@@ -1532,6 +1650,10 @@ std::string CoreIntegration::think_with_fusion_core(
         std::cout << "[Turn End] Estado: "
                   << endocrine_system->get_hormone_profile().get_emotional_state() << std::endl;
     }
+
+    // 5. SELF: snapshot pro disco — o self.json nunca fica mais de um turno
+    // atrás do que ela viveu (F2).
+    persist_self();
 
     auto turn_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - turn_start).count();

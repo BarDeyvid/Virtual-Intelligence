@@ -3,6 +3,7 @@
 #include "IExpert.hpp"
 #include "AlyssaMemoryHandler.hpp"
 #include "pc_metrics_reader.hpp"
+#include <algorithm>
 #include <memory>
 #include <regex>
 
@@ -22,6 +23,7 @@ namespace alyssa_experts {
         std::vector<llama_chat_message> history;           ///< Conversation history
         llama_adapter_lora* lora;                          ///< LoRA adapter (if used)
         std::string expert_id;                             ///< Unique expert identifier
+        int base_max_tokens_ = -1;                         ///< max_tokens original do config (gate F2 escala sobre ele)
 
         /**
          * @brief Parse structured signal from expert's raw response (FLEXIBLE VERSION).
@@ -144,6 +146,19 @@ namespace alyssa_experts {
          */
         void clear_history() override {
             free_chat_history(history);
+        }
+
+        /**
+         * @brief Gate hormonal de tamanho de resposta (v2/F2).
+         * @details Captura o max_tokens do config na primeira chamada e escala
+         *          sempre sobre ESSE original (nunca composto). Piso de 24
+         *          tokens: mesmo de saco cheio ela responde uma frase.
+         */
+        void set_max_tokens_scale(double scale) override {
+            if (base_max_tokens_ < 0) base_max_tokens_ = config.params.max_tokens;
+            scale = std::clamp(scale, 0.25, 1.0);
+            config.params.max_tokens =
+                std::max(24, static_cast<int>(base_max_tokens_ * scale));
         }
 
         /**

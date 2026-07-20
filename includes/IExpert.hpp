@@ -126,6 +126,15 @@ namespace alyssa_experts {
         virtual void clear_own_kv_cache() {}
 
         /**
+         * @brief Gate hormonal de tamanho de resposta (v2/F2).
+         * @param scale Fator sobre o max_tokens configurado (clampado no impl).
+         * @details Energia/humor baixos encurtam a resposta DE VERDADE
+         *          (menos tokens), não só no tom do prompt. No-op por default;
+         *          ExpertBase guarda o max_tokens original e escala sobre ele.
+         */
+        virtual void set_max_tokens_scale(double /*scale*/) {}
+
+        /**
          * @brief Core dedicado deste expert, se ele tiver um próprio.
          * @return nullptr para experts do modelo 1B compartilhado; o
          *         AlyssaCore próprio no DedicatedCoreExpert (alyssa, gameplay).

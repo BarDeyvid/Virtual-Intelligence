@@ -1,6 +1,7 @@
 # Plano Alyssa v2 — de pipeline de chat pra entidade persistente
 
-**Data:** 2026-07-19 · **Status:** aprovado, não iniciado
+**Data:** 2026-07-19 · **Status:** F1 ✔ (commit 5330c8b, aceite em
+docs/benchmarks-v2.md) · F2 ✔ (aceite idem) · F3 próxima
 **Contexto:** docs/10_Architecture/Core_Architecture.md descreve a v1 (comitê + fusão).
 Este plano substitui a v1 por fases, sem a Alyssa nunca parar de funcionar.
 

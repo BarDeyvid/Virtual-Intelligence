@@ -5,6 +5,7 @@
 #include "EndocrineSystem.hpp"
 #include "ToolExecutor.hpp"
 #include "PersonalityCore.hpp"
+#include "SelfState.hpp"
 #include "PresenceDetector.hpp"
 #include <filesystem>
 #include <functional>
@@ -74,6 +75,14 @@ private:
     std::unique_ptr<alyssa_tools::ToolExecutor> tool_executor;       ///< Registry-driven tool system (Phase 1)
     alyssa_personality::Personality personality;                     ///< Static personality profile (Phase 2.1)
     std::filesystem::file_time_type personality_mtime{};             ///< For hot-reload of personality.json
+    alyssa_self::SelfState self_state;                               ///< Self persistente (v2/F2): opiniões, metas, agenda, hormônios
+
+    /**
+     * @brief Snapshot dos hormônios no self + poda de agenda + save em disco.
+     * @details Chamado ao fim de cada turno, nos tool handlers de self e no
+     *          destrutor — o self.json nunca fica mais de um turno atrás.
+     */
+    void persist_self();
     std::unique_ptr<alyssa_vision::PresenceDetector> presence_detector; ///< Webcam presence (night-shift)
 
     /// @brief Map of registered expert models with their unique IDs
@@ -246,6 +255,11 @@ public:
      *          sem reiniciar (e sem recarregar modelo nenhum).
      */
     void maybe_reload_personality();
+
+    /**
+     * @brief Self persistente (leitura p/ UI e, na F3, p/ consolidação).
+     */
+    const alyssa_self::SelfState& get_self_state() const { return self_state; }
 
     /**
      * @brief Tool executor getter (for UI inspection of the call log).
