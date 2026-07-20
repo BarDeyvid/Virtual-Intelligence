@@ -1,4 +1,4 @@
-# alyssad — protocolo do daemon (v0.1)
+# alyssad — protocolo do daemon (v0.2)
 
 `alyssad` é o cérebro da Alyssa rodando headless: CoreIntegration + (opcional)
 Kokoro TTS atrás de um socket TCP local. Frontends (TUI em TS/Ink, web, o que
@@ -18,8 +18,19 @@ alyssad [--echo] [--voice] [--port N]
 - **`--port N`** (ou env `ALYSSAD_PORT`): porta TCP. Default **8377**, sempre
   em `127.0.0.1` (nunca exposto pra rede).
 
-Um cliente por vez: conexão nova só é aceita depois que a atual desconecta.
-Turnos são serializados — `say` enquanto pensa devolve erro `busy`.
+**v0.2 (F5.0): múltiplos clientes simultâneos** — TUI e celular conectados ao
+mesmo tempo. Turnos continuam serializados (`say` enquanto pensa devolve
+`busy`), e **eventos são broadcast** pra todos os clientes conectados: quem
+não pediu o turno vê o mesmo streaming (`res` vai só pro requisitante).
+
+**Auth (opcional):** com a env `ALYSSAD_TOKEN` setada no daemon, todo método
+além de `ping`/`auth` exige autenticar primeiro:
+```json
+{"type":"req","id":0,"method":"auth","params":{"token":"..."}}
+```
+→ `{"ok":true,"data":{"authed":true}}` (ou `token inválido`). Sem a env,
+auth é opcional e no-op. É o preparo pro bind no tailnet (F5): o 8377 segue
+SEMPRE em loopback até o Tailscale entrar em cena.
 
 ## Envelopes
 

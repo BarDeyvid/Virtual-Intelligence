@@ -35,11 +35,13 @@ typedef int socket_t;
 #include "voice/KokoroTTS.hpp"
 #include "json.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -131,11 +133,34 @@ struct DaemonState {
     std::atomic<bool> running{true};
     std::atomic<long long> last_activity{0};  // epoch do último say (gate de idle da consolidação)
     std::thread worker;                 // no máximo um turno em andamento
+    std::mutex worker_mtx;              // v0.2: vários clientes despacham — join/assign serializado
+
+    // v0.2 (F5.0): múltiplos clientes simultâneos. Turnos continuam
+    // serializados pelo `busy`; eventos são BROADCAST pra todos (a TUI e o
+    // celular veem a mesma conversa). `res` continua indo só pro requisitante.
+    std::mutex clients_mtx;
+    std::vector<socket_t> clients;
+    std::string auth_token;             // env ALYSSAD_TOKEN; vazio = sem auth (loopback)
+    socket_t listener = INVALID_SOCKET; // shutdown fecha pra destravar o accept
+
+    void start_worker(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lk(worker_mtx);
+        if (worker.joinable()) worker.join();
+        worker = std::thread(std::move(fn));
+    }
 
     void join_worker() {
+        std::lock_guard<std::mutex> lk(worker_mtx);
         if (worker.joinable()) worker.join();
     }
 };
+
+/// Evento pra TODOS os clientes conectados (v0.2). Envio é best-effort:
+/// cliente morto falha em silêncio e sai da lista no próprio recv loop.
+void broadcast_event(DaemonState& st, const std::string& event, const json& data) {
+    std::lock_guard<std::mutex> lk(st.clients_mtx);
+    for (socket_t s : st.clients) send_event(s, event, data);
+}
 
 /// Hora local (0-23) e AAAAMMDD numa tacada (pro trigger da consolidação).
 void local_clock(int& hour, int& yyyymmdd) {
@@ -161,26 +186,25 @@ void handle_say(DaemonState& st, socket_t sock, const json& id, const json& para
         send_err(sock, id, "busy");
         return;
     }
-    st.join_worker(); // turno anterior já sinalizou !busy; só recolhe a thread
     st.last_activity = static_cast<long long>(std::time(nullptr));
 
     if (st.echo_mode) {
         send_ok(sock, id, {{"accepted", true}});
         // Mesma coreografia do modo real (worker + busy): o frontend consegue
         // testar o erro `busy` e a UI de streaming sem carregar modelo nenhum.
-        st.worker = std::thread([&st, sock, text]() {
-            send_event(sock, "state", {{"phase", "thinking"}});
+        st.start_worker([&st, text]() {
+            broadcast_event(st, "state", {{"phase", "thinking"}});
             std::string full = "[eco] " + text;
             size_t start = 0;
             while (start < full.size()) {
                 size_t sp = full.find(' ', start);
                 size_t end = (sp == std::string::npos) ? full.size() : sp + 1;
-                send_event(sock, "token", {{"text", full.substr(start, end - start)}});
+                broadcast_event(st, "token", {{"text", full.substr(start, end - start)}});
                 std::this_thread::sleep_for(std::chrono::milliseconds(30));
                 start = end;
             }
-            send_event(sock, "response", {{"text", full}, {"latency_ms", 0}, {"tts", false}});
-            send_event(sock, "state", {{"phase", "idle"}});
+            broadcast_event(st, "response", {{"text", full}, {"latency_ms", 0}, {"tts", false}});
+            broadcast_event(st, "state", {{"phase", "idle"}});
             st.busy = false;
         });
         return;
@@ -189,20 +213,20 @@ void handle_say(DaemonState& st, socket_t sock, const json& id, const json& para
     bool want_tts = params.value("tts", st.tts != nullptr);
     send_ok(sock, id, {{"accepted", true}});
 
-    st.worker = std::thread([&st, sock, text, want_tts]() {
-        send_event(sock, "state", {{"phase", "thinking"}});
+    st.start_worker([&st, text, want_tts]() {
+        broadcast_event(st, "state", {{"phase", "thinking"}});
 
-        // Sink de streaming: cada pedaço gerado vira um evento `token`.
-        // Roda nesta mesma thread (dentro do think_*), então setar/limpar
-        // aqui não corre com nada — turnos são serializados pelo busy.
+        // Sink de streaming: cada pedaço gerado vira um evento `token`
+        // (broadcast: TUI e celular veem o mesmo streaming). Roda nesta
+        // mesma thread (dentro do think_*) — turnos serializados pelo busy.
         // O carry segura bytes de um caractere UTF-8 cortado entre tokens.
         auto utf8_carry = std::make_shared<std::string>();
-        st.brain->on_response_chunk = [sock, utf8_carry](const std::string& piece) {
+        st.brain->on_response_chunk = [&st, utf8_carry](const std::string& piece) {
             std::string out = *utf8_carry + piece;
             size_t complete = utf8_complete_prefix_len(out);
             *utf8_carry = out.substr(complete);
             out.resize(complete);
-            if (!out.empty()) send_event(sock, "token", {{"text", out}});
+            if (!out.empty()) broadcast_event(st, "token", {{"text", out}});
         };
 
         auto t0 = std::chrono::steady_clock::now();
@@ -217,14 +241,14 @@ void handle_say(DaemonState& st, socket_t sock, const json& id, const json& para
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - t0).count();
 
-            send_event(sock, "response",
-                       {{"text", resp}, {"latency_ms", ms}, {"tts", used_tts}});
-            send_event(sock, "hormones", hormones_json(*st.brain));
+            broadcast_event(st, "response",
+                            {{"text", resp}, {"latency_ms", ms}, {"tts", used_tts}});
+            broadcast_event(st, "hormones", hormones_json(*st.brain));
         } catch (const std::exception& e) {
-            send_event(sock, "error", {{"message", e.what()}});
+            broadcast_event(st, "error", {{"message", e.what()}});
         }
         st.brain->on_response_chunk = nullptr;
-        send_event(sock, "state", {{"phase", "idle"}});
+        broadcast_event(st, "state", {{"phase", "idle"}});
         st.busy = false;
     });
 }
@@ -265,23 +289,22 @@ void handle_consolidate(DaemonState& st, socket_t sock, const json& id) {
         send_err(sock, id, "busy");
         return;
     }
-    st.join_worker();
     send_ok(sock, id, {{"accepted", true}});
 
-    st.worker = std::thread([&st, sock]() {
-        send_event(sock, "state", {{"phase", "consolidating"}});
+    st.start_worker([&st]() {
+        broadcast_event(st, "state", {{"phase", "consolidating"}});
         try {
             json stats = st.brain->run_consolidation();
-            send_event(sock, "consolidation", stats);
+            broadcast_event(st, "consolidation", stats);
         } catch (const std::exception& e) {
-            send_event(sock, "error", {{"message", e.what()}});
+            broadcast_event(st, "error", {{"message", e.what()}});
         }
-        send_event(sock, "state", {{"phase", "idle"}});
+        broadcast_event(st, "state", {{"phase", "idle"}});
         st.busy = false;
     });
 }
 
-void dispatch(DaemonState& st, socket_t sock, const std::string& raw) {
+void dispatch(DaemonState& st, socket_t sock, const std::string& raw, bool& authed) {
     json msg;
     try {
         msg = json::parse(raw);
@@ -294,6 +317,26 @@ void dispatch(DaemonState& st, socket_t sock, const std::string& raw) {
     std::string method = msg.value("method", "");
     json params = msg.value("params", json::object());
 
+    // v0.2: com ALYSSAD_TOKEN setado, tudo além de ping/auth exige auth
+    // (preparo pro bind no tailnet da F5 — no loopback puro é opcional).
+    if (method == "auth") {
+        if (st.auth_token.empty()) {
+            // Sem token configurado: auth é no-op de sucesso (cliente pode
+            // sempre mandar auth sem se importar com o modo do daemon).
+            send_ok(sock, id, {{"authed", true}, {"required", false}});
+        } else if (params.value("token", "") == st.auth_token) {
+            authed = true;
+            send_ok(sock, id, {{"authed", true}});
+        } else {
+            send_err(sock, id, "token inválido");
+        }
+        return;
+    }
+    if (!authed && method != "ping") {
+        send_err(sock, id, "não autenticado (mande {method:\"auth\"} primeiro)");
+        return;
+    }
+
     if (method == "ping") {
         send_ok(sock, id, {{"pong", true}});
     } else if (method == "status") {
@@ -305,19 +348,31 @@ void dispatch(DaemonState& st, socket_t sock, const std::string& raw) {
     } else if (method == "shutdown") {
         send_ok(sock, id);
         st.running = false;
+        if (st.listener != INVALID_SOCKET) ALYSSAD_CLOSESOCK(st.listener); // destrava o accept
+        // Fecha os sockets dos clientes: destrava os recv() das threads
+        // (senão o join do encerramento espera todo mundo desconectar).
+        std::lock_guard<std::mutex> lk(st.clients_mtx);
+        for (socket_t s : st.clients) ALYSSAD_CLOSESOCK(s);
     } else {
         send_err(sock, id, "método desconhecido: " + method);
     }
 }
 
-/// Loop de leitura de um cliente: recv em blocos, quebra em linhas, despacha.
+/// Loop de leitura de UM cliente (v0.2: uma thread por cliente): registra no
+/// broadcast, recv em blocos, quebra em linhas, despacha, desregistra.
 void serve_client(DaemonState& st, socket_t sock) {
+    {
+        std::lock_guard<std::mutex> lk(st.clients_mtx);
+        st.clients.push_back(sock);
+    }
+    bool authed = st.auth_token.empty(); // sem token configurado = liberado
+
     std::string buffer;
     char chunk[4096];
 
     while (st.running) {
         int n = recv(sock, chunk, sizeof(chunk), 0);
-        if (n <= 0) break; // desconectou (ou erro): volta pro accept
+        if (n <= 0) break; // desconectou (ou erro)
 
         buffer.append(chunk, n);
         size_t pos;
@@ -325,14 +380,18 @@ void serve_client(DaemonState& st, socket_t sock) {
             std::string line = buffer.substr(0, pos);
             buffer.erase(0, pos + 1);
             if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (!line.empty()) dispatch(st, sock, line);
+            if (!line.empty()) dispatch(st, sock, line, authed);
             if (!st.running) break;
         }
     }
 
-    // Turno em andamento termina antes de soltar o socket (os últimos
-    // eventos podem se perder se o cliente já caiu — aceitável).
-    st.join_worker();
+    {
+        std::lock_guard<std::mutex> lk(st.clients_mtx);
+        st.clients.erase(std::remove(st.clients.begin(), st.clients.end(), sock),
+                         st.clients.end());
+    }
+    // NÃO espera o worker aqui (v0.2): outros clientes continuam recebendo
+    // os eventos do turno em andamento via broadcast.
 }
 
 } // namespace
@@ -407,7 +466,7 @@ int main(int argc, char** argv) {
                   << " (já tem um alyssad rodando?)\n";
         return 1;
     }
-    if (listen(listener, 1) == SOCKET_ERROR) {
+    if (listen(listener, 4) == SOCKET_ERROR) { // v0.2: TUI + celular + folga
         std::cerr << "[alyssad] listen falhou\n";
         return 1;
     }
@@ -419,6 +478,11 @@ int main(int argc, char** argv) {
     st.brain = brain.get();
     st.tts = tts.get();
     st.last_activity = static_cast<long long>(std::time(nullptr));
+    st.listener = listener;
+    if (const char* tok = std::getenv("ALYSSAD_TOKEN")) {
+        st.auth_token = tok;
+        std::cout << "[alyssad] auth por token LIGADA (ALYSSAD_TOKEN)\n";
+    }
 
     // Scheduler da consolidação noturna (v2/F3): checa a cada minuto se
     // (a) hoje ainda não consolidou, (b) já passou das 04:00 e (c) tem 30min
@@ -454,6 +518,8 @@ int main(int argc, char** argv) {
         });
     }
 
+    // v0.2: uma thread por cliente — TUI e celular conectados ao mesmo tempo.
+    std::vector<std::thread> client_threads;
     while (st.running) {
         socket_t client = accept(listener, nullptr, nullptr);
         if (client == INVALID_SOCKET) {
@@ -461,12 +527,17 @@ int main(int argc, char** argv) {
             continue;
         }
         std::cout << "[alyssad] cliente conectado\n";
-        serve_client(st, client);
-        ALYSSAD_CLOSESOCK(client);
-        std::cout << "[alyssad] cliente desconectado\n";
+        client_threads.emplace_back([&st, client]() {
+            serve_client(st, client);
+            ALYSSAD_CLOSESOCK(client);
+            std::cout << "[alyssad] cliente desconectado\n";
+        });
     }
 
-    ALYSSAD_CLOSESOCK(listener);
+    for (auto& t : client_threads) {
+        if (t.joinable()) t.join();
+    }
+    st.join_worker(); // turno em andamento termina antes de derrubar tudo
     if (consolidation_scheduler.joinable()) consolidation_scheduler.join();
 #ifdef _WIN32
     WSACleanup();
