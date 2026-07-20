@@ -485,6 +485,14 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
         "curta e compartilhe",
         "tchau, tchau!",
         "até o próximo vídeo",
+        "até a próxima!",
+        "valeu galera",
+        "e aí, galera",
+        "fala galera",
+        "música",
+        "[música]",
+        "[aplausos]",
+        "aplausos",
     };
     std::string lowered = full_text;
     std::transform(lowered.begin(), lowered.end(), lowered.begin(),
@@ -495,6 +503,22 @@ std::string VoicePipeline::_process_transcription(const std::vector<float>& audi
                       << full_text << "\"" << std::endl;
             return "";
         }
+    }
+
+    // Famílias de créditos de legenda — lista exata não alcança ("Legenda
+    // por Sônia Ruberti" passou ao vivo em 2026-07-20; o nome muda sempre).
+    // Só descarta quando o transcript INTEIRO começa com o padrão: ninguém
+    // abre uma frase pra Alyssa com "legenda..."/"tradução...".
+    auto starts_with = [&lowered](const char* p) { return lowered.rfind(p, 0) == 0; };
+    const bool credit_pattern =
+        starts_with("legenda") ||        // legenda/legendas/legendado(a) por...
+        starts_with("tradução") || starts_with("traducao") ||
+        ((starts_with("revisão") || starts_with("revisao")) &&
+         lowered.find(" por ") != std::string::npos);
+    if (credit_pattern) {
+        std::cout << "[Whisper] Crédito de legenda descartado (alucinação): \""
+                  << full_text << "\"" << std::endl;
+        return "";
     }
 
     return full_text;

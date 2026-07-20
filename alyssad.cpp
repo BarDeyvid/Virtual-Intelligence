@@ -342,6 +342,10 @@ void handle_listen(DaemonState& st, socket_t sock, const json& id, const json& p
         }
         if (!st.stt) {
             VoicePipeline::Options opts; // defaults já são pt-BR + Silero + initial_prompt
+            // Um tico mais conservador que o default: ruído marginal que o
+            // Silero deixa passar é exatamente o que vira "Legenda por..."
+            opts.vad_threshold = 0.6f;
+            opts.vad_min_duration_ms = 300;
             st.stt = std::make_unique<VoicePipeline>(WHISPER_PATH, opts, /*defer=*/true);
         }
         if (!st.stt->model_loaded() && !st.stt->load_model()) {

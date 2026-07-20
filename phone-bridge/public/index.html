@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Alyssa</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="top">
+    <div class="brand">
+      <span class="sigil"></span>
+      <h1>ALYSSA</h1>
+      <span id="conn" class="conn off" title="conexão"></span>
+    </div>
+    <div id="statusline">
+      <span id="mood">—</span>
+      <span id="ambient"></span>
+    </div>
+    <div id="hormones" aria-hidden="true">
+      <i id="h-cor" title="cortisol"></i><i id="h-dop" title="dopamina"></i><i id="h-oxi" title="oxitocina"></i><i id="h-ser" title="serotonina"></i><i id="h-adr" title="adrenalina"></i>
+    </div>
+  </header>
+
+  <main id="chat" aria-live="polite"></main>
+
+  <div id="stream" class="msg alyssa" hidden>
+    <div class="who">Alyssa <span class="dots">▌</span></div>
+    <div class="text"></div>
+  </div>
+
+  <footer id="bar">
+    <button id="ptt" aria-label="segure para falar">
+      <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
+    </button>
+    <input id="input" type="text" placeholder="fala com ela..." autocomplete="off" enterkeyhint="send">
+    <button id="send" aria-label="enviar">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 20v-6l8-2-8-2V4l19 8-19 8Z"/></svg>
+    </button>
+  </footer>
+
+  <div id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
