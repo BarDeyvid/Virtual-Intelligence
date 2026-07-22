@@ -131,12 +131,34 @@ function submit() {
 $("send").addEventListener("click", submit);
 input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
 
-// ---- push-to-talk: SpeechRecognition do Android (pt-BR) ----
+// ---- push-to-talk ----
+// Dentro do app nativo (phone-app), o WebView NÃO tem webkitSpeechRecognition
+// — a casca expõe window.AndroidSpeech (SpeechRecognizer nativo pt-BR) e
+// devolve o texto por window.onAndroidSpeech. No Chrome puro (PWA), cai no
+// webkitSpeechRecognition. Mesma UI dos dois lados.
+const NATIVE = window.AndroidSpeech && window.AndroidSpeech.available && window.AndroidSpeech.available();
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const ptt = $("ptt");
 let rec = null, recActive = false;
 
+if (NATIVE) {
+  window.onAndroidSpeech = (text, isFinal) => {
+    if (text) input.value = text;
+    if (isFinal) {
+      recActive = false;
+      ptt.classList.remove("listening");
+      if (input.value.trim()) submit();
+    }
+  };
+}
+
 function startPTT() {
+  if (NATIVE) {
+    if (recActive) return;
+    recActive = true; ptt.classList.add("listening"); input.value = "";
+    window.AndroidSpeech.start();
+    return;
+  }
   if (!SR) { toast("sem reconhecimento de voz neste navegador"); return; }
   if (recActive) return;
   rec = new SR();
@@ -169,7 +191,10 @@ function startPTT() {
   input.value = "";
   rec.start();
 }
-function stopPTT() { if (recActive && rec) rec.stop(); }
+function stopPTT() {
+  if (NATIVE) { if (recActive) window.AndroidSpeech.stop(); return; }
+  if (recActive && rec) rec.stop();
+}
 
 // Segurar fala, soltar envia (toque rápido também funciona: o SR
 // continua até a primeira pausa e envia sozinho no onend).
