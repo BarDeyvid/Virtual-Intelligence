@@ -555,7 +555,32 @@ int main(int argc, char** argv) {
             KokoroTTS::Config tts_cfg;
             tts_cfg.voice_blend = {{"models/kokoro/voices/pf_dora.bin", 0.5f},
                                    {"models/kokoro/voices/af_bella.bin", 0.5f}};
-            tts = std::make_unique<KokoroTTS>(tts_cfg);
+
+            // Guarda de assets (2026-07-20): sem os arquivos do Kokoro, a
+            // síntese entra no espeak-ng com o data dir faltando e a lib C
+            // DERRUBA o processo (abort não-capturável) na PRIMEIRA frase —
+            // a Alyssa "morre" no meio do primeiro turno falado. Como o
+            // load é lazy, o boot não acusa nada. Então checamos AQUI: se
+            // faltar qualquer peça, roda texto-puro (voice_available:false)
+            // em vez de prometer voz e cair. O celular nem usa este TTS
+            // (fala com a voz do próprio Android), então nada se perde lá.
+            const char* required[] = {
+                tts_cfg.model_path.c_str(),        // models/kokoro/model.onnx
+                tts_cfg.espeak_data_path.c_str(),  // models/kokoro/espeak-ng-data
+                "models/kokoro/voices/pf_dora.bin",
+                "models/kokoro/voices/af_bella.bin",
+            };
+            std::string missing;
+            for (const char* p : required) {
+                if (!std::filesystem::exists(p)) missing += std::string("\n  - ") + p;
+            }
+            if (missing.empty()) {
+                tts = std::make_unique<KokoroTTS>(tts_cfg);
+            } else {
+                std::cerr << "[alyssad] --voice pedido, mas faltam assets do Kokoro:"
+                          << missing << "\n[alyssad] rodando TEXTO-PURO (voz desativada; "
+                          << "reponha models/kokoro/ pra falar).\n";
+            }
         }
     }
 
